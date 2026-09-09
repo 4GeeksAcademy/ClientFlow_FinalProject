@@ -10,7 +10,8 @@ conversations and AI-assisted workflows in a single workspace.
 
 1. **Authentication and tenant access**
    - Login, logout and password recovery.
-   - Registration through a valid company invitation or activation token.
+   - A new company owner chooses a plan or starts a three-day free trial.
+   - Team members join an existing company through an email invitation.
    - Company-level isolation of all operational data.
    - Administrator and member roles.
 
@@ -49,13 +50,19 @@ conversations and AI-assisted workflows in a single workspace.
    - Company profile, users, language, theme and integrations.
    - English, Spanish and Portuguese interface preferences.
 
+9. **Plan selection and trial access**
+   - Public plan-selection page before company registration.
+   - Three-day free trial with explicit start and expiry dates.
+   - Subscription status controls access to the company workspace.
+   - Payment-provider integration may be simulated during the academic MVP.
+
 ## Outside the MVP
 
 - Native mobile applications.
 - Full accounting, payroll and stock management.
 - Marketplace for third-party extensions.
 - Fully autonomous payments or legally binding actions by AI.
-- Advanced subscription billing and usage-based invoicing.
+- Usage-based invoicing, prorating and advanced subscription billing.
 
 ## Frontend responsibilities
 
