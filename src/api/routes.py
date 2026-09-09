@@ -20,3 +20,11 @@ def handle_hello():
     }
 
     return jsonify(response_body), 200
+@api.route('/health', methods=['GET'])
+def health_check():
+
+    response_body = {
+        "status": "ok"
+    }
+
+    return jsonify(response_body), 200
