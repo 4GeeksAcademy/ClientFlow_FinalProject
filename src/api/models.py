@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer
 from sqlalchemy import JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -72,6 +72,26 @@ class MessageDirection(PyEnum):
     OUTBOUND = "outbound"
 
 
+class NextActionStatus(PyEnum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class JobStageStatus(PyEnum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class MaterialStatus(PyEnum):
+    REQUIRED = "required"
+    ORDERED = "ordered"
+    AVAILABLE = "available"
+    USED = "used"
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
@@ -88,7 +108,7 @@ class Plan(TimestampMixin, db.Model):
     code: Mapped[str] = mapped_column(String(60), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    price_gbp: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    price_eur: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     billing_interval: Mapped[str] = mapped_column(
         String(20), default="monthly", nullable=False
     )
@@ -302,6 +322,61 @@ class Job(TimestampMixin, db.Model):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     client: Mapped["Client"] = relationship(back_populates="jobs")
     appointments: Mapped[list["Appointment"]] = relationship(back_populates="job")
+    stages: Mapped[list["JobStage"]] = relationship(
+        back_populates="job", cascade="all, delete-orphan", order_by="JobStage.position"
+    )
+    materials: Mapped[list["JobMaterial"]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
+    assignments: Mapped[list["JobAssignment"]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
+
+
+class JobAssignment(db.Model):
+    __tablename__ = "job_assignments"
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), primary_key=True)
+    membership_id: Mapped[int] = mapped_column(
+        ForeignKey("company_memberships.id"), primary_key=True
+    )
+    role: Mapped[str | None] = mapped_column(String(60))
+    assigned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    job: Mapped["Job"] = relationship(back_populates="assignments")
+
+
+class JobStage(TimestampMixin, db.Model):
+    __tablename__ = "job_stages"
+    __table_args__ = (
+        UniqueConstraint("job_id", "position", name="uq_job_stage_position"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[JobStageStatus] = mapped_column(
+        Enum(JobStageStatus), default=JobStageStatus.PENDING, nullable=False
+    )
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    job: Mapped["Job"] = relationship(back_populates="stages")
+
+
+class JobMaterial(TimestampMixin, db.Model):
+    __tablename__ = "job_materials"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    quantity: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
+    unit: Mapped[str] = mapped_column(String(30), nullable=False)
+    unit_cost: Mapped[float | None] = mapped_column(Numeric(12, 2))
+    status: Mapped[MaterialStatus] = mapped_column(
+        Enum(MaterialStatus), default=MaterialStatus.REQUIRED, nullable=False
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+    job: Mapped["Job"] = relationship(back_populates="materials")
 
 
 class Appointment(TimestampMixin, db.Model):
@@ -325,6 +400,98 @@ class Appointment(TimestampMixin, db.Model):
     address_text: Mapped[str | None] = mapped_column(String(300))
     notes: Mapped[str | None] = mapped_column(Text)
     job: Mapped["Job | None"] = relationship(back_populates="appointments")
+
+
+class NextAction(TimestampMixin, db.Model):
+    __tablename__ = "next_actions"
+    __table_args__ = (
+        CheckConstraint(
+            "(CASE WHEN lead_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN client_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN job_id IS NOT NULL THEN 1 ELSE 0 END) = 1",
+            name="ck_next_action_one_target",
+        ),
+        Index("ix_next_action_company_due", "company_id", "due_at"),
+        Index("ix_next_action_assignee_status", "assigned_membership_id", "status"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    assigned_membership_id: Mapped[int] = mapped_column(
+        ForeignKey("company_memberships.id"), nullable=False
+    )
+    created_by_membership_id: Mapped[int] = mapped_column(
+        ForeignKey("company_memberships.id"), nullable=False
+    )
+    lead_id: Mapped[int | None] = mapped_column(ForeignKey("leads.id"))
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id"))
+    job_id: Mapped[int | None] = mapped_column(ForeignKey("jobs.id"))
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[NextActionStatus] = mapped_column(
+        Enum(NextActionStatus), default=NextActionStatus.PENDING, nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Activity(db.Model):
+    __tablename__ = "activities"
+    __table_args__ = (
+        CheckConstraint(
+            "(CASE WHEN lead_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN client_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN job_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN conversation_id IS NOT NULL THEN 1 ELSE 0 END) = 1",
+            name="ck_activity_one_target",
+        ),
+        Index("ix_activity_company_created", "company_id", "created_at"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    actor_membership_id: Mapped[int | None] = mapped_column(
+        ForeignKey("company_memberships.id")
+    )
+    lead_id: Mapped[int | None] = mapped_column(ForeignKey("leads.id"))
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id"))
+    job_id: Mapped[int | None] = mapped_column(ForeignKey("jobs.id"))
+    conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id"))
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    metadata_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+
+class Attachment(db.Model):
+    __tablename__ = "attachments"
+    __table_args__ = (
+        CheckConstraint(
+            "(CASE WHEN lead_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN client_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN job_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN message_id IS NOT NULL THEN 1 ELSE 0 END) = 1",
+            name="ck_attachment_one_target",
+        ),
+        Index("ix_attachment_company_created", "company_id", "created_at"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    uploaded_by_membership_id: Mapped[int] = mapped_column(
+        ForeignKey("company_memberships.id"), nullable=False
+    )
+    lead_id: Mapped[int | None] = mapped_column(ForeignKey("leads.id"))
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id"))
+    job_id: Mapped[int | None] = mapped_column(ForeignKey("jobs.id"))
+    message_id: Mapped[int | None] = mapped_column(ForeignKey("messages.id"))
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    category: Mapped[str] = mapped_column(String(40), default="document", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
 
 
 class AIAgent(TimestampMixin, db.Model):
