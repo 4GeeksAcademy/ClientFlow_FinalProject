@@ -31,7 +31,7 @@ conversations and AI-assisted workflows in a single workspace.
    - Use consistent colours for service/status identification in the UI.
 
 5. **Omnichannel conversations**
-   - One inbox for web, email and WhatsApp conversations.
+   - One inbox for web, email, WhatsApp and Instagram conversations.
    - Store participants and messages independent of the channel provider.
    - Support human assignment and AI-to-human handoff.
 

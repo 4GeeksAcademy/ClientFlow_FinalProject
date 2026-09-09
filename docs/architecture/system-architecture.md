@@ -13,7 +13,7 @@ Flask API + JWT authentication
         +--> Vector search (document chunk embeddings)
         +--> Background jobs (ingestion and channel processing)
         +--> LLM provider
-        +--> Email / WhatsApp / web-channel providers
+        +--> Email / WhatsApp / Instagram / web-channel providers
 ```
 
 The Flask API is the only trusted entry point to business data. Every protected
@@ -93,7 +93,7 @@ LLM prompt = agent instruction + conversation context + RAG context
 External provider payloads are normalised into `conversations`,
 `conversation_participants` and `messages`. Provider-specific identifiers are
 kept in `external_id` fields. This lets the UI use one inbox while adapters deal
-with the differences between web chat, email and WhatsApp.
+with the differences between web chat, email, WhatsApp and Instagram.
 
 ## Security rules
 
