@@ -51,6 +51,33 @@ Enum channel_type {
   whatsapp
 }
 
+Enum subscription_status {
+  trialing
+  active
+  past_due
+  cancelled
+  expired
+}
+
+Enum billing_interval {
+  monthly
+  yearly
+}
+
+Table plans {
+  id bigint [pk, increment]
+  code varchar(60) [not null, unique]
+  name varchar(100) [not null]
+  description text
+  price_gbp decimal(10,2) [not null]
+  billing_interval billing_interval [not null, default: 'monthly']
+  trial_days int [not null, default: 3]
+  limits_json json
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
 Table companies {
   id bigint [pk, increment]
   name varchar(160) [not null]
@@ -64,6 +91,27 @@ Table companies {
   is_active boolean [not null, default: true]
   created_at timestamp [not null]
   updated_at timestamp [not null]
+}
+
+Table subscriptions {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  plan_id bigint [not null]
+  status subscription_status [not null, default: 'trialing']
+  trial_started_at timestamp
+  trial_ends_at timestamp
+  current_period_started_at timestamp
+  current_period_ends_at timestamp
+  cancelled_at timestamp
+  external_customer_id varchar(255)
+  external_subscription_id varchar(255)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, status)
+    external_subscription_id [unique]
+  }
 }
 
 Table users {
@@ -92,7 +140,7 @@ Table company_memberships {
   }
 }
 
-Table access_invitations {
+Table member_invitations {
   id bigint [pk, increment]
   company_id bigint [not null]
   email varchar(255)
@@ -344,8 +392,10 @@ Table integrations {
 
 Ref: companies.id < company_memberships.company_id
 Ref: users.id < company_memberships.user_id
-Ref: companies.id < access_invitations.company_id
-Ref: company_memberships.id < access_invitations.created_by_membership_id
+Ref: companies.id < subscriptions.company_id
+Ref: plans.id < subscriptions.plan_id
+Ref: companies.id < member_invitations.company_id
+Ref: company_memberships.id < member_invitations.created_by_membership_id
 Ref: users.id < password_reset_tokens.user_id
 Ref: companies.id < service_zones.company_id
 Ref: companies.id < service_types.company_id

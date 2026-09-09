@@ -24,12 +24,28 @@ visible to another.
 ## Main application flow
 
 ```text
-Invitation token -> Registration -> Login -> Company workspace
-                                             |
+Plans -> 3-day trial / paid plan -> Owner registration -> Company workspace
+                                                     |
 New enquiry -> Lead -> Qualified -> Customer -> Job -> Appointment -> Complete
                   |          |          |          |
                   +----------+----------+----------+--> Conversation history
 ```
+
+### Company onboarding and access
+
+There are two intentionally separate registration flows:
+
+1. **New company:** the owner selects a plan or a three-day free trial, creates
+   their user and company, and becomes the `owner` membership. The backend
+   creates the subscription and calculates `trial_ends_at`; no activation code
+   is requested on this public flow.
+2. **Existing company member:** an owner or administrator sends an invitation
+   to a specific email address. The recipient uses the single-use invitation
+   token to create or connect a user account to that company. They do not select
+   or purchase a plan.
+
+Workspace access is allowed only when the company is active and its subscription
+is in `trialing` or `active` state. The backend, not the frontend, enforces this.
 
 ### Lead conversion
 
@@ -82,7 +98,7 @@ with the differences between web chat, email and WhatsApp.
 ## Security rules
 
 - Hash passwords; never store or return plaintext passwords.
-- Store only hashes of invitation and password-reset tokens.
+- Store only hashes of member-invitation and password-reset tokens.
 - Apply expiry and single-use rules to tokens.
 - Validate `company_id` access on every protected resource.
 - Do not place provider credentials or API keys in source control.
