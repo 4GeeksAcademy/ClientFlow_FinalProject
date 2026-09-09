@@ -1,0 +1,436 @@
+// ClientFlow MVP relational model
+// Source of truth for SQLAlchemy models and migrations.
+
+Enum membership_role {
+  owner
+  admin
+  manager
+  agent
+  technician
+}
+
+Enum lead_status {
+  new
+  contacted
+  qualified
+  won
+  lost
+}
+
+Enum job_status {
+  draft
+  scheduled
+  in_progress
+  review
+  completed
+  cancelled
+}
+
+Enum appointment_status {
+  scheduled
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+Enum conversation_status {
+  open
+  waiting
+  resolved
+}
+
+Enum message_direction {
+  inbound
+  outbound
+}
+
+Enum channel_type {
+  web
+  email
+  whatsapp
+  instagram
+}
+
+Enum subscription_status {
+  trialing
+  active
+  past_due
+  cancelled
+  expired
+}
+
+Enum billing_interval {
+  monthly
+  yearly
+}
+
+Table plans {
+  id bigint [pk, increment]
+  code varchar(60) [not null, unique]
+  name varchar(100) [not null]
+  description text
+  price_gbp decimal(10,2) [not null]
+  billing_interval billing_interval [not null, default: 'monthly']
+  trial_days int [not null, default: 3]
+  limits_json json
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table companies {
+  id bigint [pk, increment]
+  name varchar(160) [not null]
+  slug varchar(160) [not null, unique]
+  email varchar(255)
+  phone varchar(40)
+  timezone varchar(60) [not null, default: 'Europe/London']
+  default_language varchar(5) [not null, default: 'en']
+  theme varchar(10) [not null, default: 'system']
+  primary_colour varchar(20)
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table subscriptions {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  plan_id bigint [not null]
+  status subscription_status [not null, default: 'trialing']
+  trial_started_at timestamp
+  trial_ends_at timestamp
+  current_period_started_at timestamp
+  current_period_ends_at timestamp
+  cancelled_at timestamp
+  external_customer_id varchar(255)
+  external_subscription_id varchar(255)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, status)
+    external_subscription_id [unique]
+  }
+}
+
+Table users {
+  id bigint [pk, increment]
+  email varchar(255) [not null, unique]
+  password_hash varchar(255) [not null]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  preferred_language varchar(5) [not null, default: 'en']
+  is_active boolean [not null, default: true]
+  last_login_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table company_memberships {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  user_id bigint [not null]
+  role membership_role [not null, default: 'agent']
+  colour varchar(20)
+  created_at timestamp [not null]
+
+  Indexes {
+    (company_id, user_id) [unique]
+  }
+}
+
+Table member_invitations {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  email varchar(255)
+  token_hash varchar(255) [not null, unique]
+  role membership_role [not null, default: 'agent']
+  expires_at timestamp [not null]
+  used_at timestamp
+  created_by_membership_id bigint [not null]
+  created_at timestamp [not null]
+}
+
+Table password_reset_tokens {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  token_hash varchar(255) [not null, unique]
+  expires_at timestamp [not null]
+  used_at timestamp
+  created_at timestamp [not null]
+}
+
+Table service_zones {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  name varchar(120) [not null]
+  postcode_pattern varchar(30)
+  is_active boolean [not null, default: true]
+}
+
+Table service_types {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  name varchar(120) [not null]
+  colour varchar(20) [not null]
+  default_duration_minutes int
+  is_active boolean [not null, default: true]
+}
+
+Table leads {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  assigned_membership_id bigint
+  service_type_id bigint
+  converted_client_id bigint
+  first_name varchar(100) [not null]
+  last_name varchar(100)
+  email varchar(255)
+  phone varchar(40)
+  source varchar(80)
+  status lead_status [not null, default: 'new']
+  notes text
+  converted_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, status)
+    (company_id, email)
+  }
+}
+
+Table clients {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  first_name varchar(100) [not null]
+  last_name varchar(100)
+  email varchar(255)
+  phone varchar(40)
+  notes text
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, email)
+  }
+}
+
+Table client_addresses {
+  id bigint [pk, increment]
+  client_id bigint [not null]
+  label varchar(60)
+  line_1 varchar(160) [not null]
+  line_2 varchar(160)
+  city varchar(100) [not null]
+  postcode varchar(20) [not null]
+  is_primary boolean [not null, default: false]
+}
+
+Table jobs {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  client_id bigint [not null]
+  service_type_id bigint
+  service_zone_id bigint
+  assigned_membership_id bigint
+  title varchar(180) [not null]
+  description text
+  status job_status [not null, default: 'draft']
+  priority varchar(20) [not null, default: 'normal']
+  quoted_amount decimal(12,2)
+  scheduled_start timestamp
+  scheduled_end timestamp
+  completed_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, status)
+    (client_id, created_at)
+  }
+}
+
+Table appointments {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  job_id bigint
+  client_id bigint [not null]
+  assigned_membership_id bigint [not null]
+  service_type_id bigint
+  title varchar(180) [not null]
+  status appointment_status [not null, default: 'scheduled']
+  starts_at timestamp [not null]
+  ends_at timestamp [not null]
+  address_text varchar(300)
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, starts_at)
+    (assigned_membership_id, starts_at)
+  }
+}
+
+Table conversations {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  lead_id bigint
+  client_id bigint
+  assigned_membership_id bigint
+  ai_agent_id bigint
+  channel channel_type [not null]
+  external_id varchar(255)
+  subject varchar(255)
+  status conversation_status [not null, default: 'open']
+  last_message_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, status)
+    (company_id, channel, external_id) [unique]
+  }
+}
+
+Table conversation_participants {
+  id bigint [pk, increment]
+  conversation_id bigint [not null]
+  membership_id bigint
+  lead_id bigint
+  client_id bigint
+  external_identifier varchar(255)
+  display_name varchar(160)
+  participant_type varchar(30) [not null]
+  joined_at timestamp [not null]
+}
+
+Table messages {
+  id bigint [pk, increment]
+  conversation_id bigint [not null]
+  sender_participant_id bigint
+  direction message_direction [not null]
+  external_id varchar(255)
+  content text [not null]
+  content_type varchar(30) [not null, default: 'text']
+  sent_by_ai boolean [not null, default: false]
+  delivery_status varchar(30)
+  created_at timestamp [not null]
+
+  Indexes {
+    (conversation_id, created_at)
+  }
+}
+
+Table ai_agents {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  name varchar(120) [not null]
+  purpose varchar(120) [not null]
+  model_name varchar(80) [not null]
+  main_instruction text [not null]
+  is_active boolean [not null, default: true]
+  requires_human_approval boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table knowledge_documents {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  title varchar(200) [not null]
+  source_type varchar(30) [not null]
+  storage_key varchar(500)
+  checksum varchar(128)
+  ingestion_status varchar(30) [not null, default: 'pending']
+  uploaded_by_membership_id bigint [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table knowledge_chunks {
+  id bigint [pk, increment]
+  document_id bigint [not null]
+  chunk_index int [not null]
+  content text [not null]
+  embedding_reference varchar(255)
+  token_count int
+  created_at timestamp [not null]
+
+  Indexes {
+    (document_id, chunk_index) [unique]
+  }
+}
+
+Table agent_documents {
+  agent_id bigint [not null]
+  document_id bigint [not null]
+
+  Indexes {
+    (agent_id, document_id) [pk]
+  }
+}
+
+Table integrations {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  provider varchar(60) [not null]
+  status varchar(30) [not null, default: 'disconnected']
+  external_account_id varchar(255)
+  credentials_reference varchar(500)
+  settings_json json
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (company_id, provider) [unique]
+  }
+}
+
+Ref: companies.id < company_memberships.company_id
+Ref: users.id < company_memberships.user_id
+Ref: companies.id < subscriptions.company_id
+Ref: plans.id < subscriptions.plan_id
+Ref: companies.id < member_invitations.company_id
+Ref: company_memberships.id < member_invitations.created_by_membership_id
+Ref: users.id < password_reset_tokens.user_id
+Ref: companies.id < service_zones.company_id
+Ref: companies.id < service_types.company_id
+Ref: companies.id < leads.company_id
+Ref: company_memberships.id < leads.assigned_membership_id
+Ref: service_types.id < leads.service_type_id
+Ref: clients.id - leads.converted_client_id
+Ref: companies.id < clients.company_id
+Ref: clients.id < client_addresses.client_id
+Ref: companies.id < jobs.company_id
+Ref: clients.id < jobs.client_id
+Ref: service_types.id < jobs.service_type_id
+Ref: service_zones.id < jobs.service_zone_id
+Ref: company_memberships.id < jobs.assigned_membership_id
+Ref: companies.id < appointments.company_id
+Ref: jobs.id < appointments.job_id
+Ref: clients.id < appointments.client_id
+Ref: company_memberships.id < appointments.assigned_membership_id
+Ref: service_types.id < appointments.service_type_id
+Ref: companies.id < conversations.company_id
+Ref: leads.id < conversations.lead_id
+Ref: clients.id < conversations.client_id
+Ref: company_memberships.id < conversations.assigned_membership_id
+Ref: ai_agents.id < conversations.ai_agent_id
+Ref: conversations.id < conversation_participants.conversation_id
+Ref: company_memberships.id < conversation_participants.membership_id
+Ref: leads.id < conversation_participants.lead_id
+Ref: clients.id < conversation_participants.client_id
+Ref: conversations.id < messages.conversation_id
+Ref: conversation_participants.id < messages.sender_participant_id
+Ref: companies.id < ai_agents.company_id
+Ref: companies.id < knowledge_documents.company_id
+Ref: company_memberships.id < knowledge_documents.uploaded_by_membership_id
+Ref: knowledge_documents.id < knowledge_chunks.document_id
+Ref: ai_agents.id < agent_documents.agent_id
+Ref: knowledge_documents.id < agent_documents.document_id
+Ref: companies.id < integrations.company_id
