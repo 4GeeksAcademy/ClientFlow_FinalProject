@@ -1,7 +1,5 @@
-// src/front/services/authService.js
-
-const USE_REAL_API = false; 
-const API_URL = import.meta.env.VITE_BACKEND_URL || "https://ideal-space-spoon-69xjqwgrx47pc5jgw-3001.app.github.dev/";
+const USE_REAL_API = false; // Cambia a true cuando quieras conectar con el backend real
+const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 export const authService = {
   login: async (email, password) => {
@@ -9,10 +7,11 @@ export const authService = {
       const response = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Error al iniciar sesión");
+      if (!response.ok)
+        throw new Error(data.message || "Error al iniciar sesión");
       return data;
     } else {
       return new Promise((resolve, reject) => {
@@ -22,7 +21,7 @@ export const authService = {
           } else {
             resolve({
               token: "mock_jwt_token_abc123",
-              user: { email: email, name: "Usuario de Prueba" }
+              user: { email: email, name: "Usuario de Prueba" },
             });
           }
         }, 1000);
@@ -35,7 +34,7 @@ export const authService = {
       const response = await fetch(`${API_URL}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Error al registrar");
@@ -43,8 +42,9 @@ export const authService = {
     } else {
       return new Promise((resolve, reject) => {
         setTimeout(() => {
-          if (!formData.code || formData.code.trim() === "") {
-            reject(new Error("El código de acceso es obligatorio (Simulado)"));
+          // Actualizado: ya no valida 'code', sino los campos reales del formulario
+          if (!formData.email || !formData.password || !formData.firstName) {
+            reject(new Error("Faltan campos obligatorios (Simulado)"));
           } else {
             resolve({ message: "Usuario registrado con éxito (Simulado)" });
           }
@@ -58,10 +58,11 @@ export const authService = {
       const response = await fetch(`${API_URL}/api/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Error al enviar correo");
+      if (!response.ok)
+        throw new Error(data.message || "Error al enviar correo");
       return data;
     } else {
       return new Promise((resolve) => {
@@ -77,10 +78,11 @@ export const authService = {
       const response = await fetch(`${API_URL}/api/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Error al actualizar contraseña");
+      if (!response.ok)
+        throw new Error(data.message || "Error al actualizar contraseña");
       return data;
     } else {
       return new Promise((resolve) => {
@@ -89,5 +91,5 @@ export const authService = {
         }, 1000);
       });
     }
-  }
+  },
 };
