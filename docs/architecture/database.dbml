@@ -49,6 +49,7 @@ Enum channel_type {
   web
   email
   whatsapp
+  instagram
 }
 
 Enum subscription_status {
