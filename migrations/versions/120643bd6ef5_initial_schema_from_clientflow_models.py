@@ -414,4 +414,13 @@ def downgrade():
     op.drop_table('users')
     op.drop_table('plans')
     op.drop_table('companies')
+
+    op.execute("DROP TYPE IF EXISTS messagedirection")
+    op.execute("DROP TYPE IF EXISTS conversationstatus")
+    op.execute("DROP TYPE IF EXISTS channeltype")
+    op.execute("DROP TYPE IF EXISTS appointmentstatus")
+    op.execute("DROP TYPE IF EXISTS leadstatus")
+    op.execute("DROP TYPE IF EXISTS jobstatus")
+    op.execute("DROP TYPE IF EXISTS subscriptionstatus")
+    op.execute("DROP TYPE IF EXISTS membershiprole")
     # ### end Alembic commands ###
