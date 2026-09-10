@@ -1,5 +1,6 @@
 import React from "react";
 import { Route, createBrowserRouter, createRoutesFromElements, Navigate } from "react-router-dom";
+import { PlanSelection } from "./pages/PlanSelection";
 import { Layout } from "./pages/Layout";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -24,6 +25,7 @@ export const router = createBrowserRouter(
             {/* Rutas Públicas */}
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
+            <Route path="/select-plan" element={<PlanSelection />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
 
