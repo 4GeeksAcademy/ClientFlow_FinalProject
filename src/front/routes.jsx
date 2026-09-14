@@ -6,6 +6,7 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
+import { Dashboard } from "./pages/Dashboard"; // <--- 1. Importa tu vista del Dashboard
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
@@ -29,16 +30,14 @@ export const router = createBrowserRouter(
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
 
-            {/* Ruta Protegida */}
-            <Route 
-                path="dashboard" 
+            {/* Ruta Protegida del Dashboard */}
+            <Route
+                path="dashboard"
                 element={
                     <ProtectedRoute>
-                        <div className="container mt-4">
-                            <h1>Panel de Control (Dashboard)</h1>
-                        </div>
+                        <Dashboard /> {/* <--- 2. Reemplaza el h1 por tu componente Dashboard */}
                     </ProtectedRoute>
-                } 
+                }
             />
         </Route>
     )
