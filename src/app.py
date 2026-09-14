@@ -10,6 +10,8 @@ from flask_swagger import swagger
 from api.utils import APIException, generate_sitemap
 from api.models import db
 from api.routes import api
+from api.auth import init_auth
+from flask_cors import CORS
 from api.admin import setup_admin
 from api.commands import setup_commands
 
@@ -34,13 +36,16 @@ MIGRATE = Migrate(app, db, compare_type=True)
 db.init_app(app)
 
 # add the admin
-setup_admin(app)
+if os.getenv("ENABLE_DEV_ADMIN") == "1" and ENV == "development":
+    setup_admin(app)
 
 # add the admin
 setup_commands(app)
 
 # Add all endpoints form the API with a "api" prefix
 app.register_blueprint(api, url_prefix='/api')
+init_auth(app)
+CORS(app, resources={r"/api/*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").split(",")}})
 
 # Handle/serialize errors like a JSON object
 
