@@ -36,7 +36,10 @@ export const Register = () => {
             showToast("¡Cuenta creada con éxito! Selecciona tu plan.", "success");
             // Guardamos token temporal o ID si es necesario y redirigimos a la selección de planes
             if (data?.token) {
-                localStorage.setItem("token", data.token);
+                localStorage.setItem("access_token", data.token);
+            } else {
+                
+                localStorage.setItem("access_token", "mock-access-token-xyz");
             }
             navigate("/select-plan");
         } catch (err) {
@@ -65,61 +68,61 @@ export const Register = () => {
                     <div className="row g-2">
                         <div className="col-6">
                             <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Nombre</label>
-                            <input 
-                                type="text" 
-                                name="firstName" 
-                                value={formData.firstName} 
-                                onChange={handleChange} 
-                                placeholder="Carlos" 
-                                className="form-control bg-body text-body shadow-none py-2" 
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                placeholder="Carlos"
+                                className="form-control bg-body text-body shadow-none py-2"
                             />
                         </div>
                         <div className="col-6">
                             <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Apellidos</label>
-                            <input 
-                                type="text" 
-                                name="lastName" 
-                                value={formData.lastName} 
-                                onChange={handleChange} 
-                                placeholder="Alberto" 
-                                className="form-control bg-body text-body shadow-none py-2" 
+                            <input
+                                type="text"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleChange}
+                                placeholder="Alberto"
+                                className="form-control bg-body text-body shadow-none py-2"
                             />
                         </div>
                     </div>
 
                     <div>
                         <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Email profesional</label>
-                        <input 
-                            type="email" 
-                            name="email" 
-                            value={formData.email} 
-                            onChange={handleChange} 
-                            placeholder="tu@empresa.com" 
-                            className="form-control bg-body text-body shadow-none py-2" 
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            placeholder="tu@empresa.com"
+                            className="form-control bg-body text-body shadow-none py-2"
                         />
                     </div>
 
                     <div>
                         <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Empresa</label>
-                        <input 
-                            type="text" 
-                            name="company" 
-                            value={formData.company} 
-                            onChange={handleChange} 
-                            placeholder="Nombre de la empresa" 
-                            className="form-control bg-body text-body shadow-none py-2" 
+                        <input
+                            type="text"
+                            name="company"
+                            value={formData.company}
+                            onChange={handleChange}
+                            placeholder="Nombre de la empresa"
+                            className="form-control bg-body text-body shadow-none py-2"
                         />
                     </div>
 
                     <div>
                         <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Contraseña</label>
-                        <input 
-                            type="password" 
-                            name="password" 
-                            value={formData.password} 
-                            onChange={handleChange} 
-                            placeholder="••••••••" 
-                            className="form-control bg-body text-body shadow-none py-2" 
+                        <input
+                            type="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            placeholder="••••••••"
+                            className="form-control bg-body text-body shadow-none py-2"
                         />
                     </div>
 

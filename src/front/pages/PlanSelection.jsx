@@ -34,12 +34,25 @@ export const PlanSelection = () => {
     }, []);
 
     const handleSelectPlan = async (e) => {
-        e.preventDefault();
-        if (!selectedPlanId) return;
-        setLoading(true);
+    e.preventDefault();
+    if (!selectedPlanId) return;
+    setLoading(true);
 
+    const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
+
+    if (USE_MOCK_API) {
+        // Simulación controlada para el PR #15
+        setTimeout(() => {
+            localStorage.setItem("selected_plan_id", selectedPlanId);
+            localStorage.setItem("subscription_status", "trialing");
+            setLoading(false);
+            showToast("¡Plan activado con éxito!", "success");
+            navigate("/dashboard");
+        }, 500);
+    } else {
+        // Modo real: si la API falla, muestra error y SE QUEDA en la página
         try {
-            const token = localStorage.getItem("token");
+            const token = localStorage.getItem("access_token");
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/plan`, {
                 method: "PUT",
                 headers: {
@@ -49,17 +62,17 @@ export const PlanSelection = () => {
                 body: JSON.stringify({ planId: selectedPlanId })
             });
 
-            if (!response.ok) throw new Error("Error al asignar el plan");
+            if (!response.ok) throw new Error("Error al asignar el plan en el servidor");
 
             setLoading(false);
             showToast("¡Plan activado con éxito!", "success");
             navigate("/dashboard");
         } catch (err) {
             setLoading(false);
-            showToast("Plan seleccionado (Modo local)", "success");
-            navigate("/dashboard");
+            showToast(err.message || "No se pudo actualizar el plan", "danger");
         }
-    };
+    }
+};
 
     return (
         <AuthLayout>
