@@ -583,3 +583,19 @@ Ref: knowledge_documents.id < knowledge_chunks.document_id
 Ref: ai_agents.id < agent_documents.agent_id
 Ref: knowledge_documents.id < agent_documents.document_id
 Ref: companies.id < integrations.company_id
+
+// AUTH-API-01 (#22): integrar migraciones posteriormente en #43.
+Table auth_sessions {
+  id varchar(64) [pk]
+  user_id integer [not null, ref: > users.id]
+  expires_at timestamptz [not null]
+  revoked_at timestamptz
+  indexes { user_id }
+}
+
+Table auth_rate_limits {
+  key varchar(64) [pk]
+  count integer [not null]
+  expires_at integer [not null]
+  indexes { expires_at }
+}
