@@ -1,0 +1,58 @@
+ClientFlow Dashboard Metrics and Interaction Rules
+This document establishes the shared reference and architectural contract that both frontend and backend implementations must follow for the ClientFlow dashboard.
+1. KPI Calculation Rules
+Sales this month: Total quoted value of completed jobs inside the selected period. Formula: Sales = SUM(job.budget_amount). Conditions: job.status = completed and job.completed_at is inside the selected period. Monetary values use Euros (€).
+New leads: Total count of newly created leads whose creation date falls within the selected period range.
+Active clients: Total count of clients holding an active status during the reference period.
+Jobs in progress: Total count of jobs currently holding an in-progress status within the timeframe.
+Appointments: Total count of scheduled appointments registered for the selected period.
+Previous-period comparisons: All primary KPIs include a percentage variance metric compared against the immediately preceding equivalent period.
+2. KPI Interaction & Drill-Down Rules
+KPI / Metric
+Interaction Destination / Action
+ 
+Sales this month
+Opens the sales summary and complete sales report module.
+New leads
+Opens the Leads module filtered by the active period.
+Active clients
+Opens the Clients module filtered by active status.
+Jobs in progress
+Opens the Jobs module filtered by in-progress status.
+Appointments
+Opens the Agenda module for the selected period.
+
+3. Chart Interaction Rules (Leads vs Clients)
+Supports year, month, day, and hour grouping scales.
+Scale changes must be triggered exclusively via the - and + control buttons.
+The mouse wheel must only scroll the page vertically (prevents involuntary chart zooming/scaling).
+Selecting chart data displays contextual tooltips/information and allows users to open the related filtered records.
+4. Sales Report Fields
+Client
+Job
+Amount (€)
+Completion date
+Status
+Assigned user
+5. Recent Activity Event Types
+client_created
+job_completed
+appointment_scheduled
+subscription_updated
+6. UI States (Loading, Error, Empty-State)
+Loading: Skeleton loaders placeholders matching the dimensions of incoming KPI cards and charts.
+Error: User-friendly alert banners with retry buttons when API requests fail.
+Empty-State: Informative placeholder illustrations or messages indicating zero data points found for the selected period/filter.
+7. API JSON Contracts
+// GET /api/dashboard/metrics?period=current_month
+{
+  "sales_this_month": { "value": 14500.00, "currency": "EUR", "change_percentage": 12.5 },
+  "new_leads": { "value": 42, "change_percentage": -4.2 },
+  "active_clients": { "value": 128, "change_percentage": 8.1 },
+  "jobs_in_progress": { "value": 15, "change_percentage": 0.0 },
+  "appointments": { "value": 24, "change_percentage": 15.3 }
+}
+
+
+8. Internationalization (i18n)
+All frontend implementations must fully support three official languages: English, Spanish, and Portuguese. No visible interface text should be hardcoded outside the translation resource system.
