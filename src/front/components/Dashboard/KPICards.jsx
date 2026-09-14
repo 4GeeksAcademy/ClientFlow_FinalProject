@@ -80,7 +80,7 @@ export const KPICards = ({ currentLang = "es", testState = "success" }) => {
         );
     }
 
-    const isEmpty = !kpiData || kpiData.sales.value === 0;
+    const isEmpty = testState === "empty";
 
     return (
         <>
@@ -227,11 +227,11 @@ export const KPICards = ({ currentLang = "es", testState = "success" }) => {
                                     </li>
                                     <li className="list-group-item d-flex justify-content-between px-0">
                                         <span>{t.completedJobs}</span>
-                                        <strong>{kpiData.jobs.value}</strong>
+                                        <strong>{kpiData.salesSummary.completedJobs}</strong>
                                     </li>
                                     <li className="list-group-item d-flex justify-content-between px-0">
                                         <span>{t.activeClients}</span>
-                                        <strong>{kpiData.clients.value}</strong>
+                                        <strong>{kpiData.salesSummary.associatedClients}</strong>
                                     </li>
                                     <li className="list-group-item d-flex justify-content-between px-0">
                                         <span>{t.avgPerJob}</span>
