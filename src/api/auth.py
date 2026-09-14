@@ -135,9 +135,16 @@ def init_auth(app):
             return True
         session = db.session.get(AuthSession, claims.get('sid', ''))
         user = db.session.get(User, int(identity))
-        return (session is None or session.revoked_at is not None or user is None
-                or not user.is_active or session.user_id != user.id
-                or session.expires_at.replace(tzinfo=timezone.utc) <= utc_now())
+        if (session is None or session.revoked_at is not None or user is None
+                or not user.is_active or session.user_id != user.id):
+            return True
+        expires_at = session.expires_at
+        # SQLite returns naive UTC; PostgreSQL may return another aware offset.
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        else:
+            expires_at = expires_at.astimezone(timezone.utc)
+        return expires_at <= utc_now()
 
     @jwt.unauthorized_loader
     def missing(reason):

@@ -1,7 +1,7 @@
 import os
 import sys
 import unittest
-from datetime import timedelta
+from datetime import timedelta, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -169,6 +169,23 @@ class AuthenticationTest(unittest.TestCase):
         response = self.login()
         self.assertEqual(response.status_code, 429)
         self.assertGreater(int(response.headers['Retry-After']), 0)
+
+    def test_session_expiry_preserves_timezone_instant(self):
+        headers = self.headers()
+        session = db.session.scalar(select(AuthSession))
+        # Retain aware values in the identity map: SQLite strips offsets on read.
+        # These are the values PostgreSQL can return in a non-UTC session.
+        for offset in (-5, 0, 5.5):
+            for minutes, expected in ((29, 200), (-1, 401)):
+                with self.subTest(offset=offset, minutes=minutes):
+                    session.expires_at = (utc_now() + timedelta(minutes=minutes)).astimezone(
+                        timezone(timedelta(hours=offset)))
+                    response = self.client.get('/api/me', headers=headers)
+                    self.assertEqual(response.status_code, expected)
+        for minutes, expected in ((29, 200), (-1, 401)):
+            with self.subTest(naive_utc=True, minutes=minutes):
+                session.expires_at = (utc_now() + timedelta(minutes=minutes)).replace(tzinfo=None)
+                self.assertEqual(self.client.get('/api/me', headers=headers).status_code, expected)
 
     def test_logout_only_revokes_current_session(self):
         first, second = self.headers(), self.headers()

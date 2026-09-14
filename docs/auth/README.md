@@ -92,4 +92,4 @@ npm run build
 
 Los tests usan por defecto SQLite en memoria y crean/eliminan las tablas. Para repetir sobre PostgreSQL, definir `AUTH_TEST_DATABASE_URL` apuntando EXCLUSIVAMENTE a una base desechable: la suite elimina sus tablas al terminar. No prueba la cadena de migraciones ni acredita su integración.
 
-Resultado desta entrega: 22 testes passaram em Python 3.13.15 com as versões de dependências de `Pipfile.lock`; build Vite passou; a aplicação Flask carregou e registrou as seis rotas de autenticação. A entrega local de recuperação em arquivo foi testada. Não foram executados testes contra PostgreSQL, envio SMTP real nem uma inspeção visual do navegador.
+Resultado desta entrega: 23 testes passaram em Python 3.13.15 com as versões de dependências de `Pipfile.lock`; build Vite passou; a aplicação Flask carregou e registrou as seis rotas de autenticação. A entrega local de recuperação em arquivo foi testada. Não foram executados testes contra PostgreSQL, envio SMTP real nem uma inspeção visual do navegador.
