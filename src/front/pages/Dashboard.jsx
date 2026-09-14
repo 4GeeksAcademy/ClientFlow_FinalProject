@@ -1,5 +1,6 @@
 import React from "react";
 import { KPICards } from "../components/Dashboard/KPICards";
+import { InteractiveCharts } from "../components/Dashboard/InteractiveCharts";
 
 export const Dashboard = () => {
     return (
@@ -28,8 +29,11 @@ export const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Tarjetas KPI compactas dentro del container */}
+                {/* 1. Tarjetas KPI del Ticket #13 */}
                 <KPICards />
+
+                {/* 2. Gráficas interactivas del Ticket #14 */}
+                <InteractiveCharts />
                 
             </div>
         </div>
