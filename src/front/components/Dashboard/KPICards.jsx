@@ -1,33 +1,69 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { kpiTranslations, mockKpiStates } from "../../../data/kpiMockData";
 
-export const KPICards = () => {
+export const KPICards = ({ currentLang = "es", testState = "success" }) => {
     const [kpiData, setKpiData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [showSalesModal, setShowSalesModal] = useState(false);
+    
+    const modalCloseButtonRef = useRef(null);
+    const salesCardRef = useRef(null);
     const navigate = useNavigate();
+    const t = kpiTranslations[currentLang] || kpiTranslations.es;
 
+    // Simulación de consumo de API (Contrato #12 pendiente de integración real)
     useEffect(() => {
-        setTimeout(() => {
-            setKpiData({
-                sales: { value: 18420, change: "+8.4%", text: "este mes" },
-                leads: { value: 48, change: "+12.5%", text: "este mes" },
-                clients: { value: 126, change: "+6.2%", text: "este mes" },
-                jobs: { value: 18, change: "+3.1%", text: "este mes" },
-                appointments: { value: 24, change: "+9.8%", text: "este mes" }
-            });
+        setLoading(true);
+        setError(false);
+        const timer = setTimeout(() => {
+            if (testState === "error") {
+                setError(true);
+                setKpiData(null);
+            } else if (testState === "empty") {
+                setKpiData(mockKpiStates.empty);
+            } else {
+                setKpiData(mockKpiStates.success);
+            }
             setLoading(false);
-        }, 300);
-    }, []);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [testState]);
+
+    // Gestión de foco para accesibilidad en el Modal
+    useEffect(() => {
+        if (showSalesModal && modalCloseButtonRef.current) {
+            modalCloseButtonRef.current.focus();
+        } else if (!showSalesModal && salesCardRef.current) {
+            salesCardRef.current.focus();
+        }
+    }, [showSalesModal]);
+
+    // Manejador de teclado para accesibilidad en modales (Escape)
+    const handleKeyDownModal = (e) => {
+        if (e.key === "Escape") {
+            setShowSalesModal(false);
+        }
+    };
+
+    // Navegación con filtros documentados (dependencias de módulos futuros)
+    const handleNavigation = (destination) => {
+        // Dependencia: Los módulos de destino están pendientes de implementación en tickets futuros.
+        // Se documenta aquí la ruta con filtros para evitar errores 404.
+        navigate(destination);
+    };
 
     if (loading) {
         return (
-            <div className="row g-3 mb-4">
+            <div className="row g-3 mb-4 row-cols-1 row-cols-md-5">
                 {[1, 2, 3, 4, 5].map((i) => (
                     <div className="col" key={i}>
-                        <div className="card border-0 shadow-sm p-3 bg-white rounded-3 placeholder-glow" style={{ minHeight: "100px" }}>
-                            <span className="placeholder col-6 mb-2"></span>
-                            <span className="placeholder col-4 fs-4"></span>
+                        <div className="card border-0 shadow-sm p-3 bg-white rounded-3 placeholder-glow" style={{ minHeight: "110px" }}>
+                            <span className="placeholder col-7 mb-2"></span>
+                            <span className="placeholder col-5 fs-4 mb-2"></span>
+                            <span className="placeholder col-4"></span>
                         </div>
                     </div>
                 ))}
@@ -35,19 +71,31 @@ export const KPICards = () => {
         );
     }
 
+    if (error) {
+        return (
+            <div className="alert alert-danger d-flex align-items-center justify-content-between p-3 rounded-3 shadow-sm mb-4" role="alert">
+                <div><i className="fa-solid fa-triangle-exclamation me-2"></i> {t.errorMessage}</div>
+                <button className="btn btn-sm btn-outline-danger" onClick={() => window.location.reload()}>Reintentar</button>
+            </div>
+        );
+    }
+
+    const isEmpty = !kpiData || kpiData.sales.value === 0;
+
     return (
         <>
             <div className="row g-3 mb-4 row-cols-1 row-cols-md-5">
                 {/* 1. Ventas */}
                 <div className="col">
-                    <div 
-                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 cursor-pointer position-relative"
+                    <button
+                        ref={salesCardRef}
+                        type="button"
+                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 text-start w-100 text-decoration-none transition-hover position-relative"
                         onClick={() => setShowSalesModal(true)}
-                        role="button"
-                        tabIndex={0}
+                        style={{ cursor: "pointer" }}
                     >
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="text-secondary small">Ventas este mes</span>
+                        <div className="d-flex justify-content-between align-items-center mb-1 w-100">
+                            <span className="text-secondary small">{t.sales}</span>
                             <span className="badge bg-light text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style={{ width: "28px", height: "28px" }}>
                                 <i className="fa-solid fa-euro-sign fs-7"></i>
                             </span>
@@ -55,21 +103,20 @@ export const KPICards = () => {
                         <h3 className="fw-bold mb-2 text-dark">€{kpiData.sales.value.toLocaleString()}</h3>
                         <div className="d-flex align-items-center text-success small">
                             <span className="fw-semibold me-1">{kpiData.sales.change}</span>
-                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{kpiData.sales.text}</span>
+                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{t[kpiData.sales.textKey]}</span>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
-                {/* 2. Leads */}
+                {/* 2. Leads (Filtro por período: /leads?filter=period) */}
                 <div className="col">
-                    <div 
-                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 cursor-pointer position-relative"
-                        onClick={() => navigate("/leads")}
-                        role="button"
-                        tabIndex={0}
+                    <button
+                        type="button"
+                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 text-start w-100 text-decoration-none transition-hover position-relative"
+                        onClick={() => handleNavigation("/leads?filter=period")}
                     >
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="text-secondary small">Nuevos leads</span>
+                        <div className="d-flex justify-content-between align-items-center mb-1 w-100">
+                            <span className="text-secondary small">{t.leads}</span>
                             <span className="badge bg-light text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style={{ width: "28px", height: "28px" }}>
                                 <i className="fa-solid fa-user-plus fs-7"></i>
                             </span>
@@ -77,21 +124,20 @@ export const KPICards = () => {
                         <h3 className="fw-bold mb-2 text-dark">{kpiData.leads.value}</h3>
                         <div className="d-flex align-items-center text-success small">
                             <span className="fw-semibold me-1">{kpiData.leads.change}</span>
-                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{kpiData.leads.text}</span>
+                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{t[kpiData.leads.textKey]}</span>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
-                {/* 3. Clientes activos */}
+                {/* 3. Clientes activos (Filtro por estado activo: /clients?status=active) */}
                 <div className="col">
-                    <div 
-                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 cursor-pointer position-relative"
-                        onClick={() => navigate("/clients")}
-                        role="button"
-                        tabIndex={0}
+                    <button
+                        type="button"
+                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 text-start w-100 text-decoration-none transition-hover position-relative"
+                        onClick={() => handleNavigation("/clients?status=active")}
                     >
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="text-secondary small">Clientes activos</span>
+                        <div className="d-flex justify-content-between align-items-center mb-1 w-100">
+                            <span className="text-secondary small">{t.clients}</span>
                             <span className="badge bg-light text-success rounded-circle p-2 d-flex align-items-center justify-content-center" style={{ width: "28px", height: "28px" }}>
                                 <i className="fa-solid fa-users fs-7"></i>
                             </span>
@@ -99,21 +145,20 @@ export const KPICards = () => {
                         <h3 className="fw-bold mb-2 text-dark">{kpiData.clients.value}</h3>
                         <div className="d-flex align-items-center text-success small">
                             <span className="fw-semibold me-1">{kpiData.clients.change}</span>
-                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{kpiData.clients.text}</span>
+                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{t[kpiData.clients.textKey]}</span>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
-                {/* 4. Trabajos en curso */}
+                {/* 4. Trabajos en curso (Filtro por estado in_progress: /jobs?status=in_progress) */}
                 <div className="col">
-                    <div 
-                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 cursor-pointer position-relative"
-                        onClick={() => navigate("/jobs")}
-                        role="button"
-                        tabIndex={0}
+                    <button
+                        type="button"
+                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 text-start w-100 text-decoration-none transition-hover position-relative"
+                        onClick={() => handleNavigation("/jobs?status=in_progress")}
                     >
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="text-secondary small">Trabajos en curso</span>
+                        <div className="d-flex justify-content-between align-items-center mb-1 w-100">
+                            <span className="text-secondary small">{t.jobs}</span>
                             <span className="badge bg-light text-warning rounded-circle p-2 d-flex align-items-center justify-content-center" style={{ width: "28px", height: "28px" }}>
                                 <i className="fa-solid fa-briefcase fs-7"></i>
                             </span>
@@ -121,21 +166,20 @@ export const KPICards = () => {
                         <h3 className="fw-bold mb-2 text-dark">{kpiData.jobs.value}</h3>
                         <div className="d-flex align-items-center text-success small">
                             <span className="fw-semibold me-1">{kpiData.jobs.change}</span>
-                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{kpiData.jobs.text}</span>
+                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{t[kpiData.jobs.textKey]}</span>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
-                {/* 5. Citas */}
+                {/* 5. Citas (Filtro por período: /agenda?filter=period) */}
                 <div className="col">
-                    <div 
-                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 cursor-pointer position-relative"
-                        onClick={() => navigate("/agenda")}
-                        role="button"
-                        tabIndex={0}
+                    <button
+                        type="button"
+                        className="card border-0 shadow-sm p-3 bg-white rounded-3 h-100 text-start w-100 text-decoration-none transition-hover position-relative"
+                        onClick={() => handleNavigation("/agenda?filter=period")}
                     >
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="text-secondary small">Citas</span>
+                        <div className="d-flex justify-content-between align-items-center mb-1 w-100">
+                            <span className="text-secondary small">{t.appointments}</span>
                             <span className="badge bg-light text-info rounded-circle p-2 d-flex align-items-center justify-content-center" style={{ width: "28px", height: "28px" }}>
                                 <i className="fa-solid fa-calendar-days fs-7"></i>
                             </span>
@@ -143,41 +187,76 @@ export const KPICards = () => {
                         <h3 className="fw-bold mb-2 text-dark">{kpiData.appointments.value}</h3>
                         <div className="d-flex align-items-center text-success small">
                             <span className="fw-semibold me-1">{kpiData.appointments.change}</span>
-                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{kpiData.appointments.text}</span>
+                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>{t[kpiData.appointments.textKey]}</span>
                         </div>
-                    </div>
+                    </button>
                 </div>
             </div>
 
-            {/* Modal de resumen para ventas */}
+            {isEmpty && (
+                <div className="text-center text-muted py-3 small bg-white rounded-3 mb-4 shadow-sm">
+                    {t.emptyData}
+                </div>
+            )}
+
+            {/* Modal de ventas accesible con gestión de teclado */}
             {showSalesModal && (
-                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.4)" }}>
+                <div 
+                    className="modal show d-block" 
+                    tabIndex="-1" 
+                    style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+                    onKeyDown={handleKeyDownModal}
+                >
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow">
                             <div className="modal-header border-0">
-                                <h5 className="modal-title fw-bold">Resumen de Ventas</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowSalesModal(false)}></button>
+                                <h5 className="modal-title fw-bold">{t.salesModalTitle}</h5>
+                                <button 
+                                    ref={modalCloseButtonRef}
+                                    type="button" 
+                                    className="btn-close" 
+                                    onClick={() => setShowSalesModal(false)}
+                                    aria-label="Close"
+                                ></button>
                             </div>
                             <div className="modal-body">
-                                <p className="text-muted small">Detalle acumulado del periodo actual:</p>
                                 <ul className="list-group list-group-flush">
                                     <li className="list-group-item d-flex justify-content-between px-0">
-                                        <span>Ventas totales:</span>
-                                        <strong>€18,420.00</strong>
+                                        <span>{t.totalSales}</span>
+                                        <strong>€{kpiData.sales.value.toLocaleString()}</strong>
                                     </li>
                                     <li className="list-group-item d-flex justify-content-between px-0">
-                                        <span>Trabajos completados:</span>
-                                        <strong>18</strong>
+                                        <span>{t.completedJobs}</span>
+                                        <strong>{kpiData.jobs.value}</strong>
                                     </li>
                                     <li className="list-group-item d-flex justify-content-between px-0">
-                                        <span>Clientes asociados:</span>
-                                        <strong>126</strong>
+                                        <span>{t.activeClients}</span>
+                                        <strong>{kpiData.clients.value}</strong>
+                                    </li>
+                                    <li className="list-group-item d-flex justify-content-between px-0">
+                                        <span>{t.avgPerJob}</span>
+                                        <strong>€{kpiData.sales.avgJob ? kpiData.sales.avgJob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</strong>
                                     </li>
                                 </ul>
                             </div>
                             <div className="modal-footer border-0">
-                                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setShowSalesModal(false)}>Cerrar</button>
-                                <button type="button" className="btn btn-primary btn-sm" onClick={() => { setShowSalesModal(false); navigate("/jobs"); }}>Ver reporte completo</button>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-outline-secondary btn-sm" 
+                                    onClick={() => setShowSalesModal(false)}
+                                >
+                                    {t.close}
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-primary btn-sm" 
+                                    onClick={() => { 
+                                        setShowSalesModal(false); 
+                                        navigate("/reports/sales"); // Destino acordado de informe independiente
+                                    }}
+                                >
+                                    {t.viewReport}
+                                </button>
                             </div>
                         </div>
                     </div>
