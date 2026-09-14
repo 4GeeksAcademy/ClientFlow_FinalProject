@@ -9,7 +9,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     if (!token) {
         return <Navigate to="/login" replace />;
     }
@@ -25,7 +25,7 @@ export const router = createBrowserRouter(
             {/* Rutas Públicas */}
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
-            <Route path="/select-plan" element={<PlanSelection />} />
+            <Route path="select-plan" element={<PlanSelection />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
 

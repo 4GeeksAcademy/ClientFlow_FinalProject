@@ -12,26 +12,38 @@ export const Login = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!email || !password) {
-            setError("Por favor completa todos los campos.");
-            return;
-        }
-        setError("");
-        setLoading(true);
+    const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
 
-        try {
-            const data = await authService.login(email, password);
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    if (USE_MOCK_API) {
+        // Simulación controlada para el PR #15
+        setTimeout(() => {
+            if (email === "error@clientflow.com") {
+                setLoading(false);
+                setError("Credenciales inválidas (Simulado)");
+                return;
+            }
+            localStorage.setItem("access_token", "mock-access-token-xyz");
             setLoading(false);
-            localStorage.setItem("token", data.token || "mock_token");
-            showToast("¡Inicio de sesión exitoso!", "success");
+            navigate("/dashboard");
+        }, 600);
+    } else {
+        // Petición real al backend (Ticket #22)
+        try {
+            const data = await authService.login({ email, password });
+            localStorage.setItem("access_token", data.token);
+            setLoading(false);
             navigate("/dashboard");
         } catch (err) {
             setLoading(false);
-            setError(err.message || "Credenciales inválidas.");
+            setError(err.message || "Error al iniciar sesión");
         }
-    };
+    }
+};
 
     return (
         <AuthLayout>

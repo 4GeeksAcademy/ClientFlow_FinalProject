@@ -3,39 +3,32 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-    const [language, setLanguage] = useState(localStorage.getItem("lang") || "ES");
-    const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-    const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+    // Estado del tema: 'light', 'dark' o 'system'
+    const [theme, setTheme] = useState(() => {
+        return localStorage.getItem("theme") || "system";
+    });
+
+    // Función para obtener la preferencia nativa del sistema operativo
+    const getSystemTheme = () => 
+        window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
     useEffect(() => {
-        localStorage.setItem("lang", language);
-    }, [language]);
+        const root = document.documentElement;
+        const currentTheme = theme === "system" ? getSystemTheme() : theme;
 
-    useEffect(() => {
+        // Aplicar el atributo data-bs-theme para Bootstrap o clases nativas
+        root.setAttribute("data-bs-theme", currentTheme);
         localStorage.setItem("theme", theme);
-        // Esto cambia dinámicamente el tema de Bootstrap en todo el documento
-        document.documentElement.setAttribute("data-bs-theme", theme);
     }, [theme]);
 
+    // Sistema de notificaciones simple (Toast) si lo requiere tu proyecto
     const showToast = (message, type = "success") => {
-        setToast({ show: true, message, type });
-        setTimeout(() => setToast({ show: false, message: "", type: "success" }), 4000);
+        console.log(`[Toast ${type}]: ${message}`);
     };
 
     return (
-        <AppContext.Provider value={{ language, setLanguage, theme, setTheme, showToast, toast }}>
+        <AppContext.Provider value={{ theme, setTheme, showToast }}>
             {children}
-            {toast.show && (
-                <div className="position-fixed bottom-0 end-0 p-3" style={{ zIndex: 1100 }}>
-                    <div className={`toast show align-items-center text-white bg-${toast.type === "success" ? "success" : "danger"} border-0`} role="alert">
-                        <div className="d-flex">
-                            <div className="toast-body">
-                                {toast.message}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </AppContext.Provider>
     );
 };
