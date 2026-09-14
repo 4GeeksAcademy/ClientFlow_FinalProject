@@ -611,3 +611,19 @@ class Integration(TimestampMixin, db.Model):
     external_account_id: Mapped[str | None] = mapped_column(String(255))
     credentials_reference: Mapped[str | None] = mapped_column(String(500))
     settings: Mapped[dict | None] = mapped_column(JSON)
+
+
+class AuthSession(db.Model):
+    __tablename__ = 'auth_sessions'
+    id = db.Column(db.String(64), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    revoked_at = db.Column(db.DateTime(timezone=True))
+
+
+class AuthRateLimit(db.Model):
+    """Shared fixed-window counters; keys contain hashes, never raw emails/IPs."""
+    __tablename__ = 'auth_rate_limits'
+    key = db.Column(db.String(64), primary_key=True)
+    count = db.Column(db.Integer, nullable=False)
+    expires_at = db.Column(db.Integer, nullable=False, index=True)
