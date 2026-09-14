@@ -75,12 +75,12 @@ export const authService = {
     }
   },
 
-  resetPassword: async ({ token, password }) => {
+  resetPassword: async ({ token, password, password_confirmation }) => {
     if (!USE_MOCK_API) {
       const response = await fetch(`${API_URL}/api/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, password, password_confirmation }),
       });
       const data = await response.json();
       if (!response.ok)

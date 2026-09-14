@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { authService } from "../services/authService";
 import { useApp } from "../context/AppContext";
@@ -11,11 +11,16 @@ export const Login = () => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
 
 const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email.trim() || !password) {
+        setError("Introduce email y contraseña.");
+        return;
+    }
     setLoading(true);
     setError("");
 
@@ -34,7 +39,7 @@ const handleSubmit = async (e) => {
     } else {
         // Petición real al backend (Ticket #22)
         try {
-            const data = await authService.login({ email, password });
+            const data = await authService.login(email, password);
             localStorage.setItem("access_token", data.token);
             setLoading(false);
             navigate("/dashboard");
@@ -55,6 +60,7 @@ const handleSubmit = async (e) => {
                 <h2 className="fw-bold text-body fs-3 mb-1">Iniciar Sesión</h2>
                 <p className="text-muted small mb-4">Ingresa a tu cuenta para continuar</p>
 
+                {location.state?.passwordReset && <div className="alert alert-success" role="status">Contraseña actualizada. Ya puedes iniciar sesión.</div>}
                 {error && (
                     <div className="alert alert-danger py-2 small mb-3">
                         {error}
