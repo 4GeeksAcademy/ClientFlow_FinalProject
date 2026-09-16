@@ -272,6 +272,8 @@ class Lead(TimestampMixin, db.Model):
     )
     notes: Mapped[str | None] = mapped_column(Text)
     converted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_given: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Client(TimestampMixin, db.Model):
