@@ -8,6 +8,8 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Dashboard } from "./pages/Dashboard";
 import { Leads } from "./pages/Leads";
+import { Jobs } from "./pages/Jobs";
+import { JobDetail } from "./pages/JobDetail";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
@@ -46,6 +48,26 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <Leads />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Trabajos (Listado) */}
+            <Route
+                path="jobs"
+                element={
+                    <ProtectedRoute>
+                        <Jobs />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida del Espacio de Trabajo Detallado */}
+            <Route
+                path="jobs/:id"
+                element={
+                    <ProtectedRoute>
+                        <JobDetail />
                     </ProtectedRoute>
                 }
             />
