@@ -6,7 +6,8 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
-import { Dashboard } from "./pages/Dashboard"; // <--- 1. Importa tu vista del Dashboard
+import { Dashboard } from "./pages/Dashboard";
+import { Leads } from "./pages/Leads";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +37,15 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <Dashboard /> {/* <--- 2. Reemplaza el h1 por tu componente Dashboard */}
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="leads"
+                element={
+                    <ProtectedRoute>
+                        <Leads />
                     </ProtectedRoute>
                 }
             />
