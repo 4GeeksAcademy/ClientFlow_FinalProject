@@ -10,6 +10,8 @@ import { Dashboard } from "./pages/Dashboard";
 import { Leads } from "./pages/Leads";
 import { Jobs } from "./pages/Jobs";
 import { JobDetail } from "./pages/JobDetail";
+import { Clients } from "./pages/Clients";
+import { ClientDetail } from "./pages/ClientDetail";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
@@ -68,6 +70,26 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <JobDetail />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Clientes (Listado) */}
+            <Route
+                path="clients"
+                element={
+                    <ProtectedRoute>
+                        <Clients />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Detalle de Cliente */}
+            <Route
+                path="clients/:id"
+                element={
+                    <ProtectedRoute>
+                        <ClientDetail />
                     </ProtectedRoute>
                 }
             />
