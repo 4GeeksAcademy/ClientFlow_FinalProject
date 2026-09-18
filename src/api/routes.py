@@ -12,6 +12,7 @@ from api.models import (
     db,
     Activity,
     CompanyMembership,
+    ClientAddress,
     Client,
     Lead,
     LeadStatus,
@@ -55,6 +56,22 @@ def _lead_to_dict(lead):
     }
 
 
+def _client_to_dict(client):
+    """Serialize a Client model into the public API representation."""
+    return {
+        "id": client.id,
+        "company_id": client.company_id,
+        "first_name": client.first_name,
+        "last_name": client.last_name,
+        "email": client.email,
+        "phone": client.phone,
+        "notes": client.notes,
+        "is_active": client.is_active,
+        "created_at": client.created_at.isoformat() if client.created_at else None,
+        "updated_at": client.updated_at.isoformat() if client.updated_at else None,
+    }
+
+
 def _get_json_payload():
     """Return the request JSON payload or an empty dictionary."""
     payload = request.get_json(silent=True)
@@ -66,6 +83,616 @@ def _get_json_payload():
         return None
 
     return payload
+
+
+@api.route("/clients", methods=["GET"])
+@tenant_required
+def list_clients():
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    search = request.args.get("search", "").strip()
+
+    if page < 1:
+        return jsonify({
+            "error": "La página debe ser mayor que 0."
+        }), 400
+
+    if per_page < 1 or per_page > 100:
+        return jsonify({
+            "error": "per_page debe estar entre 1 y 100."
+        }), 400
+
+    query = select(Client).where(
+        Client.company_id == g.company_id
+    )
+
+    count_query = select(func.count(Client.id)).where(
+        Client.company_id == g.company_id
+    )
+
+    if search:
+        pattern = f"%{search}%"
+
+        search_filter = or_(
+            Client.first_name.ilike(pattern),
+            Client.last_name.ilike(pattern),
+            Client.email.ilike(pattern),
+            Client.phone.ilike(pattern),
+        )
+
+        query = query.where(search_filter)
+        count_query = count_query.where(search_filter)
+
+    total = db.session.scalar(count_query) or 0
+
+    clients = db.session.scalars(
+        query
+        .order_by(Client.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    ).all()
+
+    return jsonify({
+        "items": [_client_to_dict(client) for client in clients],
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "pages": (total + per_page - 1) // per_page,
+    }), 200
+
+
+@api.route("/clients/<int:client_id>", methods=["GET"])
+@tenant_required
+def get_client(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({
+            "error": "Cliente no encontrado."
+        }), 404
+
+    return jsonify(_client_to_dict(client)), 200
+
+
+@api.route("/clients", methods=["POST"])
+@tenant_required
+def create_client():
+    data = _get_json_payload()
+
+    if data is None:
+        return jsonify({
+            "error": "El cuerpo debe ser un objeto JSON."
+        }), 400
+
+    allowed_fields = {
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "notes",
+        "is_active",
+    }
+
+    unknown_fields = set(data) - allowed_fields
+
+    if unknown_fields:
+        return jsonify({
+            "error": (
+                f"Campos no permitidos: "
+                f"{', '.join(sorted(unknown_fields))}."
+            )
+        }), 400
+
+    first_name = data.get("first_name")
+
+    if not isinstance(first_name, str) or not first_name.strip():
+        return jsonify({
+            "error": "El nombre es obligatorio."
+        }), 400
+
+    if len(first_name.strip()) > 100:
+        return jsonify({
+            "error": "El nombre no puede superar los 100 caracteres."
+        }), 400
+
+    string_limits = {
+        "last_name": 100,
+        "email": 255,
+        "phone": 40,
+    }
+
+    for field, max_length in string_limits.items():
+        if field not in data or data[field] is None:
+            continue
+
+        if not isinstance(data[field], str):
+            return jsonify({
+                "error": f"El campo '{field}' debe ser texto."
+            }), 400
+
+        if len(data[field].strip()) > max_length:
+            return jsonify({
+                "error": (
+                    f"El campo '{field}' no puede superar "
+                    f"los {max_length} caracteres."
+                )
+            }), 400
+
+    if "notes" in data and data["notes"] is not None:
+        if not isinstance(data["notes"], str):
+            return jsonify({
+                "error": "El campo 'notes' debe ser texto."
+            }), 400
+
+    if "is_active" in data and not isinstance(data["is_active"], bool):
+        return jsonify({
+            "error": "El campo 'is_active' debe ser booleano."
+        }), 400
+
+    client = Client(
+        company_id=g.company_id,
+        first_name=first_name.strip(),
+        last_name=(
+            data["last_name"].strip()
+            if data.get("last_name") is not None
+            else None
+        ),
+        email=data.get("email"),
+        phone=data.get("phone"),
+        notes=data.get("notes"),
+        is_active=data.get("is_active", True),
+    )
+
+    db.session.add(client)
+    db.session.commit()
+
+    return jsonify(_client_to_dict(client)), 201
+
+
+@api.route("/clients/<int:client_id>", methods=["PATCH"])
+@tenant_required
+def update_client(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({
+            "error": "Cliente no encontrado."
+        }), 404
+
+    data = _get_json_payload()
+
+    if data is None:
+        return jsonify({
+            "error": "El cuerpo debe ser un objeto JSON."
+        }), 400
+
+    allowed_fields = {
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "notes",
+        "is_active",
+    }
+
+    unknown_fields = set(data) - allowed_fields
+
+    if unknown_fields:
+        return jsonify({
+            "error": (
+                f"Campos no permitidos: "
+                f"{', '.join(sorted(unknown_fields))}."
+            )
+        }), 400
+
+    if "first_name" in data:
+        if not isinstance(data["first_name"], str) or not data["first_name"].strip():
+            return jsonify({
+                "error": "El nombre no puede estar vacío."
+            }), 400
+
+        if len(data["first_name"].strip()) > 100:
+            return jsonify({
+                "error": "El nombre no puede superar los 100 caracteres."
+            }), 400
+
+        client.first_name = data["first_name"].strip()
+
+    string_limits = {
+        "last_name": 100,
+        "email": 255,
+        "phone": 40,
+    }
+
+    for field, max_length in string_limits.items():
+        if field not in data:
+            continue
+
+        value = data[field]
+
+        if value is not None and not isinstance(value, str):
+            return jsonify({
+                "error": f"El campo '{field}' debe ser texto."
+            }), 400
+
+        if value is not None and len(value.strip()) > max_length:
+            return jsonify({
+                "error": (
+                    f"El campo '{field}' no puede superar "
+                    f"los {max_length} caracteres."
+                )
+            }), 400
+
+        setattr(
+            client,
+            field,
+            value.strip() if value is not None else None,
+        )
+
+    if "notes" in data:
+        if data["notes"] is not None and not isinstance(data["notes"], str):
+            return jsonify({
+                "error": "El campo 'notes' debe ser texto."
+            }), 400
+
+        client.notes = data["notes"]
+
+    if "is_active" in data:
+        if not isinstance(data["is_active"], bool):
+            return jsonify({
+                "error": "El campo 'is_active' debe ser booleano."
+            }), 400
+
+        client.is_active = data["is_active"]
+
+    db.session.commit()
+
+    return jsonify(_client_to_dict(client)), 200
+
+
+@api.route("/clients/<int:client_id>/addresses", methods=["GET"])
+@tenant_required
+def list_client_addresses(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({
+            "error": "Cliente no encontrado."
+        }), 404
+
+    addresses = db.session.scalars(
+        select(ClientAddress)
+        .where(ClientAddress.client_id == client_id)
+        .order_by(
+            ClientAddress.is_primary.desc(),
+            ClientAddress.id.asc(),
+        )
+    ).all()
+
+    return jsonify([
+        {
+            "id": address.id,
+            "client_id": address.client_id,
+            "label": address.label,
+            "line_1": address.line_1,
+            "line_2": address.line_2,
+            "city": address.city,
+            "postcode": address.postcode,
+            "is_primary": address.is_primary,
+        }
+        for address in addresses
+    ]), 200
+
+
+@api.route("/clients/<int:client_id>/addresses", methods=["POST"])
+@tenant_required
+def create_client_address(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({
+            "error": "Cliente no encontrado."
+        }), 404
+
+    data = _get_json_payload()
+
+    if data is None:
+        return jsonify({
+            "error": "El cuerpo debe ser un objeto JSON."
+        }), 400
+
+    allowed_fields = {
+        "label",
+        "line_1",
+        "line_2",
+        "city",
+        "postcode",
+        "is_primary",
+    }
+
+    unknown_fields = set(data) - allowed_fields
+
+    if unknown_fields:
+        return jsonify({
+            "error": (
+                f"Campos no permitidos: "
+                f"{', '.join(sorted(unknown_fields))}."
+            )
+        }), 400
+
+    required_fields = {
+        "line_1": 160,
+        "city": 100,
+        "postcode": 20,
+    }
+
+    for field, max_length in required_fields.items():
+        value = data.get(field)
+
+        if not isinstance(value, str) or not value.strip():
+            return jsonify({
+                "error": f"El campo '{field}' es obligatorio."
+            }), 400
+
+        if len(value.strip()) > max_length:
+            return jsonify({
+                "error": (
+                    f"El campo '{field}' no puede superar "
+                    f"los {max_length} caracteres."
+                )
+            }), 400
+
+    optional_string_limits = {
+        "label": 60,
+        "line_2": 160,
+    }
+
+    for field, max_length in optional_string_limits.items():
+        if field not in data or data[field] is None:
+            continue
+
+        if not isinstance(data[field], str):
+            return jsonify({
+                "error": f"El campo '{field}' debe ser texto."
+            }), 400
+
+        if len(data[field].strip()) > max_length:
+            return jsonify({
+                "error": (
+                    f"El campo '{field}' no puede superar "
+                    f"los {max_length} caracteres."
+                )
+            }), 400
+
+    if "is_primary" in data and not isinstance(data["is_primary"], bool):
+        return jsonify({
+            "error": "El campo 'is_primary' debe ser booleano."
+        }), 400
+
+    address = ClientAddress(
+        client_id=client.id,
+        label=(
+            data["label"].strip()
+            if data.get("label") is not None
+            else None
+        ),
+        line_1=data["line_1"].strip(),
+        line_2=(
+            data["line_2"].strip()
+            if data.get("line_2") is not None
+            else None
+        ),
+        city=data["city"].strip(),
+        postcode=data["postcode"].strip(),
+        is_primary=data.get("is_primary", False),
+    )
+
+    db.session.add(address)
+    db.session.commit()
+
+    return jsonify({
+        "id": address.id,
+        "client_id": address.client_id,
+        "label": address.label,
+        "line_1": address.line_1,
+        "line_2": address.line_2,
+        "city": address.city,
+        "postcode": address.postcode,
+        "is_primary": address.is_primary,
+    }), 201
+
+
+@api.route("/clients/<int:client_id>/addresses/<int:address_id>", methods=["PATCH"])
+@tenant_required
+def update_client_address(client_id, address_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({
+            "error": "Cliente no encontrado."
+        }), 404
+
+    address = db.session.scalar(
+        select(ClientAddress).where(
+            ClientAddress.id == address_id,
+            ClientAddress.client_id == client_id,
+        )
+    )
+
+    if address is None:
+        return jsonify({
+            "error": "Dirección no encontrada."
+        }), 404
+
+    data = _get_json_payload()
+
+    if data is None:
+        return jsonify({
+            "error": "El cuerpo debe ser un objeto JSON."
+        }), 400
+
+    allowed_fields = {
+        "label",
+        "line_1",
+        "line_2",
+        "city",
+        "postcode",
+        "is_primary",
+    }
+
+    unknown_fields = set(data) - allowed_fields
+
+    if unknown_fields:
+        return jsonify({
+            "error": (
+                f"Campos no permitidos: "
+                f"{', '.join(sorted(unknown_fields))}."
+            )
+        }), 400
+
+    string_limits = {
+        "label": 60,
+        "line_1": 160,
+        "line_2": 160,
+        "city": 100,
+        "postcode": 20,
+    }
+
+    for field, max_length in string_limits.items():
+        if field not in data:
+            continue
+
+        value = data[field]
+
+        if value is not None and not isinstance(value, str):
+            return jsonify({
+                "error": f"El campo '{field}' debe ser texto."
+            }), 400
+
+        if value is not None and len(value.strip()) > max_length:
+            return jsonify({
+                "error": (
+                    f"El campo '{field}' no puede superar "
+                    f"los {max_length} caracteres."
+                )
+            }), 400
+
+    required_fields = {
+        "line_1",
+        "city",
+        "postcode",
+    }
+
+    for field in required_fields:
+        if field in data:
+            value = data[field]
+
+            if not isinstance(value, str) or not value.strip():
+                return jsonify({
+                    "error": f"El campo '{field}' no puede estar vacío."
+                }), 400
+
+    if "is_primary" in data and not isinstance(data["is_primary"], bool):
+        return jsonify({
+            "error": "El campo 'is_primary' debe ser booleano."
+        }), 400
+
+    if "label" in data:
+        address.label = (
+            data["label"].strip()
+            if data["label"] is not None
+            else None
+        )
+
+    if "line_1" in data:
+        address.line_1 = data["line_1"].strip()
+
+    if "line_2" in data:
+        address.line_2 = (
+            data["line_2"].strip()
+            if data["line_2"] is not None
+            else None
+        )
+
+    if "city" in data:
+        address.city = data["city"].strip()
+
+    if "postcode" in data:
+        address.postcode = data["postcode"].strip()
+
+    if "is_primary" in data:
+        address.is_primary = data["is_primary"]
+
+    db.session.commit()
+
+    return jsonify({
+        "id": address.id,
+        "client_id": address.client_id,
+        "label": address.label,
+        "line_1": address.line_1,
+        "line_2": address.line_2,
+        "city": address.city,
+        "postcode": address.postcode,
+        "is_primary": address.is_primary,
+    }), 200
+
+
+@api.route("/clients/<int:client_id>/addresses/<int:address_id>", methods=["DELETE"])
+@tenant_required
+def delete_client_address(client_id, address_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({
+            "error": "Cliente no encontrado."
+        }), 404
+
+    address = db.session.scalar(
+        select(ClientAddress).where(
+            ClientAddress.id == address_id,
+            ClientAddress.client_id == client_id,
+        )
+    )
+
+    if address is None:
+        return jsonify({
+            "error": "Dirección no encontrada."
+        }), 404
+
+    db.session.delete(address)
+    db.session.commit()
+
+    return "", 204
 
 
 def _validate_lead_data(data, partial=False):
@@ -166,6 +793,51 @@ def health_check():
     }
 
     return jsonify(response_body), 200
+
+
+@api.route("/clients/<int:client_id>/activities", methods=["GET"])
+@tenant_required
+def list_client_activities(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({
+            "error": "Cliente no encontrado."
+        }), 404
+
+    activities = db.session.scalars(
+        select(Activity)
+        .where(
+            Activity.client_id == client_id,
+            Activity.company_id == g.company_id,
+        )
+        .order_by(
+            Activity.created_at.desc(),
+            Activity.id.desc(),
+        )
+    ).all()
+
+    return jsonify([
+        {
+            "id": activity.id,
+            "client_id": activity.client_id,
+            "actor_membership_id": activity.actor_membership_id,
+            "event_type": activity.event_type,
+            "description": activity.description,
+            "metadata_json": activity.metadata_json,
+            "created_at": (
+                activity.created_at.isoformat()
+                if activity.created_at
+                else None
+            ),
+        }
+        for activity in activities
+    ]), 200
 
 
 @api.route("/leads", methods=["GET"])
@@ -338,6 +1010,50 @@ def list_lead_next_actions(lead_id):
         {
             "id": action.id,
             "lead_id": action.lead_id,
+            "assigned_membership_id": action.assigned_membership_id,
+            "created_by_membership_id": action.created_by_membership_id,
+            "title": action.title,
+            "description": action.description,
+            "due_at": action.due_at.isoformat(),
+            "status": action.status.value,
+            "completed_at": (
+                action.completed_at.isoformat()
+                if action.completed_at is not None
+                else None
+            ),
+            "created_at": action.created_at.isoformat(),
+            "updated_at": action.updated_at.isoformat(),
+        }
+        for action in next_actions
+    ]), 200
+
+
+@api.route("/clients/<int:client_id>/next-actions", methods=["GET"])
+@tenant_required
+def list_client_next_actions(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({"error": "Cliente no encontrado."}), 404
+
+    next_actions = db.session.scalars(
+        select(NextAction)
+        .where(
+            NextAction.client_id == client_id,
+            NextAction.company_id == g.company_id,
+        )
+        .order_by(NextAction.due_at.asc(), NextAction.id.asc())
+    ).all()
+
+    return jsonify([
+        {
+            "id": action.id,
+            "client_id": action.client_id,
             "assigned_membership_id": action.assigned_membership_id,
             "created_by_membership_id": action.created_by_membership_id,
             "title": action.title,
