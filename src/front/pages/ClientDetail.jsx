@@ -1,10 +1,16 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { initialClients } from "../../data/clientsMockData";
+import { sharedAppointments } from "../../data/sharedAppointments"; // <--- 1. Importamos las citas compartidas
 
 export const ClientDetail = () => {
     const { id } = useParams();
     const [client, setClient] = useState(initialClients.find(c => c.id === id) || initialClients[0]);
+
+    // 2. Filtramos las citas de la agenda global que coincidan con este cliente (por ID o por nombre)
+    const clientAppointments = sharedAppointments.filter(
+        app => app.clientId === client.id || app.clientName.toLowerCase() === client.name.toLowerCase()
+    );
 
     const handleToggleChecklist = (checkId) => {
         const updatedChecklist = client.nextAction.checklist.map(item => {
@@ -60,7 +66,7 @@ export const ClientDetail = () => {
 
             <div className="row g-4">
                 <div className="col-12 col-xl-8">
-                    
+
                     {/* Próxima Acción (Next Action) */}
                     <div className="card border-0 shadow-sm mb-4 bg-white border-start border-4 border-primary">
                         <div className="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
@@ -83,10 +89,10 @@ export const ClientDetail = () => {
                             <ul className="list-group list-group-flush">
                                 {client.nextAction.checklist.map(item => (
                                     <li key={item.id} className="list-group-item bg-transparent px-0 py-2 d-flex align-items-center gap-2 border-light">
-                                        <input 
-                                            type="checkbox" 
-                                            className="form-check-input mt-0 shadow-none" 
-                                            checked={item.completed} 
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input mt-0 shadow-none"
+                                            checked={item.completed}
                                             onChange={() => handleToggleChecklist(item.id)}
                                         />
                                         <span className={`small ${item.completed ? 'text-decoration-line-through text-muted' : 'text-dark fw-semibold'}`}>
@@ -108,7 +114,7 @@ export const ClientDetail = () => {
                                 <p className="text-secondary small mb-0">No hay trabajos asociados a este cliente.</p>
                             ) : (
                                 client.relatedJobs.map(job => (
-                                    <div className="p-3 bg-light rounded-2 d-flex justify-content-between align-items-center" key={job.id}>
+                                    <div className="p-3 bg-light rounded-2 d-flex justify-content-between align-items-center mb-2" key={job.id}>
                                         <div>
                                             <span className="fw-bold text-dark d-block">{job.title}</span>
                                             <span className="text-secondary small">Entrega prevista: {job.dueDate} &bull; Presupuesto: <strong>{job.budget.toFixed(2)} €</strong></span>
@@ -120,28 +126,40 @@ export const ClientDetail = () => {
                         </div>
                     </div>
 
-                    {/* Citas Relacionadas */}
+                    {/* Citas Programadas (CONECTADAS CON LA AGENDA) */}
                     <div className="card border-0 shadow-sm bg-white">
-                        <div className="card-header bg-white py-3 border-0">
+                        <div className="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
                             <h5 className="fw-bold text-dark m-0"><i className="fa-solid fa-calendar-check me-2 text-info"></i> Citas Programadas</h5>
+                            <Link to="/agenda" className="text-decoration-none small fw-bold">Ir a la Agenda &rarr;</Link>
                         </div>
                         <div className="card-body pt-0">
-                            {client.appointments.map(app => (
-                                <div className="p-3 bg-light rounded-2 mb-2 border-start border-4 border-info" key={app.id}>
-                                    <span className="fw-bold text-dark small d-block">{app.title}</span>
-                                    <span className="text-secondary" style={{ fontSize: "0.75rem" }}>
-                                        <i className="fa-solid fa-clock me-1"></i> {app.date}
-                                    </span>
-                                </div>
-                            ))}
+                            {clientAppointments.length === 0 ? (
+                                <p className="text-secondary small mb-0">No hay citas registradas en la agenda para este cliente.</p>
+                            ) : (
+                                clientAppointments.map(app => (
+                                    <div className="p-3 bg-light rounded-2 mb-2 border-start border-4 border-info d-flex justify-content-between align-items-center" key={app.id}>
+                                        <div>
+                                            <span className="badge bg-secondary mb-1" style={{ fontSize: "0.65rem" }}>{app.type}</span>
+                                            <span className="fw-bold text-dark small d-block">{app.title}</span>
+                                            <span className="text-secondary" style={{ fontSize: "0.75rem" }}>
+                                                <i className="fa-solid fa-clock me-1"></i> {app.date} a las {app.time} &bull; Responsable: {app.responsible}
+                                            </span>
+                                        </div>
+                                        
+                                        <Link to={`/agenda?appointmentId=${app.id}`} className="btn btn-sm btn-outline-info">
+                                            Ver en Agenda
+                                        </Link>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
 
                 </div>
 
                 <div className="col-12 col-xl-4">
-                    
-                    {/* Actividad Reciente (Única tarjeta en la columna derecha ahora) */}
+
+                    {/* Actividad Reciente */}
                     <div className="card border-0 shadow-sm bg-white">
                         <div className="card-header bg-white py-3 border-0">
                             <h5 className="fw-bold text-dark m-0"><i className="fa-solid fa-clock-rotate-left me-2 text-secondary"></i> Actividad Reciente</h5>
