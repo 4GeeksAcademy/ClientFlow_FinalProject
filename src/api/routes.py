@@ -311,6 +311,7 @@ def list_lead_activities(lead_id):
         for activity in activities
     ]), 200
 
+
 @api.route("/leads/<int:lead_id>/next-actions", methods=["GET"])
 @tenant_required
 def list_lead_next_actions(lead_id):
@@ -354,6 +355,7 @@ def list_lead_next_actions(lead_id):
         for action in next_actions
     ]), 200
 
+
 @api.route("/leads", methods=["POST"])
 @tenant_required
 def create_lead():
@@ -377,10 +379,10 @@ def create_lead():
             )
         )
 
-    if membership is None:
-        return jsonify({
-            "error": "El miembro asignado no pertenece a esta empresa."
-        }), 400
+        if membership is None:
+            return jsonify({
+                "error": "El miembro asignado no pertenece a esta empresa."
+            }), 400
 
     lead = Lead(
         company_id=g.company_id,
@@ -406,6 +408,7 @@ def create_lead():
 
     return jsonify(_lead_to_dict(lead)), 201
 
+
 @api.route("/leads/<int:lead_id>/next-actions", methods=["POST"])
 @tenant_required
 def create_lead_next_action(lead_id):
@@ -424,7 +427,8 @@ def create_lead_next_action(lead_id):
     if data is None:
         return jsonify({"error": "El cuerpo debe ser un objeto JSON."}), 400
 
-    allowed_fields = {"title", "description", "due_at", "assigned_membership_id"}
+    allowed_fields = {"title", "description",
+                      "due_at", "assigned_membership_id"}
 
     unknown_fields = set(data) - allowed_fields
     if unknown_fields:
@@ -489,7 +493,6 @@ def create_lead_next_action(lead_id):
     }), 201
 
 
-
 @api.route("/leads/<int:lead_id>", methods=["PATCH"])
 @tenant_required
 def update_lead(lead_id):
@@ -515,10 +518,10 @@ def update_lead(lead_id):
         message, status_code = validation_error
         return jsonify({"error": message}), status_code
 
-    membership = None
-    service_type = None
-
-    if data.get("assigned_membership_id") is not None:
+    if (
+        "assigned_membership_id" in data
+        and data["assigned_membership_id"] is not None
+    ):
         membership = db.session.scalar(
             select(CompanyMembership).where(
                 CompanyMembership.id == data["assigned_membership_id"],
@@ -526,12 +529,15 @@ def update_lead(lead_id):
             )
         )
 
-    if membership is None:
-        return jsonify({
-            "error": "El miembro asignado no pertenece a esta empresa."
-        }), 400
+        if membership is None:
+            return jsonify({
+                "error": "El miembro asignado no pertenece a esta empresa."
+            }), 400
 
-    if data.get("service_type_id") is not None:
+    if (
+        "service_type_id" in data
+        and data["service_type_id"] is not None
+    ):
         service_type = db.session.scalar(
             select(ServiceType).where(
                 ServiceType.id == data["service_type_id"],
@@ -539,10 +545,10 @@ def update_lead(lead_id):
             )
         )
 
-    if service_type is None:
-        return jsonify({
-            "error": "El tipo de servicio no pertenece a esta empresa."
-        }), 400
+        if service_type is None:
+            return jsonify({
+                "error": "El tipo de servicio no pertenece a esta empresa."
+            }), 400
 
     if "first_name" in data:
         lead.first_name = data["first_name"].strip()
@@ -731,6 +737,7 @@ def convert_lead_to_client(lead_id):
     lead.status = LeadStatus.WON
 
     activity = Activity(
+        company_id=g.company_id,
         actor_membership_id=g.membership.id,
         lead_id=lead.id,
         event_type="lead_converted",
