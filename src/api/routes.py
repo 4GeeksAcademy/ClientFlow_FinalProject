@@ -1,10 +1,12 @@
 """
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
-from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User
-from api.utils import generate_sitemap, APIException
+from flask import Blueprint, Flask, jsonify, request, url_for
 from flask_cors import CORS
+from sqlalchemy import select
+
+from api.models import Plan, User, db
+from api.utils import APIException, generate_sitemap
 
 api = Blueprint('api', __name__)
 
@@ -28,3 +30,26 @@ def health_check():
     }
 
     return jsonify(response_body), 200
+
+
+@api.route('/plans', methods=['GET'])
+def get_plans():
+    plans = db.session.scalars(
+        select(Plan)
+        .where(Plan.is_active.is_(True))
+        .order_by(Plan.id)
+    ).all()
+
+    return jsonify([
+        {
+            "id": plan.id,
+            "code": plan.code,
+            "name": plan.name,
+            "description": plan.description,
+            "price_eur": str(plan.price_eur),
+            "billing_interval": plan.billing_interval,
+            "trial_days": plan.trial_days,
+            "limits": plan.limits,
+        }
+        for plan in plans
+    ]), 200
