@@ -6,6 +6,12 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
+import { Dashboard } from "./pages/Dashboard";
+import { Leads } from "./pages/Leads";
+import { Jobs } from "./pages/Jobs";
+import { JobDetail } from "./pages/JobDetail";
+import { Clients } from "./pages/Clients";
+import { ClientDetail } from "./pages/ClientDetail";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
@@ -29,16 +35,63 @@ export const router = createBrowserRouter(
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
 
-            {/* Ruta Protegida */}
-            <Route 
-                path="dashboard" 
+            {/* Ruta Protegida del Dashboard */}
+            <Route
+                path="dashboard"
                 element={
                     <ProtectedRoute>
-                        <div className="container mt-4">
-                            <h1>Panel de Control (Dashboard)</h1>
-                        </div>
+                        <Dashboard /> {/* <--- 2. Reemplaza el h1 por tu componente Dashboard */}
                     </ProtectedRoute>
-                } 
+                }
+            />
+
+            <Route
+                path="leads"
+                element={
+                    <ProtectedRoute>
+                        <Leads />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Trabajos (Listado) */}
+            <Route
+                path="jobs"
+                element={
+                    <ProtectedRoute>
+                        <Jobs />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida del Espacio de Trabajo Detallado */}
+            <Route
+                path="jobs/:id"
+                element={
+                    <ProtectedRoute>
+                        <JobDetail />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Clientes (Listado) */}
+            <Route
+                path="clients"
+                element={
+                    <ProtectedRoute>
+                        <Clients />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Detalle de Cliente */}
+            <Route
+                path="clients/:id"
+                element={
+                    <ProtectedRoute>
+                        <ClientDetail />
+                    </ProtectedRoute>
+                }
             />
         </Route>
     )
