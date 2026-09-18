@@ -12,6 +12,7 @@ import { Jobs } from "./pages/Jobs";
 import { JobDetail } from "./pages/JobDetail";
 import { Clients } from "./pages/Clients";
 import { ClientDetail } from "./pages/ClientDetail";
+import { Agenda } from "./pages/Agenda";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
@@ -64,7 +65,7 @@ export const router = createBrowserRouter(
                 }
             />
 
-            {/* Ruta Protegida del Espacio de Trabajo Detallado */}
+            {/* Ruta Protegida de Detalle de Trabajo */}
             <Route
                 path="jobs/:id"
                 element={
@@ -90,6 +91,15 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <ClientDetail />
+                    </ProtectedRoute>
+                }
+            />
+            {/* Ruta Protegida de la Agenda */}
+            <Route
+                path="agenda"
+                element={
+                    <ProtectedRoute>
+                        <Agenda />
                     </ProtectedRoute>
                 }
             />
