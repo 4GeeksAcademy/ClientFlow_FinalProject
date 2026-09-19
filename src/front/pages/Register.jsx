@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
-import { authService } from "../services/authService";
 import { useApp } from "../context/AppContext";
+import { authService } from "../services/authService";
 
 export const Register = () => {
     const { showToast } = useApp();
@@ -17,12 +17,20 @@ export const Register = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    const [searchParams] = useSearchParams();
+    const planId = Number(searchParams.get("plan_id"));
+    const registrationMode = searchParams.get("mode") ?? "trial";
+
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!Number.isSafeInteger(planId) || planId <= 0) {
+            setError("Please select a plan before registering.");
+            return;
+        }
         if (!formData.firstName || !formData.email || !formData.password || !formData.company) {
             setError("Por favor completa todos los campos obligatorios.");
             return;
@@ -31,22 +39,23 @@ export const Register = () => {
         setLoading(true);
 
         try {
-            const data = await authService.register(formData);
+            await authService.register({
+                ...formData,
+                plan_id: planId,
+                registration_mode: registrationMode,
+            });
             setLoading(false);
-            showToast("¡Cuenta creada con éxito! Selecciona tu plan.", "success");
-            // Guardamos token temporal o ID si es necesario y redirigimos a la selección de planes
-            if (data?.token) {
-                localStorage.setItem("access_token", data.token);
-            } else {
-                
-                localStorage.setItem("access_token", "mock-access-token-xyz");
-            }
-            navigate("/select-plan");
+            showToast("Account created successfully. Please sign in.", "success");
+            navigate("/login");
         } catch (err) {
             setLoading(false);
             setError(err.message || "No se pudo conectar con el servidor.");
         }
     };
+
+    if (!Number.isSafeInteger(planId) || planId <= 0) {
+        return <Navigate to="/select-plan" replace />;
+    }
 
     return (
         <AuthLayout>
@@ -132,7 +141,7 @@ export const Register = () => {
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-2"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {loading ? "Procesando..." : "Seleccionar plan"}
+                        {loading ? "Procesando..." : "Create account"}
                     </button>
                 </form>
 
