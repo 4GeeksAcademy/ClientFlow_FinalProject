@@ -9,7 +9,7 @@ export const ClientDetail = () => {
 
     // 2. Filtramos las citas de la agenda global que coincidan con este cliente (por ID o por nombre)
     const clientAppointments = sharedAppointments.filter(
-        app => app.clientId === client.id || app.clientName.toLowerCase() === client.name.toLowerCase()
+        app => app.clientId === client.id
     );
 
     const handleToggleChecklist = (checkId) => {

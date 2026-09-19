@@ -210,7 +210,7 @@ export const Jobs = () => {
 
                                     <div className="d-flex justify-content-end pt-2 border-top border-light">
                                         <Link 
-                                            to={`/jobs/${job.id}`} 
+                                            to={`/jobs/${job.id}`} state={{ job }}
                                             className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2"
                                         >
                                             Ver Espacio de Trabajo <i className="fa-solid fa-arrow-right"></i>

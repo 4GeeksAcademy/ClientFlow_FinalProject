@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import { initialJobs } from "../../data/jobsMockData";
 import { sharedAppointments } from "../../data/sharedAppointments"; // <--- Importamos las citas compartidas
 
 export const JobDetail = () => {
     const { id } = useParams();
-    const [job, setJob] = useState(initialJobs.find(j => j.id === id) || initialJobs[0]);
+    const location = useLocation();
+    const [job, setJob] = useState(() => initialJobs.find(j => j.id === id) ||
+        (location.state?.job?.id === id ? location.state.job : null));
 
     // Filtramos de forma segura las citas de la agenda global que coincidan con este trabajo
     const jobAppointments = sharedAppointments.filter(
-        app => app.jobId === job.id || app.relatedJob.toLowerCase() === job.title.toLowerCase()
+        app => app.jobId === job?.id
     );
 
     const handleStageChange = (stageId, newStatus) => {
@@ -50,6 +52,8 @@ export const JobDetail = () => {
             default: return "Pendiente";
         }
     };
+
+    if (!job) return <p role="alert">Job not found.</p>;
 
     return (
         <div className="container-fluid px-0">
