@@ -106,7 +106,7 @@ const handleSubmit = async (e) => {
                 </form>
 
                 <p className="text-center text-muted small mt-4 mb-0">
-                    ¿Aún no tienes cuenta? <Link to="/register" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>Regístrate</Link>
+                    ¿Aún no tienes cuenta? <Link to="/select-plan" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>Regístrate</Link>
                 </p>
             </div>
         </AuthLayout>
