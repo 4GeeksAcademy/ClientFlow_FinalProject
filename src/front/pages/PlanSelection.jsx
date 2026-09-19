@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
-import { useApp } from "../context/AppContext";
+
 
 export const PlanSelection = () => {
-    const { showToast } = useApp();
     const [plans, setPlans] = useState([]);
     const [selectedPlanId, setSelectedPlanId] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [registrationMode, setRegistrationMode] = useState("trial");
 
     const [plansLoading, setPlansLoading] = useState(true);
     const [plansError, setPlansError] = useState("");
@@ -22,7 +21,7 @@ export const PlanSelection = () => {
 
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/plans`,
+                    `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"}/api/plans`,
                     { signal: controller.signal }
                 );
 
@@ -56,45 +55,16 @@ export const PlanSelection = () => {
         return () => controller.abort();
     }, []);
 
-    const handleSelectPlan = async (e) => {
+    const handleSelectPlan = (e) => {
         e.preventDefault();
-        if (!selectedPlanId) return;
-        setLoading(true);
 
-        const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
-
-        if (USE_MOCK_API) {
-            // Simulación controlada para el PR #15
-            setTimeout(() => {
-                localStorage.setItem("selected_plan_id", selectedPlanId);
-                localStorage.setItem("subscription_status", "trialing");
-                setLoading(false);
-                showToast("¡Plan activado con éxito!", "success");
-                navigate("/dashboard");
-            }, 500);
-        } else {
-            // Modo real: si la API falla, muestra error y SE QUEDA en la página
-            try {
-                const token = localStorage.getItem("access_token");
-                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/plan`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ planId: selectedPlanId })
-                });
-
-                if (!response.ok) throw new Error("Error al asignar el plan en el servidor");
-
-                setLoading(false);
-                showToast("¡Plan activado con éxito!", "success");
-                navigate("/dashboard");
-            } catch (err) {
-                setLoading(false);
-                showToast(err.message || "No se pudo actualizar el plan", "danger");
-            }
+        if (plansLoading || plansError || selectedPlanId === null) {
+            return;
         }
+
+        navigate(
+            `/register?plan_id=${selectedPlanId}&mode=${registrationMode}`
+        );
     };
 
     return (
@@ -143,6 +113,15 @@ export const PlanSelection = () => {
                             return (
                                 <div
                                     key={plan.id}
+                                    role="radio"
+                                    aria-checked={isSelected}
+                                    tabIndex={0}
+                                    onKeyDown={(event) => {
+                                        if (event.key === " " || event.key === "Enter") {
+                                            event.preventDefault();
+                                            setSelectedPlanId(plan.id);
+                                        }
+                                    }}
                                     onClick={() => setSelectedPlanId(plan.id)}
                                     className={`p-3 rounded-3 border transition-all ${isSelected ? "shadow-sm bg-purple-subtle bg-opacity-10" : "border-opacity-25"}`}
                                     style={{ cursor: "pointer", borderColor: isSelected ? "#9333ea" : undefined }}
@@ -154,21 +133,51 @@ export const PlanSelection = () => {
                                         <small className="text-muted">{plan.description}</small>
                                         <small className="text-secondary fw-medium">
                                             {plan.trial_days
-                                                ? `${plan.trial_days}-day trial · ${maxLeadsText}`
+                                                ? `3-day trial · ${maxLeadsText}`
                                                 : maxLeadsText}                                        </small>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
+                    <fieldset>
+                        <legend className="fs-6">Choose how to start</legend>
 
+                        <label className="d-block">
+                            <input
+                                type="radio"
+                                name="registrationMode"
+                                value="trial"
+                                checked={registrationMode === "trial"}
+                                onChange={(e) => setRegistrationMode(e.target.value)}
+                                className="me-2"
+                            />
+                            Start a 3-day free trial
+                        </label>
+
+                        <label className="d-block mt-2">
+                            <input
+                                type="radio"
+                                name="registrationMode"
+                                value="mock_payment"
+                                checked={registrationMode === "mock_payment"}
+                                onChange={(e) => setRegistrationMode(e.target.value)}
+                                className="me-2"
+                            />
+                            Simulate payment — no real charge
+                        </label>
+                    </fieldset>
                     <button
                         type="submit"
-                        disabled={loading || plans.length === 0}
+                        disabled={
+                            plansLoading ||
+                            Boolean(plansError) ||
+                            selectedPlanId === null
+                        }
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-3"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {loading ? "Activando..." : "Confirmar y continuar al Dashboard"}
+                        Continue to registration
                     </button>
                 </form>
             </div>
