@@ -95,6 +95,13 @@ class LeadActivitiesTest(unittest.TestCase):
         db.session.add(self.activity)
         db.session.commit()
 
+        from api.models import Plan, Subscription, utc_now
+        from datetime import timedelta
+        plan = Plan(code="fixture", name="Fixture", price_eur=20)
+        db.session.add(Subscription(company=self.company, plan=plan,
+                                    trial_started_at=utc_now(),
+                                    trial_ends_at=utc_now() + timedelta(days=3)))
+        db.session.commit()
         self.client = self.app.test_client()
 
     def tearDown(self):

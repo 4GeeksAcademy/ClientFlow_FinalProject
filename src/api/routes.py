@@ -1,27 +1,33 @@
 """
 API routes for ClientFlow.
 """
-from datetime import datetime
+from datetime import datetime, timedelta
+from uuid import uuid4
 
 from flask import Blueprint, g, jsonify, request
 from flask_cors import CORS
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 
-from api.auth import tenant_required
+from api.auth import email_value, limited, password_valid, set_password, tenant_required
 from api.models import (
-    db,
-    Plan,
     Activity,
-    CompanyMembership,
     Client,
+    Company,
+    CompanyMembership,
     Lead,
     LeadStatus,
+    MembershipRole,
     NextAction,
     NextActionStatus,
+    Plan,
     ServiceType,
+    Subscription,
+    SubscriptionStatus,
+    User,
+    db,
     utc_now,
 )
-
 
 api = Blueprint("api", __name__)
 
@@ -780,3 +786,112 @@ def get_plans():
         }
         for plan in plans
     ]), 200
+@api.route("/register", methods=["POST"])
+@limited("register")
+def register():
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify(message="Request body must be a JSON object."), 400
+    registration_mode = data.get("registration_mode", "trial")
+
+    if registration_mode not in ("trial", "mock_payment"):
+        return jsonify(
+            message="Choose a free trial or simulated payment."
+        ), 400
+    email = email_value(data)
+    password = data.get("password")
+
+    if not email or not password_valid(password):
+        return jsonify(
+            message="Use a valid email and a password of 12–128 characters."
+        ), 400
+
+    fields = {}
+    for key, max_length in (
+        ("firstName", 100),
+        ("lastName", 100),
+        ("company", 160),
+    ):
+        value = data.get(key, "")
+
+        if not isinstance(value, str):
+            return jsonify(message=f"{key} must be text."), 400
+
+        value = value.strip()
+
+        if len(value) > max_length:
+            return jsonify(message=f"{key} is too long."), 400
+
+        fields[key] = value
+
+    if not fields["firstName"] or not fields["company"]:
+        return jsonify(
+            message="First name and company name are required."
+        ), 400
+
+    plan_id = data.get("plan_id")
+
+    if type(plan_id) is not int or plan_id <= 0:
+        return jsonify(message="Select a valid plan."), 400
+
+    plan = db.session.scalar(
+        select(Plan).where(
+            Plan.id == plan_id,
+            Plan.is_active.is_(True),
+        )
+    )
+
+    if plan is None:
+        return jsonify(message="Selected plan is unavailable."), 400
+
+    if db.session.scalar(select(User.id).where(User.email == email)):
+        return jsonify(message="An account with this email already exists."), 409
+
+    now = utc_now()
+
+    user = User(
+        email=email,
+        first_name=fields["firstName"],
+        last_name=fields["lastName"],
+    )
+    set_password(user, password)
+
+    company = Company(
+        name=fields["company"],
+        slug=f"company-{uuid4().hex}",
+        email=email,
+    )
+
+    membership = CompanyMembership(
+        user=user,
+        company=company,
+        role=MembershipRole.OWNER,
+    )
+
+    subscription = Subscription(
+        company=company,
+        plan=plan,
+    )
+
+    if registration_mode == "trial":
+        subscription.status = SubscriptionStatus.TRIALING
+        subscription.trial_started_at = now
+        subscription.trial_ends_at = now + timedelta(days=3)
+    else:
+        # Academic payment simulation: no real charge is made.
+        subscription.status = SubscriptionStatus.ACTIVE
+        subscription.current_period_started_at = now
+        subscription.current_period_ends_at = now + timedelta(days=30)
+        subscription.external_subscription_id = f"mock_{uuid4().hex}"
+
+    try:
+        db.session.add_all([user, company, membership, subscription])
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(
+            message="Registration could not be completed due to a data conflict."
+        ), 409
+
+    return jsonify(message="Account created successfully. Please sign in."), 201
