@@ -141,7 +141,7 @@ export const Register = () => {
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-2"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {loading ? "Procesando..." : "Seleccionar plan"}
+                        {loading ? "Procesando..." : "Create account"}
                     </button>
                 </form>
 
