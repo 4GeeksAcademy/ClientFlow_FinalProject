@@ -110,7 +110,7 @@ const ProtectedRoute = ({ children }) => {
                 <p>{message}</p>
                 <button
                     type="button"
-                    className="btn btn-outline-dark"
+                    className="btn btn-secondary"
                     onClick={() => window.location.reload()}
                 >
                     Try again
