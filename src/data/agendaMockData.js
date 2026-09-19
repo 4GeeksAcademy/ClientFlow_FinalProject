@@ -21,8 +21,8 @@ export const initialAppointments = [
         clientName: "María Gómez",
         clientId: "cli-2",
         responsible: "Sofía Martínez",
-        relatedJob: "Instalación de Armario Empotrado",
-        jobId: "job-3",
+        relatedJob: "Fabricación de Librería a Medida",
+        jobId: "job-1",
         status: "pending"
     },
     {

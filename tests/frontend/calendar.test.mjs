@@ -22,3 +22,19 @@ test('day list keeps simultaneous appointments and sorts by time without mutatin
     assert.equal(items[0].id, 'b');
     assert.deepEqual(dayAppointments(items, '2026-04-26'), []);
 });
+
+test('every shared appointment links to an existing job and matching client', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const load = async path => import(`data:text/javascript;base64,${Buffer.from(await readFile(new URL(path, import.meta.url), 'utf8')).toString('base64')}`);
+    const { sharedAppointments } = await load('../../src/data/sharedAppointments.js');
+    const { initialJobs } = await load('../../src/data/jobsMockData.js');
+    const { initialClients } = await load('../../src/data/clientsMockData.js');
+    for (const appointment of sharedAppointments) {
+        const job = initialJobs.find(item => item.id === appointment.jobId);
+        const client = initialClients.find(item => item.id === appointment.clientId);
+        assert.ok(job, appointment.id);
+        assert.ok(client, appointment.id);
+        assert.equal(job.client.email, client.email);
+        assert.equal(appointment.relatedJob, job.title);
+    }
+});
