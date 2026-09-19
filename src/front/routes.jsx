@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route } from "react-router-dom";
+import { Agenda } from "./pages/Agenda";
 import { ClientDetail } from "./pages/ClientDetail";
 import { Clients } from "./pages/Clients";
 import { Dashboard } from "./pages/Dashboard";
@@ -22,13 +23,9 @@ const ProtectedRoute = ({ children }) => {
         if (!token) return;
 
         const controller = new AbortController();
-        const apiUrl =
-            import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+        const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
         const checkAccess = async () => {
-            // Recheck without unmounting the current page.
-
-
             try {
                 const headers = {
                     Authorization: `Bearer ${token}`,
@@ -71,15 +68,12 @@ const ProtectedRoute = ({ children }) => {
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(
-                        data.message || "Unable to verify your subscription."
-                    );
+                    throw new Error(data.message || "Unable to verify your subscription.");
                 }
 
                 setStatus("allowed");
             } catch (error) {
                 if (controller.signal.aborted) return;
-
                 setMessage(error.message || "Unable to verify access.");
                 setStatus("blocked");
             }
@@ -125,7 +119,6 @@ const ProtectedRoute = ({ children }) => {
 export const router = createBrowserRouter(
     createRoutesFromElements(
         <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>}>
-            {/* La raíz ya no carga el Login directamente, redirige al dashboard */}
             <Route index element={<Navigate to="/dashboard" replace />} />
 
             {/* Rutas Públicas */}
@@ -140,7 +133,7 @@ export const router = createBrowserRouter(
                 path="dashboard"
                 element={
                     <ProtectedRoute>
-                        <Dashboard /> {/* <--- 2. Reemplaza el h1 por tu componente Dashboard */}
+                        <Dashboard />
                     </ProtectedRoute>
                 }
             />
@@ -164,7 +157,7 @@ export const router = createBrowserRouter(
                 }
             />
 
-            {/* Ruta Protegida del Espacio de Trabajo Detallado */}
+            {/* Ruta Protegida de Detalle de Trabajo */}
             <Route
                 path="jobs/:id"
                 element={
@@ -190,6 +183,16 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <ClientDetail />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de la Agenda */}
+            <Route
+                path="agenda"
+                element={
+                    <ProtectedRoute>
+                        <Agenda />
                     </ProtectedRoute>
                 }
             />
