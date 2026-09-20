@@ -2,8 +2,20 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer
-from sqlalchemy import JSON, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 db = SQLAlchemy()
@@ -546,6 +558,7 @@ class ConversationParticipant(db.Model):
     display_name: Mapped[str | None] = mapped_column(String(160))
     participant_type: Mapped[str] = mapped_column(String(30), nullable=False)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_read_message_id: Mapped[int | None] = mapped_column(Integer)
     conversation: Mapped["Conversation"] = relationship(back_populates="participants")
 
 
