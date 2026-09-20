@@ -561,6 +561,7 @@ class ConversationParticipant(db.Model):
     display_name: Mapped[str | None] = mapped_column(String(160))
     participant_type: Mapped[str] = mapped_column(String(30), nullable=False)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_read_message_id: Mapped[int | None] = mapped_column(Integer)
     conversation: Mapped["Conversation"] = relationship(back_populates="participants")
 
 

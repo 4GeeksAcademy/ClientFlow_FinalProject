@@ -14,6 +14,7 @@ from flask_swagger import swagger
 from api.admin import setup_admin
 from api.auth import init_auth
 from api.commands import setup_commands
+from api.inbox import inbox
 from api.members import members
 from api.models import db
 from api.routes import api
@@ -48,6 +49,7 @@ setup_commands(app)
 
 # Add all endpoints form the API with a "api" prefix
 app.register_blueprint(api, url_prefix='/api')
+app.register_blueprint(inbox, url_prefix="/api")
 app.register_blueprint(members, url_prefix="/api")
 init_auth(app)
 CORS(app, resources={r"/api/*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").split(",")}})
