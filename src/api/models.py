@@ -2,8 +2,20 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer
-from sqlalchemy import JSON, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 db = SQLAlchemy()
@@ -194,6 +206,9 @@ class CompanyMembership(db.Model):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     role: Mapped[MembershipRole] = mapped_column(
         Enum(MembershipRole), default=MembershipRole.AGENT, nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
     )
     colour: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(
