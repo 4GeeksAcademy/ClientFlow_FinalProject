@@ -2,18 +2,22 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 import os
+
 from dotenv import load_dotenv
+
 load_dotenv()
-from flask import Flask, request, jsonify, url_for, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, url_for
+from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_swagger import swagger
-from api.utils import APIException, generate_sitemap
+
+from api.admin import setup_admin
+from api.auth import init_auth
+from api.commands import setup_commands
+from api.members import members
 from api.models import db
 from api.routes import api
-from api.auth import init_auth
-from flask_cors import CORS
-from api.admin import setup_admin
-from api.commands import setup_commands
+from api.utils import APIException, generate_sitemap
 
 # from models import Person
 
@@ -44,6 +48,7 @@ setup_commands(app)
 
 # Add all endpoints form the API with a "api" prefix
 app.register_blueprint(api, url_prefix='/api')
+app.register_blueprint(members, url_prefix="/api")
 init_auth(app)
 CORS(app, resources={r"/api/*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").split(",")}})
 

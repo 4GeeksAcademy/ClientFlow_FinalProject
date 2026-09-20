@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { AcceptInvitation } from "./pages/AcceptInvitation";
+import { useEffect, useState } from "react";
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route } from "react-router-dom";
 import { Agenda } from "./pages/Agenda";
 import { ClientDetail } from "./pages/ClientDetail";
@@ -10,6 +11,7 @@ import { Jobs } from "./pages/Jobs";
 import { Layout } from "./pages/Layout";
 import { Leads } from "./pages/Leads";
 import { Login } from "./pages/Login";
+import { Members } from "./pages/Members";
 import { PlanSelection } from "./pages/PlanSelection";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
@@ -119,6 +121,7 @@ const ProtectedRoute = ({ children }) => {
 export const router = createBrowserRouter(
     createRoutesFromElements(
         <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>}>
+            <Route path="accept-invitation" element={<AcceptInvitation />} />
             <Route index element={<Navigate to="/dashboard" replace />} />
 
             {/* Rutas Públicas */}
@@ -193,6 +196,14 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <Agenda />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="team"
+                element={
+                    <ProtectedRoute>
+                        <Members />
                     </ProtectedRoute>
                 }
             />
