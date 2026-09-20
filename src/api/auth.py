@@ -140,6 +140,7 @@ def tenant_required(fn):
         membership = db.session.scalar(select(CompanyMembership).join(Company).where(
             CompanyMembership.company_id == int(raw),
             CompanyMembership.user_id == int(get_jwt_identity()),
+            CompanyMembership.is_active.is_(True),
             Company.is_active.is_(True)))
         if membership is None:
             return error('No tienes acceso a esta empresa.', 403)
@@ -271,11 +272,27 @@ def login():
 @jwt_required()
 def me():
     user = db.session.get(User, int(get_jwt_identity()))
-    memberships = db.session.scalars(select(CompanyMembership).join(Company).where(
-        CompanyMembership.user_id == user.id, Company.is_active.is_(True))).all()
-    return jsonify(user=user.serialize(), companies=[{
-        'id': m.company_id, 'name': m.company.name, 'membership_id': m.id,
-        'role': m.role.value} for m in memberships])
+
+    memberships = db.session.scalars(
+        select(CompanyMembership).join(Company).where(
+            CompanyMembership.user_id == user.id,
+            CompanyMembership.is_active.is_(True),
+            Company.is_active.is_(True),
+        )
+    ).all()
+
+    return jsonify(
+        user=user.serialize(),
+        companies=[
+            {
+                "id": membership.company_id,
+                "name": membership.company.name,
+                "membership_id": membership.id,
+                "role": membership.role.value,
+            }
+            for membership in memberships
+        ],
+    )
 
 
 @auth.get('/auth/context')

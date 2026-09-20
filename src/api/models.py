@@ -207,6 +207,9 @@ class CompanyMembership(db.Model):
     role: Mapped[MembershipRole] = mapped_column(
         Enum(MembershipRole), default=MembershipRole.AGENT, nullable=False
     )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
     colour: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
