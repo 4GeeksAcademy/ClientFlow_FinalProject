@@ -6,6 +6,7 @@ import { ClientDetail } from "./pages/ClientDetail";
 import { Clients } from "./pages/Clients";
 import { Dashboard } from "./pages/Dashboard";
 import { ForgotPassword } from "./pages/ForgotPassword";
+import { Inbox } from "./pages/Inbox";
 import { JobDetail } from "./pages/JobDetail";
 import { Jobs } from "./pages/Jobs";
 import { Layout } from "./pages/Layout";
@@ -204,6 +205,14 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <Members />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="conversations"
+                element={
+                    <ProtectedRoute>
+                        <Inbox />
                     </ProtectedRoute>
                 }
             />
