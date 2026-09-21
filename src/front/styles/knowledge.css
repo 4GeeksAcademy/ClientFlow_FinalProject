@@ -1,0 +1,39 @@
+.knowledge-page{padding:36px;max-width:1600px;margin:auto;color:#202538}
+.knowledge-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px}
+.knowledge-heading h1{font-size:32px;margin:8px 0}
+.knowledge-heading p{color:#7c879f}
+.knowledge-eyebrow{color:#7357dc!important;letter-spacing:1.5px;font-size:12px;font-weight:700}
+.knowledge-page button{border:1px solid #e3e6ef;background:white;color:#534579;border-radius:9px;padding:9px 13px;cursor:pointer}
+.knowledge-page button:disabled{opacity:.45;cursor:not-allowed}
+.knowledge-page button.knowledge-primary{background:#7357dc;color:#fff;border-color:#7357dc;padding:13px 19px}
+.knowledge-card,.knowledge-preview{background:white;border:1px solid #e7e9f2;border-radius:15px;overflow:hidden}
+.knowledge-scroll{overflow-x:auto}
+.knowledge-card table{width:100%;border-collapse:collapse;min-width:720px}
+.knowledge-card th{text-align:left;background:#fafbfe;color:#7c879f;font-size:12px;padding:17px 20px}
+.knowledge-card td{border-top:1px solid #edf0f6;padding:20px;vertical-align:middle}
+.knowledge-card small{display:block;color:#7c879f;margin-top:6px}
+.knowledge-actions{display:flex;gap:8px;flex-wrap:wrap}
+.knowledge-status{font-size:12px;border-radius:20px;padding:6px 10px;background:#f0ecff;color:#7457cc;white-space:nowrap}
+.knowledge-status.ready{background:#e4f8ef;color:#258767}
+.knowledge-status.failed{background:#fdeaea;color:#b33d4b}
+.knowledge-status.processing{background:#fff4d9;color:#947010}
+.knowledge-page footer{padding:18px 20px;border-top:1px solid #edf0f6;display:flex;justify-content:space-between;align-items:center;color:#7c879f}
+.knowledge-page footer div{display:flex;gap:16px;align-items:center}
+.knowledge-empty{padding:48px;text-align:center;color:#7c879f}
+.knowledge-empty h2{font-size:20px;color:#384259}
+.knowledge-error,.knowledge-notice{padding:14px;border-radius:10px;background:#fdeaea;margin-bottom:20px}
+.knowledge-notice{background:#e4f8ef}
+.knowledge-failure{max-width:400px;color:#ae3b4b;font-size:13px;margin:8px 0}
+.knowledge-dialog{border:1px solid #e7e9f2;border-radius:16px;padding:28px;width:min(520px,92vw);color:#202538}
+.knowledge-dialog::backdrop{background:#15182c80}
+.knowledge-dialog label{display:block;margin:18px 0}
+.knowledge-dialog input{display:block;width:100%;padding:10px;border:1px solid #dce0ed;border-radius:8px;margin-top:6px}
+.knowledge-preview{padding:24px;margin-top:24px}
+.knowledge-preview header{display:flex;justify-content:space-between;gap:16px}
+.knowledge-preview article{border-top:1px solid #edf0f6;padding:18px 0}
+.knowledge-preview article p{white-space:pre-wrap;overflow-wrap:anywhere}
+.knowledge-preview small{color:#7c879f}
+@media(max-width:700px){.knowledge-page{padding:18px}
+.knowledge-heading{align-items:flex-start;flex-direction:column}
+.knowledge-page footer{gap:12px;flex-wrap:wrap}
+}
