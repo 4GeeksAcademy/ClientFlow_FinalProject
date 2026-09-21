@@ -8,6 +8,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Inbox } from "./pages/Inbox";
 import { JobDetail } from "./pages/JobDetail";
+import { Knowledge } from "./pages/Knowledge";
 import { Jobs } from "./pages/Jobs";
 import { Layout } from "./pages/Layout";
 import { Leads } from "./pages/Leads";
@@ -200,6 +201,7 @@ export const router = createBrowserRouter(
                     </ProtectedRoute>
                 }
             />
+            <Route path="knowledge" element={<ProtectedRoute><Knowledge /></ProtectedRoute>} />
             <Route
                 path="team"
                 element={
