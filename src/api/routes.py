@@ -9,10 +9,12 @@ from sqlalchemy.exc import IntegrityError
 from api.auth import email_value, limited, password_valid, set_password, tenant_required
 from api.models import (
     Activity,
+    Attachment,
     Client,
     ClientAddress,
     Company,
     CompanyMembership,
+    Job,
     Lead,
     LeadStatus,
     MembershipRole,
@@ -841,6 +843,144 @@ def list_client_activities(client_id):
             ),
         }
         for activity in activities
+    ]), 200
+
+
+@api.route("/clients/<int:client_id>/jobs", methods=["GET"])
+@tenant_required
+def list_client_jobs(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({"error": "Cliente no encontrado."}), 404
+
+    jobs = db.session.scalars(
+        select(Job)
+        .where(
+            Job.client_id == client_id,
+            Job.company_id == g.company_id,
+        )
+        .order_by(Job.created_at.desc(), Job.id.desc())
+    ).all()
+
+    return jsonify([
+        {
+            "id": job.id,
+            "client_id": job.client_id,
+            "service_type_id": job.service_type_id,
+            "service_zone_id": job.service_zone_id,
+            "assigned_membership_id": job.assigned_membership_id,
+            "title": job.title,
+            "description": job.description,
+            "status": job.status.value,
+            "priority": job.priority,
+            "quoted_amount": (
+                float(job.quoted_amount)
+                if job.quoted_amount is not None
+                else None
+            ),
+            "scheduled_start": (
+                job.scheduled_start.isoformat()
+                if job.scheduled_start
+                else None
+            ),
+            "scheduled_end": (
+                job.scheduled_end.isoformat()
+                if job.scheduled_end
+                else None
+            ),
+            "completed_at": (
+                job.completed_at.isoformat()
+                if job.completed_at
+                else None
+            ),
+            "created_at": job.created_at.isoformat(),
+            "updated_at": job.updated_at.isoformat(),
+        }
+        for job in jobs
+    ]), 200
+
+
+@api.route("/clients/<int:client_id>/appointments", methods=["GET"])
+@tenant_required
+def list_client_appointments(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({"error": "Cliente no encontrado."}), 404
+
+    appointments = db.session.scalars(
+        select(Appointment)
+        .where(
+            Appointment.client_id == client_id,
+            Appointment.company_id == g.company_id,
+        )
+        .order_by(Appointment.starts_at.asc(), Appointment.id.asc())
+    ).all()
+
+    return jsonify([
+        {
+            "id": appointment.id,
+            "company_id": appointment.company_id,
+            "job_id": appointment.job_id,
+            "client_id": appointment.client_id,
+            "assigned_membership_id": appointment.assigned_membership_id,
+            "service_type_id": appointment.service_type_id,
+            "title": appointment.title,
+            "status": appointment.status.value,
+            "starts_at": appointment.starts_at.isoformat(),
+            "ends_at": appointment.ends_at.isoformat(),
+            "address_text": appointment.address_text,
+            "notes": appointment.notes,
+        }
+        for appointment in appointments
+    ]), 200
+
+
+@api.route("/clients/<int:client_id>/attachments", methods=["GET"])
+@tenant_required
+def list_client_attachments(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({"error": "Cliente no encontrado."}), 404
+
+    attachments = db.session.scalars(
+        select(Attachment)
+        .where(
+            Attachment.client_id == client_id,
+            Attachment.company_id == g.company_id,
+        )
+        .order_by(Attachment.created_at.desc(), Attachment.id.desc())
+    ).all()
+
+    return jsonify([
+        {
+            "id": attachment.id,
+            "client_id": attachment.client_id,
+            "uploaded_by_membership_id": attachment.uploaded_by_membership_id,
+            "filename": attachment.filename,
+            "content_type": attachment.content_type,
+            "size_bytes": attachment.size_bytes,
+            "category": attachment.category,
+            "created_at": attachment.created_at.isoformat(),
+        }
+        for attachment in attachments
     ]), 200
 
 
