@@ -1,4 +1,3 @@
-import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export const Sidebar = ({ isOpen, onClose }) => {
@@ -8,9 +7,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
     const isActive = (path) => location.pathname === path;
 
     const getLinkClass = (path) => {
-        return `nav-link d-flex align-items-center gap-3 py-2 px-3 rounded-2 text-white small ${
-            isActive(path) ? "bg-primary bg-opacity-50 fw-semibold text-white shadow-sm" : "text-white-50"
-        }`;
+        return `nav-link d-flex align-items-center gap-3 py-2 px-3 rounded-2 text-white small ${isActive(path) ? "bg-primary bg-opacity-50 fw-semibold text-white shadow-sm" : "text-white-50"
+            }`;
     };
 
     // Función para manejar el cierre de sesión
@@ -20,7 +18,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         sessionStorage.clear();
-        
+
         // Redirigimos al usuario a la vista de inicio de sesión
         navigate("/login");
     };
@@ -34,17 +32,16 @@ export const Sidebar = ({ isOpen, onClose }) => {
         <>
             {/* Fondo oscuro semitransparente en móvil cuando el menú está abierto */}
             {isOpen && (
-                <div 
-                    className="modal-backdrop fade show d-md-none" 
+                <div
+                    className="modal-backdrop fade show d-md-none"
                     onClick={onClose}
                     style={{ zIndex: 1040 }}
                 ></div>
             )}
 
-            <div 
-                className={`d-flex flex-column flex-shrink-0 p-3 text-white vh-100 position-fixed top-0 start-0 border-end border-secondary border-opacity-10 sidebar-container ${
-                    isOpen ? "show-mobile" : ""
-                }`} 
+            <div
+                className={`d-flex flex-column flex-shrink-0 p-3 text-white vh-100 position-fixed top-0 start-0 border-end border-secondary border-opacity-10 sidebar-container ${isOpen ? "show-mobile" : ""
+                    }`}
                 style={{ width: "260px", backgroundColor: "#0f172a", zIndex: 1050 }}
             >
                 {/* Logo y Marca con botón de cierre para móvil integrado */}
@@ -59,8 +56,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
                         </div>
                     </Link>
                     {/* Botón de cerrar visible solo en móvil */}
-                    <button 
-                        className="btn btn-link text-white-50 d-md-none text-decoration-none p-1" 
+                    <button
+                        className="btn btn-link text-white-50 d-md-none text-decoration-none p-1"
                         onClick={onClose}
                         aria-label="Cerrar menú"
                     >
@@ -72,11 +69,11 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
                 {/* Menú de Navegación principal */}
                 <div className="overflow-y-auto pe-2" style={{ maxHeight: "calc(100vh - 160px)" }}>
-                    
+
                     <span className="text-uppercase text-white-50 fw-bold px-2 mb-2 d-block" style={{ fontSize: "0.6rem", letterSpacing: "0.8px" }}>
                         Espacio de trabajo
                     </span>
-                    
+
                     <ul className="nav nav-pills flex-column mb-3 gap-1">
                         <li>
                             <Link to="/dashboard" onClick={handleLinkClick} className={getLinkClass("/dashboard")}>
@@ -104,11 +101,10 @@ export const Sidebar = ({ isOpen, onClose }) => {
                             </Link>
                         </li>
                         <li>
-                            <Link to="/communications" onClick={handleLinkClick} className={`${getLinkClass("/communications")} justify-content-between`}>
+                            <Link to="/conversations" onClick={handleLinkClick} className={`${getLinkClass("/conversations")} justify-content-between`}>
                                 <span className="d-flex align-items-center gap-3">
                                     <i className="fa-solid fa-comments" style={{ width: "16px" }}></i> Conversaciones
                                 </span>
-                                <span className="badge rounded-pill fw-bold" style={{ backgroundColor: "#635bff", fontSize: "0.65rem" }}>4</span>
                             </Link>
                         </li>
                         <li>
@@ -145,12 +141,12 @@ export const Sidebar = ({ isOpen, onClose }) => {
                         </li>
                         <li>
                             {/* Botón de Cerrar Sesión interactivo */}
-                            <a 
-                                href="#logout" 
+                            <a
+                                href="#logout"
                                 onClick={(e) => {
                                     handleLinkClick();
                                     handleLogout(e);
-                                }} 
+                                }}
                                 className="nav-link d-flex align-items-center gap-3 py-2 px-3 rounded-2 text-danger small hover-danger"
                                 style={{ cursor: "pointer" }}
                             >

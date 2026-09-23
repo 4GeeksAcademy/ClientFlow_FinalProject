@@ -1,30 +1,34 @@
-"""
-API routes for ClientFlow.
-"""
-from datetime import datetime
+from datetime import datetime, timedelta
+from uuid import uuid4
 
 from flask import Blueprint, g, jsonify, request
 from flask_cors import CORS
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, and_, select
+from sqlalchemy.exc import IntegrityError
 
-from api.auth import tenant_required
+from api.auth import email_value, limited, password_valid, set_password, tenant_required
 from api.models import (
-    db,
     Activity,
-    CompanyMembership,
-    ClientAddress,
     Client,
+    ClientAddress,
+    Company,
+    CompanyMembership,
     Lead,
     LeadStatus,
+    MembershipRole,
     NextAction,
     NextActionStatus,
+    Plan,
     ServiceType,
+    Subscription,
+    SubscriptionStatus,
+    User,
+    Appointment,
+    AppointmentStatus,
+    db,
     utc_now,
 )
-
-
-api = Blueprint("api", __name__)
-
+api = Blueprint("api",__name__)
 # Allow CORS requests to this API
 CORS(api)
 
@@ -1472,3 +1476,333 @@ def convert_lead_to_client(lead_id):
         "status": lead.status.value,
         "converted_at": lead.converted_at.isoformat(),
     }), 201
+
+
+@api.route('/plans', methods=['GET'])
+def get_plans():
+    plans = db.session.scalars(
+        select(Plan)
+        .where(Plan.is_active.is_(True))
+        .order_by(Plan.id)
+    ).all()
+
+    return jsonify([
+        {
+            "id": plan.id,
+            "code": plan.code,
+            "name": plan.name,
+            "description": plan.description,
+            "price_eur": str(plan.price_eur),
+            "billing_interval": plan.billing_interval,
+            "trial_days": plan.trial_days,
+            "limits": plan.limits,
+        }
+        for plan in plans
+    ]), 200
+
+
+@api.route("/register", methods=["POST"])
+@limited("register")
+def register():
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify(message="Request body must be a JSON object."), 400
+    registration_mode = data.get("registration_mode", "trial")
+
+    if registration_mode not in ("trial", "mock_payment"):
+        return jsonify(
+            message="Choose a free trial or simulated payment."
+        ), 400
+    email = email_value(data)
+    password = data.get("password")
+
+    if not email or not password_valid(password):
+        return jsonify(
+            message="Use a valid email and a password of 12–128 characters."
+        ), 400
+
+    fields = {}
+    for key, max_length in (
+        ("firstName", 100),
+        ("lastName", 100),
+        ("company", 160),
+    ):
+        value = data.get(key, "")
+
+        if not isinstance(value, str):
+            return jsonify(message=f"{key} must be text."), 400
+
+        value = value.strip()
+
+        if len(value) > max_length:
+            return jsonify(message=f"{key} is too long."), 400
+
+        fields[key] = value
+
+    if not fields["firstName"] or not fields["company"]:
+        return jsonify(
+            message="First name and company name are required."
+        ), 400
+
+    plan_id = data.get("plan_id")
+
+    if type(plan_id) is not int or plan_id <= 0:
+        return jsonify(message="Select a valid plan."), 400
+
+    plan = db.session.scalar(
+        select(Plan).where(
+            Plan.id == plan_id,
+            Plan.is_active.is_(True),
+        )
+    )
+
+    if plan is None:
+        return jsonify(message="Selected plan is unavailable."), 400
+
+    if db.session.scalar(select(User.id).where(User.email == email)):
+        return jsonify(message="An account with this email already exists."), 409
+
+    now = utc_now()
+
+    user = User(
+        email=email,
+        first_name=fields["firstName"],
+        last_name=fields["lastName"],
+    )
+    set_password(user, password)
+
+    company = Company(
+        name=fields["company"],
+        slug=f"company-{uuid4().hex}",
+        email=email,
+    )
+
+    membership = CompanyMembership(
+        user=user,
+        company=company,
+        role=MembershipRole.OWNER,
+    )
+
+    subscription = Subscription(
+        company=company,
+        plan=plan,
+    )
+
+    if registration_mode == "trial":
+        subscription.status = SubscriptionStatus.TRIALING
+        subscription.trial_started_at = now
+        subscription.trial_ends_at = now + timedelta(days=3)
+    else:
+        # Academic payment simulation: no real charge is made.
+        subscription.status = SubscriptionStatus.ACTIVE
+        subscription.current_period_started_at = now
+        subscription.current_period_ends_at = now + timedelta(days=30)
+        subscription.external_subscription_id = f"mock_{uuid4().hex}"
+
+    try:
+        db.session.add_all([user, company, membership, subscription])
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(
+            message="Registration could not be completed due to a data conflict."
+        ), 409
+
+    return jsonify(message="Account created successfully. Please sign in."), 201
+
+# ==========================================
+# APPOINTMENTS ENDPOINTS (Ticket #28)
+# ==========================================
+
+
+@api.route("/appointments", methods=["GET"])
+@tenant_required
+def get_appointments():
+    """List appointments for the current company, with optional date filters."""
+    company_id = g.company_id
+
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    query = select(Appointment).where(Appointment.company_id == company_id)
+
+    if start_date:
+        query = query.where(Appointment.starts_at >=
+                            datetime.fromisoformat(start_date))
+    if end_date:
+        query = query.where(Appointment.ends_at <=
+                            datetime.fromisoformat(end_date))
+
+    appointments = db.session.scalars(query).all()
+
+    return jsonify([{
+        "id": appt.id,
+        "company_id": appt.company_id,
+        "job_id": appt.job_id,
+        "client_id": appt.client_id,
+        "assigned_membership_id": appt.assigned_membership_id,
+        "service_type_id": appt.service_type_id,
+        "title": appt.title,
+        "status": appt.status.value if hasattr(appt.status, "value") else appt.status,
+        "starts_at": appt.starts_at.isoformat() if appt.starts_at else None,
+        "ends_at": appt.ends_at.isoformat() if appt.ends_at else None,
+        "address_text": appt.address_text,
+        "notes": appt.notes
+    } for appt in appointments]), 200
+
+
+@api.route("/appointments", methods=["POST"])
+@tenant_required
+def create_appointment():
+    """Create a new appointment with scheduling conflict detection."""
+    body = request.get_json()
+    company_id = g.company_id
+
+    required_fields = ["title", "client_id",
+                       "starts_at", "ends_at", "assigned_membership_id"]
+    for field in required_fields:
+        if not body.get(field):
+            return jsonify({"error": f"Missing required field: {field}"}), 400
+
+    try:
+        new_start = datetime.fromisoformat(body["starts_at"])
+        new_end = datetime.fromisoformat(body["ends_at"])
+        assigned_id = body["assigned_membership_id"]
+
+        # Validación de conflictos de horarios para el usuario asignado
+        conflict_query = select(Appointment).where(
+            Appointment.assigned_membership_id == assigned_id,
+            Appointment.status != AppointmentStatus.CANCELLED,
+            or_(
+                and_(Appointment.starts_at <= new_start,
+                     Appointment.ends_at > new_start),
+                and_(Appointment.starts_at < new_end,
+                     Appointment.ends_at >= new_end),
+                and_(Appointment.starts_at >= new_start,
+                     Appointment.ends_at <= new_end)
+            )
+        )
+
+        existing_conflict = db.session.scalar(conflict_query)
+        if existing_conflict:
+            return jsonify({
+                "error": "Scheduling conflict: The assigned user already has an appointment during this time slot."
+            }), 409  # Conflicto HTTP 409
+
+        new_appointment = Appointment(
+            company_id=company_id,
+            job_id=body.get("job_id"),
+            client_id=body["client_id"],
+            assigned_membership_id=assigned_id,
+            service_type_id=body.get("service_type_id"),
+            title=body["title"],
+            status=AppointmentStatus.SCHEDULED,
+            starts_at=new_start,
+            ends_at=new_end,
+            address_text=body.get("address_text"),
+            notes=body.get("notes")
+        )
+
+        db.session.add(new_appointment)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Appointment created successfully",
+            "id": new_appointment.id
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@api.route("/appointments/<int:appointment_id>", methods=["PUT"])
+@tenant_required
+def update_appointment(appointment_id):
+    """Update or move an existing appointment, with conflict detection."""
+    company_id = g.company_id
+    appointment = db.session.get(Appointment, appointment_id)
+
+    if not appointment or appointment.company_id != company_id:
+        return jsonify({"error": "Appointment not found"}), 404
+
+    body = request.get_json()
+
+    try:
+        new_start = datetime.fromisoformat(
+            body["starts_at"]) if "starts_at" in body else appointment.starts_at
+        new_end = datetime.fromisoformat(
+            body["ends_at"]) if "ends_at" in body else appointment.ends_at
+        assigned_id = body.get("assigned_membership_id",
+                               appointment.assigned_membership_id)
+
+        # Validar conflictos si se modifican las fechas o el usuario asignado
+        if "starts_at" in body or "ends_at" in body or "assigned_membership_id" in body:
+            conflict_query = select(Appointment).where(
+                Appointment.assigned_membership_id == assigned_id,
+                Appointment.id != appointment_id,
+                Appointment.status != AppointmentStatus.CANCELLED,
+                or_(
+                    and_(Appointment.starts_at <= new_start,
+                         Appointment.ends_at > new_start),
+                    and_(Appointment.starts_at < new_end,
+                         Appointment.ends_at >= new_end),
+                    and_(Appointment.starts_at >= new_start,
+                         Appointment.ends_at <= new_end)
+                )
+            )
+            existing_conflict = db.session.scalar(conflict_query)
+            if existing_conflict:
+                return jsonify({
+                    "error": "Scheduling conflict: The assigned user already has an appointment during this time slot."
+                }), 409
+
+        if "title" in body:
+            appointment.title = body["title"]
+        if "client_id" in body:
+            appointment.client_id = body["client_id"]
+        if "job_id" in body:
+            appointment.job_id = body["job_id"]
+        if "assigned_membership_id" in body:
+            appointment.assigned_membership_id = assigned_id
+        if "service_type_id" in body:
+            appointment.service_type_id = body["service_type_id"]
+        if "status" in body:
+            appointment.status = AppointmentStatus(body["status"])
+        if "starts_at" in body:
+            appointment.starts_at = new_start
+        if "ends_at" in body:
+            appointment.ends_at = new_end
+        if "address_text" in body:
+            appointment.address_text = body["address_text"]
+        if "notes" in body:
+            appointment.notes = body["notes"]
+
+        db.session.commit()
+        return jsonify({"message": "Appointment updated successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@api.route("/appointments/<int:appointment_id>", methods=["DELETE"])
+@tenant_required
+def delete_appointment(appointment_id):
+    """Cancel an appointment (sets status to CANCELLED)."""
+    company_id = g.company_id
+    appointment = db.session.get(Appointment, appointment_id)
+
+    if not appointment or appointment.company_id != company_id:
+        return jsonify({"error": "Appointment not found"}), 404
+
+    try:
+        # Cambiamos el estado a cancelado en lugar de borrar el registro físicamente
+        appointment.status = AppointmentStatus.CANCELLED
+        db.session.commit()
+        return jsonify({"message": "Appointment cancelled successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

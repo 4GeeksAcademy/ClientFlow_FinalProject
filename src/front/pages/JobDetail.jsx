@@ -1,10 +1,18 @@
 import React, { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import { initialJobs } from "../../data/jobsMockData";
+import { sharedAppointments } from "../../data/sharedAppointments"; // <--- Importamos las citas compartidas
 
 export const JobDetail = () => {
     const { id } = useParams();
-    const [job, setJob] = useState(initialJobs.find(j => j.id === id) || initialJobs[0]);
+    const location = useLocation();
+    const [job, setJob] = useState(() => initialJobs.find(j => j.id === id) ||
+        (location.state?.job?.id === id ? location.state.job : null));
+
+    // Filtramos de forma segura las citas de la agenda global que coincidan con este trabajo
+    const jobAppointments = sharedAppointments.filter(
+        app => app.jobId === job?.id
+    );
 
     const handleStageChange = (stageId, newStatus) => {
         const updatedStages = job.stages.map(stage => {
@@ -44,6 +52,8 @@ export const JobDetail = () => {
             default: return "Pendiente";
         }
     };
+
+    if (!job) return <p role="alert">Job not found.</p>;
 
     return (
         <div className="container-fluid px-0">
@@ -178,22 +188,30 @@ export const JobDetail = () => {
                 {/* Columna Derecha: Citas Relacionadas y Actividad Reciente */}
                 <div className="col-12 col-xl-4">
                     
-                    {/* Citas Relacionadas */}
+                    {/* Citas Relacionadas (Conectadas con la agenda y deeplink) */}
                     <div className="card border-0 shadow-sm mb-4 bg-white">
-                        <div className="card-header bg-white py-3 border-0">
+                        <div className="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
                             <h5 className="fw-bold text-dark m-0">
                                 <i className="fa-solid fa-calendar-check me-2 text-info"></i> Citas Relacionadas
                             </h5>
+                            <Link to="/agenda" className="text-decoration-none small fw-bold">Ver Agenda</Link>
                         </div>
                         <div className="card-body pt-0">
-                            {job.appointments.map(app => (
-                                <div className="p-3 bg-light rounded-2 mb-2 border-start border-4 border-primary" key={app.id}>
-                                    <span className="fw-bold text-dark small d-block">{app.title}</span>
-                                    <span className="text-secondary" style={{ fontSize: "0.75rem" }}>
-                                        <i className="fa-solid fa-clock me-1"></i> {app.date}
-                                    </span>
-                                </div>
-                            ))}
+                            {jobAppointments.length === 0 ? (
+                                <p className="text-secondary small mb-0">No hay citas registradas para este trabajo.</p>
+                            ) : (
+                                jobAppointments.map(app => (
+                                    <div className="p-3 bg-light rounded-2 mb-2 border-start border-4 border-primary d-flex justify-content-between align-items-center" key={app.id}>
+                                        <div>
+                                            <span className="fw-bold text-dark small d-block">{app.title}</span>
+                                            <span className="text-secondary" style={{ fontSize: "0.75rem" }}>
+                                                <i className="fa-solid fa-clock me-1"></i> {app.date} a las {app.time}
+                                            </span>
+                                        </div>
+                                        <Link to={`/agenda?appointmentId=${app.id}`} className="btn btn-sm btn-outline-primary">Abrir</Link>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
 

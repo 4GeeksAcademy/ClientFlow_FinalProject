@@ -2,8 +2,20 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer
-from sqlalchemy import JSON, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 db = SQLAlchemy()
@@ -194,6 +206,9 @@ class CompanyMembership(db.Model):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     role: Mapped[MembershipRole] = mapped_column(
         Enum(MembershipRole), default=MembershipRole.AGENT, nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
     )
     colour: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(
@@ -546,6 +561,7 @@ class ConversationParticipant(db.Model):
     display_name: Mapped[str | None] = mapped_column(String(160))
     participant_type: Mapped[str] = mapped_column(String(30), nullable=False)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_read_message_id: Mapped[int | None] = mapped_column(Integer)
     conversation: Mapped["Conversation"] = relationship(back_populates="participants")
 
 
@@ -581,6 +597,8 @@ class KnowledgeDocument(TimestampMixin, db.Model):
     storage_key: Mapped[str | None] = mapped_column(String(500))
     checksum: Mapped[str | None] = mapped_column(String(128))
     ingestion_status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)
+    ingestion_error: Mapped[str | None] = mapped_column(Text)
+    processing_token: Mapped[str | None] = mapped_column(String(64))
     uploaded_by_membership_id: Mapped[int] = mapped_column(ForeignKey("company_memberships.id"), nullable=False)
     chunks: Mapped[list["KnowledgeChunk"]] = relationship(
         back_populates="document", cascade="all, delete-orphan"
@@ -598,6 +616,9 @@ class KnowledgeChunk(db.Model):
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding_reference: Mapped[str | None] = mapped_column(String(255))
+    embedding: Mapped[list | None] = mapped_column(JSON)
+    embedding_model: Mapped[str | None] = mapped_column(String(100))
+    embedding_dimensions: Mapped[int | None] = mapped_column(Integer)
     token_count: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     document: Mapped["KnowledgeDocument"] = relationship(back_populates="chunks")
