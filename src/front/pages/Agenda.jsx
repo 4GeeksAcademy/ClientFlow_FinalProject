@@ -1,179 +1,123 @@
-import React, { useState, useEffect, useContext } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Context } from "../context/AppContext";
-import { 
-    getAppointments, 
-    createAppointment, 
-    cancelAppointment 
-} from "../services/appointmentService"; // Importamos los servicios que creamos
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { dateKey, parseDate } from "../utils/calendar.mjs";
+import { getAppointmentContext, getAppointmentOptions, getAppointments,
+    createAppointment, updateAppointment, cancelAppointment } from "../services/appointmentService";
+
+const localTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+const localStamp = (value) => { const date = new Date(value); return `${dateKey(date)}T${localTime(date)}`; };
+const statusLabels = { scheduled: "Programada", confirmed: "Confirmada", completed: "Completada", cancelled: "Cancelada", no_show: "No asistió" };
+const statusColors = { scheduled: "#635bff", confirmed: "#198754", completed: "#495057", cancelled: "#6c757d", no_show: "#a64b00" };
 
 export const Agenda = () => {
-    const { store } = useContext(Context); // Obtenemos el token de autenticación
+    const token = localStorage.getItem("access_token");
+    const [company, setCompany] = useState(null);
+    const [choices, setChoices] = useState({ clients: [], members: [], jobs: [], services: [] });
     const [appointments, setAppointments] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const [revision, setRevision] = useState(0);
     const [errorMsg, setErrorMsg] = useState(null);
-
+    const [formError, setFormError] = useState("");
     const location = useLocation();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0]);
-
-    // Vistas de mes y semana
+    const [selectedDateStr, setSelectedDateStr] = useState(dateKey(new Date()));
     const [currentView, setCurrentView] = useState("month");
+    const [showModal, setShowModal] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const emptyForm = { title: "", date: selectedDateStr, time: "10:00", duration: 60,
+        clientId: "", assignedId: "", jobId: "", serviceId: "", status: "scheduled", notes: "" };
+    const [newApp, setNewApp] = useState(emptyForm);
+    const options = { token, companyId: company?.id };
 
-    // Cargar citas desde el backend al iniciar o cuando cambia el token
     useEffect(() => {
-        if (store.token) {
-            fetchAppointments();
-        }
-    }, [store.token]);
+        const controller = new AbortController();
+        const load = async () => {
+            setLoading(true); setErrorMsg(null);
+            try {
+                const account = await getAppointmentContext(token, controller.signal);
+                const current = account.companies?.[0];
+                if (!current) throw new Error("No hay una empresa disponible.");
+                const opts = { token, companyId: current.id, signal: controller.signal };
+                const [data, lists] = await Promise.all([getAppointments(opts), getAppointmentOptions(opts)]);
+                if (controller.signal.aborted) return;
+                setCompany(current); setChoices(lists);
+                setAppointments(data.map(item => ({ ...item,
+                    duration: Math.round((new Date(item.ends_at) - new Date(item.starts_at)) / 60000),
+                    starts_at: localStamp(item.starts_at), ends_at: localStamp(item.ends_at) })));
+            } catch (error) {
+                if (!controller.signal.aborted) setErrorMsg(error instanceof TypeError ? "No se pudo conectar con la API. Comprueba la configuración del servidor." : error.message);
+            } finally { if (!controller.signal.aborted) setLoading(false); }
+        };
+        load();
+        return () => controller.abort();
+    }, [token, revision]);
 
-    const fetchAppointments = async () => {
-        try {
-            setLoading(true);
-            setErrorMsg(null);
-            const data = await getAppointments(store.token);
-            setAppointments(data);
-        } catch (err) {
-            console.error(err);
-            setErrorMsg("No se pudieron cargar las citas del servidor.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Detectar si llegamos desde un enlace con un appointment ID específico
     useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const appId = params.get("appointmentId");
-        if (appId && appointments.length > 0) {
-            const foundApp = appointments.find(a => String(a.id) === String(appId));
-            if (foundApp && foundApp.starts_at) {
-                const datePart = foundApp.starts_at.split('T')[0];
-                setSelectedDateStr(datePart); 
-                setCurrentDate(new Date(datePart)); 
-            }
+        const id = new URLSearchParams(location.search).get("appointmentId");
+        const item = appointments.find(app => String(app.id) === id);
+        if (item) {
+            const day = item.starts_at.split('T')[0];
+            setSelectedDateStr(day); setCurrentDate(parseDate(day));
         }
     }, [location.search, appointments]);
 
-    // Modal de Nueva Cita
-    const [showModal, setShowModal] = useState(false);
-    const [newApp, setNewApp] = useState({
-        title: "",
-        date: selectedDateStr,
-        time: "10:00",
-        type: "Medición",
-        clientName: "Antonio Ruiz",
-        clientId: 1, // Ajustado a número o ID válido para tu backend
-        responsible: "Carlos Alberto",
-        relatedJob: "Renovación de Puertas de Cocina",
-        jobId: 1
-    });
-
+    const openCreate = () => {
+        setEditingId(null); setFormError("");
+        setNewApp({ ...emptyForm, assignedId: String(company?.membership_id || "") });
+        setShowModal(true);
+    };
+    const openEdit = (item) => {
+        setEditingId(item.id); setFormError("");
+        setNewApp({ title: item.title, date: item.starts_at.split('T')[0], time: item.starts_at.split('T')[1],
+            duration: item.duration, clientId: String(item.client_id), assignedId: String(item.assigned_membership_id),
+            jobId: String(item.job_id || ""), serviceId: String(item.service_type_id || ""), status: item.status, notes: item.notes || "" });
+        setShowModal(true);
+    };
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-
-    const monthNames = [
-        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-    ];
-
-    const handlePrev = () => {
-        if (currentView === "month") {
-            setCurrentDate(new Date(year, month - 1, 1));
-        } else {
-            const d = new Date(currentDate);
-            d.setDate(d.getDate() - 7);
-            setCurrentDate(d);
-        }
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const move = (amount) => {
+        if (currentView === "month") setCurrentDate(new Date(year, month + amount, 1));
+        else { const date = new Date(currentDate); date.setDate(date.getDate() + amount * 7); setCurrentDate(date); }
     };
-
-    const handleNext = () => {
-        if (currentView === "month") {
-            setCurrentDate(new Date(year, month + 1, 1));
-        } else {
-            const d = new Date(currentDate);
-            d.setDate(d.getDate() + 7);
-            setCurrentDate(d);
-        }
-    };
-
-    const handleToday = () => {
-        const now = new Date();
-        setCurrentDate(now);
-        setSelectedDateStr(now.toISOString().split('T')[0]);
-    };
-
-    // Crear cita conectada al Backend (con manejo de conflicto 409)
-    const handleCreateAppointment = async (e) => {
-        e.preventDefault();
-        
-        // Formatear fecha y hora para que coincidan con lo que espera el backend (ISO 8601)
-        const startsAtIso = `${newApp.date}T${newApp.time}:00`;
-        // Calculamos una hora de duración por defecto paraends_at
-        const startDateObj = new Date(startsAtIso);
-        startDateObj.setHours(startDateObj.getHours() + 1);
-        const endsAtIso = startDateObj.toISOString().slice(0, 19);
-
-        const payload = {
-            title: newApp.title,
-            notes: `${newApp.type} - Responsable: ${newApp.responsible}`,
-            starts_at: startsAtIso,
-            ends_at: endsAtIso,
-            client_id: Number(newApp.clientId)
-        };
-
+    const handlePrev = () => move(-1);
+    const handleNext = () => move(1);
+    const handleToday = () => { setCurrentDate(new Date()); setSelectedDateStr(dateKey(new Date())); };
+    const handleCreateAppointment = async (event) => {
+        event.preventDefault();
+        if (busy || !company) return;
+        setBusy(true); setFormError("");
         try {
-            await createAppointment(store.token, payload);
-            setShowModal(false);
-            fetchAppointments(); // Recargamos la lista desde la base de datos
-            alert("¡Cita creada con éxito!");
-        } catch (err) {
-            // Si el backend devuelve 409 Conflict, mostramos el mensaje de error específico
-            if (err.status === 409) {
-                alert(`Conflicto de horario: ${err.message}`);
-            } else {
-                alert(err.message || "Error al programar la cita.");
-            }
-        }
+            const start = new Date(`${newApp.date}T${newApp.time}:00`);
+            const end = new Date(start.getTime() + Number(newApp.duration) * 60000);
+            const body = { title: newApp.title.trim(), starts_at: start.toISOString(), ends_at: end.toISOString(),
+                client_id: Number(newApp.clientId), assigned_membership_id: Number(newApp.assignedId),
+                job_id: newApp.jobId ? Number(newApp.jobId) : null,
+                service_type_id: newApp.serviceId ? Number(newApp.serviceId) : null,
+                status: newApp.status, notes: newApp.notes };
+            if (editingId) await updateAppointment(options, editingId, body);
+            else await createAppointment(options, body);
+            setShowModal(false); setRevision(value => value + 1);
+        } catch (error) { setFormError(error.message || "No se pudo guardar la cita."); }
+        finally { setBusy(false); }
     };
-
-    // Función para eliminar/cancelar una cita conectada al Backend
     const handleDeleteAppointment = async (id) => {
-        if (window.confirm("¿Estás seguro de que deseas cancelar esta cita?")) {
-            try {
-                await cancelAppointment(store.token, id);
-                fetchAppointments(); // Recargamos la lista actualizada
-            } catch (err) {
-                alert(err.message || "Error al eliminar la cita.");
-            }
-        }
+        if (busy || !window.confirm("¿Cancelar esta cita?")) return;
+        setBusy(true);
+        try { await cancelAppointment(options, id); setRevision(value => value + 1); }
+        catch (error) { setErrorMsg(error.message || "No se pudo cancelar la cita."); }
+        finally { setBusy(false); }
     };
-
     const firstDayIndex = new Date(year, month, 1).getDay();
     const adjustedFirstDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
     const totalDays = new Date(year, month + 1, 0).getDate();
-
     const getWeekDays = (date) => {
-        const start = new Date(date);
-        const day = start.getDay();
-        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(start.setDate(diff));
-        let week = [];
-        for (let i = 0; i < 7; i++) {
-            const nextDay = new Date(monday);
-            nextDay.setDate(monday.getDate() + i);
-            week.push(nextDay.toISOString().split('T')[0]);
-        }
-        return week;
+        const monday = new Date(date); monday.setDate(date.getDate() - (date.getDay() + 6) % 7);
+        return Array.from({ length: 7 }, (_, index) => { const day = new Date(monday); day.setDate(monday.getDate() + index); return dateKey(day); });
     };
     const currentWeekDays = getWeekDays(currentDate);
-
-    // Filtramos las citas comparando la fecha de la base de datos con la seleccionada en el calendario
-    const selectedDayAppointments = appointments.filter(app => {
-        if (!app.starts_at) return false;
-        return app.starts_at.split('T')[0] === selectedDateStr;
-    });
-
+    const selectedDayAppointments = appointments.filter(app => app.starts_at.split('T')[0] === selectedDateStr);
     return (
         <div className="container-fluid px-0" style={{ color: "#212529" }}>
             {/* Cabecera general */}
@@ -186,17 +130,15 @@ export const Agenda = () => {
                     <button
                         className="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm"
                         style={{ backgroundColor: "#635bff", border: "none" }}
-                        onClick={() => {
-                            setNewApp(prev => ({ ...prev, date: selectedDateStr }));
-                            setShowModal(true);
-                        }}
+                        disabled={loading || busy || !company}
+                        onClick={openCreate}
                     >
                         <i className="fa-solid fa-plus"></i> Nueva Cita
                     </button>
                 </div>
             </div>
 
-            {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+            {errorMsg && <div className="alert alert-danger">{errorMsg} <button className="btn btn-sm btn-outline-danger" onClick={() => setRevision(value => value + 1)}>Reintentar</button></div>}
             {loading && <p className="text-muted">Cargando citas...</p>}
 
             <div className="row g-4">
@@ -252,7 +194,7 @@ export const Agenda = () => {
                                         {(() => {
                                             let rows = [];
                                             let cells = [];
-                                            
+
                                             // Celdas vacías iniciales para alinear al lunes
                                             for (let i = 0; i < adjustedFirstDayIndex; i++) {
                                                 cells.push(
@@ -273,11 +215,11 @@ export const Agenda = () => {
                                                         <div
                                                             onClick={() => setSelectedDateStr(dateStr)}
                                                             className="h-100 d-flex flex-column justify-content-between p-2 rounded-2 position-relative bg-white"
-                                                            style={{ 
+                                                            style={{
                                                                 cursor: "pointer",
                                                                 border: isSelected ? "2px solid #635bff" : "1px solid #dee2e6",
                                                                 boxShadow: isSelected ? "0 0 0 1px #635bff" : "none",
-                                                                transition: "all 0.15s ease-in-out" 
+                                                                transition: "all 0.15s ease-in-out"
                                                             }}
                                                         >
                                                             <div className="d-flex justify-content-between align-items-center">
@@ -331,11 +273,11 @@ export const Agenda = () => {
                                         const dayApps = appointments.filter(a => a.starts_at && a.starts_at.split('T')[0] === dateStr);
                                         const isSelected = selectedDateStr === dateStr;
                                         return (
-                                            <div 
-                                                className="col-12 col-md p-2 rounded-3 bg-white" 
-                                                key={dateStr} 
-                                                style={{ 
-                                                    minHeight: "320px", 
+                                            <div
+                                                className="col-12 col-md p-2 rounded-3 bg-white"
+                                                key={dateStr}
+                                                style={{
+                                                    minHeight: "320px",
                                                     border: isSelected ? "2px solid #635bff" : "1px solid #dee2e6",
                                                     boxShadow: isSelected ? "0 0 0 1px #635bff" : "none",
                                                     transition: "all 0.15s ease-in-out"
@@ -395,22 +337,24 @@ export const Agenda = () => {
                                             <div
                                                 className={`p-3 rounded-3 border-0 shadow-xs bg-light position-relative`}
                                                 key={app.id}
-                                                style={{ 
-                                                    borderLeft: !isHighlighted ? "4px solid #635bff" : "4px solid #198754" 
+                                                style={{
+                                                    borderLeft: `4px solid ${isHighlighted ? "#198754" : (choices.services.find(service => service.id === app.service_type_id)?.colour || "#635bff")}`
                                                 }}
                                             >
                                                 <div className="d-flex justify-content-between align-items-start mb-2">
                                                     <div>
-                                                        <span className="badge text-white mb-1" style={{ fontSize: "0.7rem", backgroundColor: "#495057" }}>{app.status || "Confirmada"}</span>
+                                                        <span className="badge text-white mb-1" style={{ fontSize: "0.7rem", backgroundColor: statusColors[app.status] || "#495057" }}>{statusLabels[app.status] || app.status}</span>
                                                         <h6 className="fw-bold mb-0 text-dark">
                                                             {app.title} {isHighlighted && <span className="text-success small ms-1">(Seleccionada)</span>}
                                                         </h6>
                                                     </div>
                                                     <div className="d-flex align-items-center gap-2">
                                                         <span className="fw-bold small" style={{ color: "#635bff" }}><i className="fa-solid fa-clock me-1"></i>{timeStr}</span>
-                                                        <button 
-                                                            className="btn btn-outline-danger btn-sm border-0 p-1" 
-                                                            title="Eliminar cita"
+                                                        <button className="btn btn-sm btn-outline-primary" disabled={busy} onClick={() => openEdit(app)}>Editar</button>
+                                                        <button
+                                                            className="btn btn-outline-danger btn-sm border-0 p-1"
+                                                            title="Cancelar cita"
+                                                            disabled={busy || app.status === "cancelled"}
                                                             onClick={() => handleDeleteAppointment(app.id)}
                                                         >
                                                             <i className="fa-solid fa-trash-can"></i>
@@ -440,7 +384,7 @@ export const Agenda = () => {
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow-lg rounded-4 bg-white text-dark">
                             <div className="modal-header border-0 pb-0">
-                                <h5 className="fw-bold text-dark">Programar Nueva Cita</h5>
+                                <h5 className="fw-bold text-dark">{editingId ? "Editar cita" : "Programar Nueva Cita"}</h5>
                                 <button type="button" className="btn-close shadow-none" onClick={() => setShowModal(false)}></button>
                             </div>
                             <form onSubmit={handleCreateAppointment}>
@@ -480,21 +424,18 @@ export const Agenda = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold text-dark">ID del Cliente</label>
-                                        <input
-                                            type="number"
-                                            className="form-control shadow-none rounded-3 border bg-light text-dark"
-                                            required
-                                            value={newApp.clientId}
-                                            onChange={e => setNewApp({ ...newApp, clientId: e.target.value })}
-                                            placeholder="Ej. 1"
-                                        />
-                                    </div>
+                                    <label className="form-label d-block">Duración (minutos)<input className="form-control" type="number" min="1" max="10080" required value={newApp.duration} onChange={event => setNewApp({ ...newApp, duration: event.target.value })} /></label>
+                                    <label className="form-label d-block">Cliente<select className="form-select" required value={newApp.clientId} onChange={event => setNewApp({ ...newApp, clientId: event.target.value, jobId: "" })}><option value="">Seleccionar cliente</option>{choices.clients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">Responsable<select className="form-select" required value={newApp.assignedId} onChange={event => setNewApp({ ...newApp, assignedId: event.target.value })}><option value="">Seleccionar responsable</option>{choices.members.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">Trabajo (opcional)<select className="form-select" value={newApp.jobId} onChange={event => setNewApp({ ...newApp, jobId: event.target.value })}><option value="">Sin trabajo</option>{choices.jobs.filter(item => item.client_id === Number(newApp.clientId)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+                                    <label className="form-label d-block">Servicio (opcional)<select className="form-select" value={newApp.serviceId} onChange={event => setNewApp({ ...newApp, serviceId: event.target.value })}><option value="">Sin servicio</option>{choices.services.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">Estado<select className="form-select" value={newApp.status} onChange={event => setNewApp({ ...newApp, status: event.target.value })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                                    <label className="form-label d-block">Notas<textarea className="form-control" maxLength={10000} value={newApp.notes} onChange={event => setNewApp({ ...newApp, notes: event.target.value })} /></label>
+                                    {formError && <p className="text-danger" role="alert">{formError}</p>}
                                 </div>
                                 <div className="modal-footer border-0 pt-0">
                                     <button type="button" className="btn btn-outline-secondary btn-sm rounded-3 px-3" onClick={() => setShowModal(false)}>Cancelar</button>
-                                    <button type="submit" className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "#635bff", border: "none" }}>Guardar Cita</button>
+                                    <button type="submit" disabled={busy} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "#635bff", border: "none" }}>Guardar Cita</button>
                                 </div>
                             </form>
                         </div>
