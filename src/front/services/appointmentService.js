@@ -1,6 +1,7 @@
 // src/services/appointmentService.js
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || "https://legendary-guacamole-96qv5r5x5p3px7q-3001.app.github.dev";
+// ✅ Forma correcta en Vite
+const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 // Helper para obtener los headers con autenticación Bearer
 const getAuthHeaders = (token) => ({
