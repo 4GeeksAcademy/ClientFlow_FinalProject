@@ -13,15 +13,30 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 import click
-
 from flask import Blueprint, current_app, g, jsonify, request
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt, get_jwt_identity, jwt_required
-from sqlalchemy import delete, select, update, inspect
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    get_jwt,
+    get_jwt_identity,
+    jwt_required,
+)
+from sqlalchemy import delete, inspect, select, update
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from api.models import db, User, Company, CompanyMembership, PasswordResetToken, AuthSession, AuthRateLimit, utc_now
-
+from api.models import (
+    AuthRateLimit,
+    AuthSession,
+    Company,
+    CompanyMembership,
+    PasswordResetToken,
+    Subscription,
+    SubscriptionStatus,
+    User,
+    db,
+    utc_now,
+)
 
 auth = Blueprint('auth', __name__)
 GENERIC_RESET = 'Si la cuenta existe, recibirás instrucciones para restablecer la contraseña.'
@@ -96,7 +111,24 @@ def limited(scope, maximum=10, window=900):
         return wrapped
     return decorate
 
+def subscription_allows_access(subscription):
+    if subscription is None:
+        return False
 
+    if subscription.status == SubscriptionStatus.TRIALING:
+        expires_at = subscription.trial_ends_at
+    elif subscription.status == SubscriptionStatus.ACTIVE:
+        expires_at = subscription.current_period_ends_at
+    else:
+        return False
+
+    if expires_at is None:
+        return False
+
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    return expires_at > utc_now()
 def tenant_required(fn):
     """Require JWT plus a verified membership selected by X-Company-ID."""
     @wraps(fn)
@@ -108,9 +140,22 @@ def tenant_required(fn):
         membership = db.session.scalar(select(CompanyMembership).join(Company).where(
             CompanyMembership.company_id == int(raw),
             CompanyMembership.user_id == int(get_jwt_identity()),
+            CompanyMembership.is_active.is_(True),
             Company.is_active.is_(True)))
         if membership is None:
             return error('No tienes acceso a esta empresa.', 403)
+        subscription = db.session.scalar(
+            select(Subscription)
+            .where(Subscription.company_id == membership.company_id)
+            .order_by(Subscription.created_at.desc(), Subscription.id.desc())
+            .limit(1)
+        )
+
+        if not subscription_allows_access(subscription):
+            return jsonify(
+                message="Your subscription is inactive or expired.",
+                code="subscription_required",
+            ), 403
         g.company_id = membership.company_id
         g.membership = membership
         g.user = db.session.get(User, int(get_jwt_identity()))
@@ -188,8 +233,12 @@ def init_auth(app):
         db.create_all()
         db.session.add_all([user, company])
         db.session.flush()
-        from api.models import MembershipRole
+        from api.models import MembershipRole, Plan
         db.session.add(CompanyMembership(user_id=user.id, company_id=company.id, role=MembershipRole.OWNER))
+        plan = Plan(code="starter", name="Starter", price_eur=29.99, trial_days=3, limits={"leads": 100})
+        now = utc_now()
+        db.session.add(Subscription(company=company, plan=plan, trial_started_at=now,
+                                    trial_ends_at=now + timedelta(days=3)))
         db.session.commit()
         click.echo('Local owner created. This is not a migration or a deployment procedure.')
 
@@ -223,11 +272,27 @@ def login():
 @jwt_required()
 def me():
     user = db.session.get(User, int(get_jwt_identity()))
-    memberships = db.session.scalars(select(CompanyMembership).join(Company).where(
-        CompanyMembership.user_id == user.id, Company.is_active.is_(True))).all()
-    return jsonify(user=user.serialize(), companies=[{
-        'id': m.company_id, 'name': m.company.name, 'membership_id': m.id,
-        'role': m.role.value} for m in memberships])
+
+    memberships = db.session.scalars(
+        select(CompanyMembership).join(Company).where(
+            CompanyMembership.user_id == user.id,
+            CompanyMembership.is_active.is_(True),
+            Company.is_active.is_(True),
+        )
+    ).all()
+
+    return jsonify(
+        user=user.serialize(),
+        companies=[
+            {
+                "id": membership.company_id,
+                "name": membership.company.name,
+                "membership_id": membership.id,
+                "role": membership.role.value,
+            }
+            for membership in memberships
+        ],
+    )
 
 
 @auth.get('/auth/context')

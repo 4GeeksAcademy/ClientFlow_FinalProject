@@ -34,6 +34,13 @@ class AuthenticationTest(unittest.TestCase):
         db.session.flush()
         db.session.add(CompanyMembership(user_id=self.user.id, company_id=company.id, role=MembershipRole.OWNER))
         db.session.commit()
+        from api.models import Plan, Subscription, utc_now
+        from datetime import timedelta
+        plan = Plan(code="fixture", name="Fixture", price_eur=20)
+        db.session.add(Subscription(company=company, plan=plan,
+                                    trial_started_at=utc_now(),
+                                    trial_ends_at=utc_now() + timedelta(days=3)))
+        db.session.commit()
         self.company_id, self.other_id = company.id, other.id
         self.client = self.app.test_client()
 

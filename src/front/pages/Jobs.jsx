@@ -7,21 +7,99 @@ export const Jobs = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
+    // Estados para el Modal de Nuevo Trabajo
+    const [showModal, setShowModal] = useState(false);
+    const [newJob, setNewJob] = useState({
+        title: "",
+        clientName: "Antonio Ruiz",
+        clientEmail: "antonio@email.com",
+        clientPhone: "600123456",
+        address: "Av. de la Constitución 12, 41001 Sevilla",
+        budget: 1200,
+        startDate: new Date().toISOString().split('T')[0],
+        dueDate: "2026-06-30"
+    });
+
     const filteredJobs = jobs.filter(job => {
         const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              job.client.name.toLowerCase().includes(searchTerm.toLowerCase());
+                            job.client.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === "all" || job.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
 
+    const handleCreateJob = (e) => {
+        e.preventDefault();
+        const createdJob = {
+            id: `job-${Date.now()}`,
+            title: newJob.title,
+            client: {
+                name: newJob.clientName,
+                email: newJob.clientEmail,
+                phone: newJob.clientPhone
+            },
+            address: newJob.address,
+            budget: Number(newJob.budget),
+            startDate: newJob.startDate,
+            dueDate: newJob.dueDate,
+            status: "in_progress",
+            progress: 0,
+            assignedTeam: ["Carlos Alberto", "Equipo Carpintería"],
+            stages: [
+                { id: "st-1", name: "Toma de Medidas y Diseño", status: "pending" },
+                { id: "st-2", name: "Selección de Materiales", status: "pending" },
+                { id: "st-3", name: "Fabricación en Taller", status: "pending" },
+                { id: "st-4", name: "Instalación en Domicilio", status: "pending" }
+            ],
+            appointments: [],
+            recentActivity: [
+                { id: `act-${Date.now()}`, date: newJob.startDate, description: "Trabajo registrado y creado en el sistema." }
+            ]
+        };
+
+        setJobs([createdJob, ...jobs]);
+        setShowModal(false);
+        // Resetear formulario básico
+        setNewJob({
+            title: "",
+            clientName: "Antonio Ruiz",
+            clientEmail: "antonio@email.com",
+            clientPhone: "600123456",
+            address: "Av. de la Constitución 12, 41001 Sevilla",
+            budget: 1200,
+            startDate: new Date().toISOString().split('T')[0],
+            dueDate: "2026-06-30"
+        });
+    };
+
     const getStatusBadge = (status) => {
         switch(status) {
             case "completed":
-                return <span className="badge bg-success bg-opacity-20 text-success px-2 py-1">Completado</span>;
+                return (
+                    <span 
+                        className="badge px-3 py-2 fw-semibold" 
+                        style={{ backgroundColor: "#198754", color: "#ffffff", fontSize: "0.8rem" }}
+                    >
+                        Completado
+                    </span>
+                );
             case "in_progress":
-                return <span className="badge bg-primary bg-opacity-20 text-primary px-2 py-1">En curso</span>;
+                return (
+                    <span 
+                        className="badge px-3 py-2 fw-semibold" 
+                        style={{ backgroundColor: "#0d6efd", color: "#ffffff", fontSize: "0.8rem" }}
+                    >
+                        En curso
+                    </span>
+                );
             default:
-                return <span className="badge bg-secondary bg-opacity-20 text-secondary px-2 py-1">Pendiente</span>;
+                return (
+                    <span 
+                        className="badge px-3 py-2 fw-semibold" 
+                        style={{ backgroundColor: "#6c757d", color: "#ffffff", fontSize: "0.8rem" }}
+                    >
+                        Pendiente
+                    </span>
+                );
         }
     };
 
@@ -34,7 +112,11 @@ export const Jobs = () => {
                     <p className="text-secondary small mb-0">Control operativo de encargos, etapas, materiales y entregables.</p>
                 </div>
                 <div className="d-flex gap-2">
-                    <button className="btn btn-primary d-flex align-items-center gap-2 shadow-sm" style={{ backgroundColor: "#635bff", border: "none" }}>
+                    <button 
+                        className="btn btn-primary d-flex align-items-center gap-2 shadow-sm" 
+                        style={{ backgroundColor: "#635bff", border: "none" }}
+                        onClick={() => setShowModal(true)}
+                    >
                         <i className="fa-solid fa-plus"></i> Nuevo Trabajo
                     </button>
                 </div>
@@ -128,7 +210,7 @@ export const Jobs = () => {
 
                                     <div className="d-flex justify-content-end pt-2 border-top border-light">
                                         <Link 
-                                            to={`/jobs/${job.id}`} 
+                                            to={`/jobs/${job.id}`} state={{ job }}
                                             className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2"
                                         >
                                             Ver Espacio de Trabajo <i className="fa-solid fa-arrow-right"></i>
@@ -138,6 +220,95 @@ export const Jobs = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Modal para Crear Nuevo Trabajo */}
+            {showModal && (
+                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow bg-white">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="fw-bold text-dark">Registrar Nuevo Trabajo</h5>
+                                <button type="button" className="btn-close shadow-none" onClick={() => setShowModal(false)}></button>
+                            </div>
+                            <form onSubmit={handleCreateJob}>
+                                <div className="modal-body">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark">Título del Encargo / Trabajo</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control bg-light text-dark shadow-none" 
+                                            required 
+                                            value={newJob.title}
+                                            onChange={e => setNewJob({...newJob, title: e.target.value})}
+                                            placeholder="Ej. Fabricación de Armario Empotrado"
+                                        />
+                                    </div>
+                                    <div className="row g-2 mb-3">
+                                        <div className="col">
+                                            <label className="form-label small fw-semibold text-dark">Nombre del Cliente</label>
+                                            <input 
+                                                type="text" 
+                                                className="form-control bg-light text-dark shadow-none" 
+                                                required 
+                                                value={newJob.clientName}
+                                                onChange={e => setNewJob({...newJob, clientName: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="col">
+                                            <label className="form-label small fw-semibold text-dark">Presupuesto (€)</label>
+                                            <input 
+                                                type="number" 
+                                                className="form-control bg-light text-dark shadow-none" 
+                                                required 
+                                                value={newJob.budget}
+                                                onChange={e => setNewJob({...newJob, budget: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark">Dirección de la Obra</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control bg-light text-dark shadow-none" 
+                                            required 
+                                            value={newJob.address}
+                                            onChange={e => setNewJob({...newJob, address: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="row g-2 mb-3">
+                                        <div className="col">
+                                            <label className="form-label small fw-semibold text-dark">Fecha de Inicio</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control bg-white text-dark border shadow-none cursor-pointer" 
+                                                required 
+                                                value={newJob.startDate}
+                                                onChange={e => setNewJob({...newJob, startDate: e.target.value})}
+                                                style={{ cursor: "pointer", colorScheme: "light" }}
+                                            />
+                                        </div>
+                                        <div className="col">
+                                            <label className="form-label small fw-semibold text-dark">Fecha de Entrega</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control bg-white text-dark border shadow-none cursor-pointer" 
+                                                required 
+                                                value={newJob.dueDate}
+                                                onChange={e => setNewJob({...newJob, dueDate: e.target.value})}
+                                                style={{ cursor: "pointer", colorScheme: "light" }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-0 pt-0">
+                                    <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setShowModal(false)}>Cancelar</button>
+                                    <button type="submit" className="btn btn-primary btn-sm px-4" style={{ backgroundColor: "#635bff", border: "none" }}>Guardar Trabajo</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
