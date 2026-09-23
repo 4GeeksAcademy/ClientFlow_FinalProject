@@ -1,89 +1,32 @@
-// src/services/appointmentService.js
+const API_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3001").replace(/\/$/, "");
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || "https://legendary-guacamole-96qv5r5x5p3px7q-3001.app.github.dev";
-
-// Helper para obtener los headers con autenticación Bearer
-const getAuthHeaders = (token) => ({
-  "Content-Type": "application/json",
-  "Authorization": `Bearer ${token}`
-});
-
-/**
- * Obtiene la lista de citas (opcionalmente filtradas por rango de fechas)
- */
-export const getAppointments = async (token, startDate = "", endDate = "") => {
-  let url = `${API_URL}/api/appointments`;
-  
-  // Agregar parámetros de fecha si están presentes
-  if (startDate && endDate) {
-    url += `?start_date=${startDate}&end_date=${endDate}`;
-  }
-
-  const response = await fetch(url, {
-    method: "GET",
-    headers: getAuthHeaders(token)
-  });
-
-  if (!response.ok) {
-    throw new Error("Error al obtener las citas");
-  }
-
-  return await response.json();
+async function request(path, { token, companyId, signal }, method = "GET", body) {
+    const response = await fetch(`${API_URL}/api${path}`, {
+        method, signal,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`,
+            ...(companyId ? { "X-Company-ID": String(companyId) } : {}) },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+        const messages = { 400: "Comprueba las fechas, el cliente, el trabajo y el responsable.",
+            401: "Vuelve a iniciar sesión.", 403: "No tienes acceso a esta empresa.",
+            404: "La cita ya no está disponible.", 409: "El responsable ya tiene una cita en ese horario.",
+            503: "El servicio no está disponible. Inténtalo de nuevo." };
+        const error = new Error(messages[response.status] || "No se pudo completar la operación.");
+        error.status = response.status;
+        throw error;
+    }
+    return data;
+}
+export const getAppointmentContext = (token, signal) => request('/me', { token, signal });
+export const getAppointmentOptions = (options) => request('/appointments/options', options);
+export const getAppointments = (options, startDate = '', endDate = '') => {
+    const query = new URLSearchParams();
+    if (startDate) query.set('start_date', startDate);
+    if (endDate) query.set('end_date', endDate);
+    return request(`/appointments?${query}`, options);
 };
-
-/**
- * Crea una nueva cita (maneja conflicto 409 si el horario está ocupado)
- */
-export const createAppointment = async (token, appointmentData) => {
-  const response = await fetch(`${API_URL}/api/appointments`, {
-    method: "POST",
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(appointmentData)
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    // Lanzamos el error incluyendo el mensaje del backend (ej. conflicto de horario 409)
-    throw { status: response.status, message: data.error || "Error al crear la cita" };
-  }
-
-  return data;
-};
-
-/**
- * Actualiza una cita existente
- */
-export const updateAppointment = async (token, id, appointmentData) => {
-  const response = await fetch(`${API_URL}/api/appointments/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(appointmentData)
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw { status: response.status, message: data.error || "Error al actualizar la cita" };
-  }
-
-  return data;
-};
-
-/**
- * Cancela (soft-delete) una cita
- */
-export const cancelAppointment = async (token, id) => {
-  const response = await fetch(`${API_URL}/api/appointments/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(token)
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw { status: response.status, message: data.error || "Error al cancelar la cita" };
-  }
-
-  return data;
-};
+export const createAppointment = (options, data) => request('/appointments', options, 'POST', data);
+export const updateAppointment = (options, id, data) => request(`/appointments/${id}`, options, 'PUT', data);
+export const cancelAppointment = (options, id) => request(`/appointments/${id}`, options, 'DELETE');
