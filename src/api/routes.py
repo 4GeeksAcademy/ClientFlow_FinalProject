@@ -846,6 +846,62 @@ def list_client_activities(client_id):
     ]), 200
 
 
+@api.route("/clients/<int:client_id>/leads", methods=["GET"])
+@tenant_required
+def list_client_leads(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({"error": "Cliente no encontrado."}), 404
+
+    leads = db.session.scalars(
+        select(Lead)
+        .where(
+            Lead.converted_client_id == client_id,
+            Lead.company_id == g.company_id,
+        )
+        .order_by(
+            Lead.created_at.desc(),
+            Lead.id.desc(),
+        )
+    ).all()
+
+    return jsonify([
+        {
+            "id": lead.id,
+            "company_id": lead.company_id,
+            "converted_client_id": lead.converted_client_id,
+            "assigned_membership_id": lead.assigned_membership_id,
+            "service_type_id": lead.service_type_id,
+            "first_name": lead.first_name,
+            "last_name": lead.last_name,
+            "email": lead.email,
+            "phone": lead.phone,
+            "source": lead.source,
+            "status": lead.status.value,
+            "consent_given": lead.consent_given,
+            "consent_at": (
+                lead.consent_at.isoformat()
+                if lead.consent_at is not None
+                else None
+            ),
+            "converted_at": (
+                lead.converted_at.isoformat()
+                if lead.converted_at is not None
+                else None
+            ),
+            "created_at": lead.created_at.isoformat(),
+            "updated_at": lead.updated_at.isoformat(),
+        }
+        for lead in leads
+    ]), 200
+
+
 @api.route("/clients/<int:client_id>/jobs", methods=["GET"])
 @tenant_required
 def list_client_jobs(client_id):

@@ -1,17 +1,70 @@
-import React, { useState } from "react";
+
 import { Link } from "react-router-dom";
-import { initialClients } from "../../data/clientsMockData";
+import { useEffect, useState } from "react";
+import { clientService } from "../services/clientService";
 
 export const Clients = () => {
-    const [clients] = useState(initialClients);
+    const [clients, setClients] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
+    useEffect(() => {
+        const loadClients = async () => {
+            const token = localStorage.getItem("access_token");
+
+            try {
+                setLoading(true);
+                setError("");
+
+                const base = (
+                    import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+                ).replace(/\/$/, "");
+
+                const response = await fetch(`${base}/api/me`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                const account = await response.json();
+                const current = account.companies?.[0];
+
+                if (!current) {
+                    throw new Error("No se encontró una empresa activa.");
+                }
+
+                const data = await clientService.list(
+                    {
+                        token,
+                        companyId: current.id,
+                    },
+                    1,
+                    ""
+                );
+
+                setClients(data.items || []);
+            } catch (err) {
+                setError(err.message || "No se pudieron cargar los clientes.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadClients();
+    }, []);
+
     const filteredClients = clients.filter(client => {
-        const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              client.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              client.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+        const name = `${client.first_name || ""} ${client.last_name || ""}`.trim();
+        const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (client.email || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "active" && client.is_active) ||
+            (statusFilter === "inactive" && !client.is_active);
+
         return matchesSearch && matchesStatus;
     });
 

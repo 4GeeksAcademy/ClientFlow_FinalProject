@@ -18,6 +18,8 @@ from api.models import (
     CompanyMembership,
     Job,
     JobStatus,
+    Lead,
+    LeadStatus,
     MembershipRole,
     User,
     db,
@@ -97,6 +99,30 @@ class ClientRelatedResourcesTest(unittest.TestCase):
         db.session.add_all([
             self.client,
             self.other_client,
+        ])
+        db.session.flush()
+
+        self.lead = Lead(
+            company_id=self.company.id,
+            converted_client_id=self.client.id,
+            first_name="Ana",
+            last_name="García",
+            email="ana@example.com",
+            status=LeadStatus.WON,
+        )
+
+        self.other_lead = Lead(
+            company_id=self.other_company.id,
+            converted_client_id=self.other_client.id,
+            first_name="Other",
+            last_name="Lead",
+            email="other-lead@example.com",
+            status=LeadStatus.WON,
+        )
+
+        db.session.add_all([
+            self.lead,
+            self.other_lead,
         ])
         db.session.flush()
 
@@ -214,6 +240,42 @@ class ClientRelatedResourcesTest(unittest.TestCase):
         self.assertEqual(data[0]["title"], "Instalación principal")
         self.assertEqual(data[0]["status"], "scheduled")
 
+
+    def test_list_client_leads(self):
+        response = self.client_http.get(
+            f"/api/clients/{self.client.id}/leads",
+            headers=self.headers(),
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json
+
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["id"], self.lead.id)
+        self.assertEqual(data[0]["converted_client_id"], self.client.id)
+        self.assertEqual(data[0]["first_name"], "Ana")
+        self.assertEqual(data[0]["status"], "won")
+
+    def test_cannot_access_leads_from_other_company(self):
+        response = self.client_http.get(
+            f"/api/clients/{self.other_client.id}/leads",
+            headers=self.headers(),
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_client_leads_do_not_cross_company_boundary(self):
+        response = self.client_http.get(
+            f"/api/clients/{self.client.id}/leads",
+            headers=self.headers(),
+        )
+
+        self.assertEqual(
+            [item["id"] for item in response.json],
+            [self.lead.id],
+        )
+    
     def test_list_client_appointments(self):
         response = self.client_http.get(
             f"/api/clients/{self.client.id}/appointments",
