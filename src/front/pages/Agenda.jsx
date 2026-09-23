@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Context } from "../context/AppContext";
+import { useApp } from "../context/AppContext";
 import { 
     getAppointments, 
     createAppointment, 

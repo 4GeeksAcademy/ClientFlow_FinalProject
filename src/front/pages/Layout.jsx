@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import ScrollToTop from "../components/ScrollToTop";
 import { Sidebar } from "../components/Sidebar";
+import { useLanguage } from "../context/LanguageContext"; // 1. Importar el hook de idioma
 
 export const Layout = () => {
     const location = useLocation();
-    
+    const { locale, setLocale } = useLanguage(); // 2. Obtener el idioma y la función para cambiarlo
+
     // Estado para saber si el sidebar móvil está abierto o cerrado
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -28,27 +30,40 @@ export const Layout = () => {
             <div className="d-flex" style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
                 
                 {/* Sidebar para ordenador y móvil */}
-                <Sidebar 
-                    isOpen={sidebarOpen} 
-                    onClose={() => setSidebarOpen(false)} 
+                <Sidebar
+                    isOpen={sidebarOpen}
+                    onClose={() => setSidebarOpen(false)}
                 />
-                
+
                 <div className="flex-grow-1 w-100">
                     
-                    {/* Barra superior para móviles con el botón de la hamburguesa */}
+                    {/* Barra superior para móviles con el botón de la hamburguesa y selector de idioma */}
                     <div 
-                        className="d-md-none text-white p-3 d-flex align-items-center justify-content-between shadow-sm sticky-top" 
+                        className="d-md-none text-white p-3 d-flex align-items-center justify-content-between shadow-sm sticky-top"
                         style={{ backgroundColor: "#0f172a", zIndex: 1020 }}
                     >
-                        <button 
-                            className="btn btn-dark text-white border-0 p-1" 
-                            onClick={() => setSidebarOpen(true)}
-                            aria-label="Abrir menú"
+                        <div className="d-flex align-items-center">
+                            <button
+                                className="btn btn-dark text-white border-0 p-1 me-2"
+                                onClick={() => setSidebarOpen(true)}
+                                aria-label="Abrir menú"
+                            >
+                                <i className="fa-solid fa-bars fa-lg"></i>
+                            </button>
+                            <span className="fw-bold fs-6">ClientFlow</span>
+                        </div>
+
+                        {/* Selector de idioma rápido en móvil */}
+                        <select 
+                            value={locale} 
+                            onChange={(e) => setLocale(e.target.value)}
+                            className="form-select form-select-sm w-auto bg-dark text-white border-secondary"
+                            aria-label="Seleccionar idioma"
                         >
-                            <i className="fa-solid fa-bars fa-lg"></i>
-                        </button>
-                        <span className="fw-bold fs-6">ClientFlow</span>
-                        <div style={{ width: "32px" }}></div>
+                            <option value="es">ES</option>
+                            <option value="en">EN</option>
+                            <option value="pt">PT</option>
+                        </select>
                     </div>
 
                     {/* Contenido dinámico de las vistas privadas */}
