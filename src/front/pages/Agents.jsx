@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import {aiRequest} from '../services/aiService';
+import './Agents.css';
 
 export function Agents() {
     const token = localStorage.getItem('access_token');
@@ -38,7 +39,7 @@ export function Agents() {
         finally {setBusy(false);}
     }
     const canManage=company && ['owner','admin','manager'].includes(company.role);
-    return <div className="container py-4"><h1>Agentes IA</h1><p>Configura las instrucciones y el conocimiento de tu empresa. Todas las respuestas requieren revisión humana.</p>
+    return <div className="agents-page container-fluid"><h1>Agentes IA</h1><p>Configura las instrucciones y el conocimiento de tu empresa. Todas las respuestas requieren revisión humana.</p>
         {error && <p role="alert" className="alert alert-danger">{error}</p>}
         <div className="row g-4"><div className="col-md-5"><h2>Agentes disponibles</h2>{agents.map(a=><div className="card p-3 mb-2" key={a.id}><strong>{a.name}</strong><p>{a.purpose}</p>{canManage && <button className="btn btn-outline-primary" onClick={()=>setForm({id:a.id,name:a.name,purpose:a.purpose,main_instruction:a.main_instruction,document_ids:a.document_ids})}>Editar configuración</button>}</div>)}</div>
         {canManage && <form className="col-md-7" onSubmit={save}><h2>{form.id?'Editar agente':'Crear agente'}</h2>
