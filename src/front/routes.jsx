@@ -6,6 +6,7 @@ import { ClientDetail } from "./pages/ClientDetail";
 import { Clients } from "./pages/Clients";
 import { Dashboard } from "./pages/Dashboard";
 import { ForgotPassword } from "./pages/ForgotPassword";
+import { Agents } from "./pages/Agents";
 import { Inbox } from "./pages/Inbox";
 import { JobDetail } from "./pages/JobDetail";
 import { Knowledge } from "./pages/Knowledge";
@@ -201,6 +202,7 @@ export const router = createBrowserRouter(
                     </ProtectedRoute>
                 }
             />
+            <Route path="agent-ai" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
             <Route path="knowledge" element={<ProtectedRoute><Knowledge /></ProtectedRoute>} />
             <Route
                 path="team"
