@@ -650,3 +650,32 @@ class AuthRateLimit(db.Model):
     key = db.Column(db.String(64), primary_key=True)
     count = db.Column(db.Integer, nullable=False)
     expires_at = db.Column(db.Integer, nullable=False, index=True)
+
+
+class AIReplyDraft(db.Model):
+    """Persist generated drafts separately from customer-visible messages."""
+    __tablename__ = "ai_reply_drafts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id"), nullable=False)
+    agent_id: Mapped[int] = mapped_column(ForeignKey("ai_agents.id"), nullable=False)
+    agent_instruction: Mapped[str] = mapped_column(Text, nullable=False)
+    requested_by: Mapped[int] = mapped_column(ForeignKey("company_memberships.id"), nullable=False)
+    based_on_message_id: Mapped[int | None] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    reply: Mapped[str | None] = mapped_column(Text)
+    sources: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    reason: Mapped[str | None] = mapped_column(String(100))
+    message_id: Mapped[int | None] = mapped_column(ForeignKey("messages.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class AIReplyAudit(db.Model):
+    """Append-only application audit events for draft decisions."""
+    __tablename__ = "ai_reply_audit"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
+    draft_id: Mapped[int] = mapped_column(ForeignKey("ai_reply_drafts.id"), nullable=False)
+    membership_id: Mapped[int] = mapped_column(ForeignKey("company_memberships.id"), nullable=False)
+    action: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)

@@ -1,15 +1,16 @@
-import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { useEffect, useState } from "react";
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route } from "react-router-dom";
+import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { Agenda } from "./pages/Agenda";
+import { Agents } from "./pages/Agents";
 import { ClientDetail } from "./pages/ClientDetail";
 import { Clients } from "./pages/Clients";
 import { Dashboard } from "./pages/Dashboard";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Inbox } from "./pages/Inbox";
 import { JobDetail } from "./pages/JobDetail";
-import { Knowledge } from "./pages/Knowledge";
 import { Jobs } from "./pages/Jobs";
+import { Knowledge } from "./pages/Knowledge";
 import { Layout } from "./pages/Layout";
 import { Leads } from "./pages/Leads";
 import { Login } from "./pages/Login";
@@ -17,6 +18,7 @@ import { Members } from "./pages/Members";
 import { PlanSelection } from "./pages/PlanSelection";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
+import { WebChatPage } from "./pages/WebChatPage";
 
 const ProtectedRoute = ({ children }) => {
     const token = localStorage.getItem("access_token");
@@ -201,6 +203,7 @@ export const router = createBrowserRouter(
                     </ProtectedRoute>
                 }
             />
+            <Route path="agent-ai" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
             <Route path="knowledge" element={<ProtectedRoute><Knowledge /></ProtectedRoute>} />
             <Route
                 path="team"
@@ -215,6 +218,14 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <Inbox />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="web-chat"
+                element={
+                    <ProtectedRoute>
+                        <WebChatPage />
                     </ProtectedRoute>
                 }
             />
