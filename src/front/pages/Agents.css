@@ -1,0 +1,63 @@
+/* Scoped light appearance matches the existing Inbox workspace. */
+.agents-page {
+    color-scheme: light;
+    color: #252b40;
+    background: #f7f7fc;
+    min-height: calc(100vh - 48px);
+    padding: 32px;
+    --bs-body-color: #252b40;
+    --bs-body-bg: #ffffff;
+    --bs-border-color: #e5e5f0;
+}
+.agents-page > h1 { font-size: 32px; font-weight: 650; letter-spacing: -1px; margin: 0 0 12px; color: #252b40; }
+.agents-page > p { color: #647087; max-width: 760px; line-height: 1.7; margin-bottom: 32px; }
+.agents-page h2 { font-size: 19px; font-weight: 650; color: #252b40; margin: 0 0 24px; }
+.agents-page .row { align-items: flex-start; }
+.agents-page form {
+    background: #fff;
+    border: 1px solid #e5e5f0;
+    border-radius: 18px;
+    padding: 28px;
+    box-shadow: 0 8px 30px #252b4005;
+}
+.agents-page .card {
+    background: #fff;
+    color: #252b40;
+    border: 1px solid #e5e5f0;
+    border-radius: 16px;
+    padding: 24px !important;
+    gap: 10px;
+    border-left: 4px solid #7859df;
+}
+.agents-page .card strong { font-size: 17px; overflow-wrap: anywhere; }
+.agents-page .card p { color: #647087; font-size: 14px; margin-bottom: 8px; }
+.agents-page label { font-size: 14px; font-weight: 550; color: #414b61; }
+.agents-page form > label { margin-bottom: 20px !important; }
+.agents-page .form-control {
+    background: #fff;
+    color: #252b40;
+    border: 1px solid #d9deea;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 8px;
+    line-height: 1.6;
+}
+.agents-page .form-control:focus { background: #fff; color: #252b40; border-color: #7859df; box-shadow: 0 0 0 3px #7859df22; }
+.agents-page textarea { min-height: 180px; resize: vertical; }
+.agents-page fieldset { background: #f8f7fd; border: 1px solid #e8e4f5; border-radius: 12px; padding: 18px; margin-top: 8px; }
+.agents-page legend { float: none; width: auto; font-size: 15px; font-weight: 650; margin-bottom: 10px; color: #414b61; }
+.agents-page fieldset label { display: flex !important; gap: 10px; align-items: flex-start; padding: 8px 0; overflow-wrap: anywhere; }
+.agents-page input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: #7357d9; }
+.agents-page fieldset p { color: #647087; font-size: 14px; margin: 0; }
+.agents-page .btn { border-radius: 10px; padding: 11px 18px; font-size: 14px; font-weight: 600; }
+.agents-page .btn-primary { background: #7357d9; border-color: #7357d9; color: #fff; }
+.agents-page .btn-primary:hover { background: #6045bf; border-color: #6045bf; }
+.agents-page .btn-outline-primary { color: #6548c5; border-color: #d7cdef; background: #fff; }
+.agents-page .btn-outline-primary:hover { color: #5135ae; background: #f0ebfc; }
+.agents-page button:focus-visible { outline: 3px solid #aa94ed; outline-offset: 3px; }
+.agents-page .btn:disabled { opacity: .55; }
+@media (max-width: 767px) {
+    .agents-page { padding: 20px 12px; }
+    .agents-page > h1 { font-size: 27px; }
+    .agents-page form { padding: 20px; }
+}

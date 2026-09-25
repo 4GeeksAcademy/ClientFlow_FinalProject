@@ -32,3 +32,12 @@ def setup_commands(app):
     @app.cli.command("insert-test-data")
     def insert_test_data():
         pass
+
+    @app.cli.command("ai-schema-upgrade")
+    def ai_schema_upgrade():
+        """Create only the two additive AI tables; preserve existing data."""
+        from api.models import AIReplyDraft, AIReplyAudit
+        with db.engine.begin() as connection:
+            AIReplyDraft.__table__.create(connection, checkfirst=True)
+            AIReplyAudit.__table__.create(connection, checkfirst=True)
+        click.echo("AI draft and audit tables are ready.")
