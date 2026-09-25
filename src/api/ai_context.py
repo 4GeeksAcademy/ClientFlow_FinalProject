@@ -2,6 +2,7 @@
 
 from sqlalchemy import select
 
+from api.ai_opening import opening_reply
 from api.ai_retrieval import retrieve_knowledge
 from api.models import AIAgent, Conversation, Message, db
 
@@ -99,11 +100,20 @@ def build_conversation_context(company_id, conversation_id, question):
     if previous_text and remaining > 0:
         search_question = previous_text[-min(remaining, 1500) :] + "\n" + question
 
-    sources = retrieve_knowledge(
-        company_id,
-        agent["id"],
-        search_question,
-    )
+    opening = opening_reply(question, history)
+    sources = []
+    if not opening:
+        sources = retrieve_knowledge(company_id, agent["id"], question)
+        if search_question != question:
+            contextual_sources = retrieve_knowledge(company_id, agent["id"], search_question)
+            by_id = {source["chunk_id"]: source for source in sources}
+            for source in contextual_sources:
+                existing = by_id.get(source["chunk_id"])
+                if existing is None or source.get("score", -1) > existing.get("score", -1):
+                    by_id[source["chunk_id"]] = source
+            sources = sorted(
+                by_id.values(), key=lambda source: (-source.get("score", -1), source["chunk_id"])
+            )[:5]
 
     return {
         "company_id": company_id,
@@ -112,5 +122,6 @@ def build_conversation_context(company_id, conversation_id, question):
         "history": history,
         "question": question,
         "sources": sources,
-        "needs_human": not sources,
+        "needs_human": not sources and not opening,
+        "opening_reply": opening,
     }

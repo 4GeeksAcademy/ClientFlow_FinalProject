@@ -58,3 +58,18 @@ class AIContextTest(unittest.TestCase):
 
         self.assertTrue(context["needs_human"])
         self.assertEqual(context["sources"], [])
+
+    def test_old_greetings_do_not_dilute_current_question(self):
+        with (
+            patch("api.ai_context.load_conversation_agent", return_value={"id": 7}),
+            patch("api.ai_context.load_conversation_history", return_value=[
+                {"direction": "inbound", "content": "Hi there"}
+            ]),
+            patch("api.ai_context.retrieve_knowledge", side_effect=[
+                [{"chunk_id": 10, "score": 0.58}],
+                [{"chunk_id": 10, "score": 0.39}],
+            ]) as retrieve,
+        ):
+            context = build_conversation_context(10, 3, "Do you make kitchen cabinets?")
+        self.assertEqual(retrieve.call_args_list[0].args, (10, 7, "Do you make kitchen cabinets?"))
+        self.assertEqual(context["sources"], [{"chunk_id": 10, "score": 0.58}])

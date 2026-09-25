@@ -1,4 +1,4 @@
-const base = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/+$/, '');
+const base = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
 export async function aiRequest(path, {token, companyId, signal}, body) {
     const response = await fetch(`${base}/api${path}`, {
         method: body === undefined ? 'GET' : 'POST', signal,

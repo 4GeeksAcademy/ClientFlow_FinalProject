@@ -15,6 +15,8 @@ class AIRoutesTest(unittest.TestCase):
         self.fixture.setUp()
         self.app=self.fixture.app
         self.app.register_blueprint(ai,url_prefix='/api')
+        from api.channel_routes import channels
+        self.app.register_blueprint(channels, url_prefix='/api')
         self.client=self.fixture.client
         self.company=self.fixture.company_id
         self.headers=self.fixture.headers() | {'X-Company-ID':str(self.company)}
@@ -124,3 +126,28 @@ class AIRoutesTest(unittest.TestCase):
         self.assertEqual(runner.invoke(args=['ai-schema-upgrade']).exit_code,0)
         self.assertEqual(runner.invoke(args=['ai-schema-upgrade']).exit_code,0)
         self.assertIsNotNone(db.session.get(AIAgent,self.agent.id))
+
+    def test_greeting_approval_reaches_only_its_web_chat(self):
+        from api.channel_session import create_chat_token
+        from api.models import ConversationParticipant
+        visitor = ConversationParticipant(conversation_id=self.conv.id, participant_type='visitor')
+        db.session.add(visitor)
+        db.session.commit()
+        visitor_headers = {'Authorization': 'Bearer ' + create_chat_token(self.company, self.conv.id, visitor.id)}
+        inbound = self.client.post('/api/web-chat/messages', headers=visitor_headers,
+                                   json={'external_id':'greeting-acceptance', 'content':'Hola'})
+        self.assertEqual(inbound.status_code, 201)
+        generated = self.client.post(f'/api/conversations/{self.conv.id}/ai-drafts',
+                                     headers=self.headers, json={'question':'Hola'})
+        self.assertEqual(generated.status_code, 201, generated.json)
+        draft = generated.json['draft']
+        self.assertEqual(draft['status'], 'pending_review')
+        self.assertEqual(draft['sources'], [])
+        before = self.client.get('/api/web-chat/messages', headers=visitor_headers).json['messages']
+        self.assertEqual(len(before), 1)
+        self.assertEqual(self.decide(draft['id']).status_code, 200)
+        self.assertEqual(self.decide(draft['id']).status_code, 409)
+        after = self.client.get('/api/web-chat/messages', headers=visitor_headers).json['messages']
+        self.assertEqual(len(after), 2)
+        self.assertEqual(after[-1]['content'], draft['reply'])
+        self.assertEqual(after[-1]['direction'], 'outbound')
