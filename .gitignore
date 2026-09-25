@@ -84,3 +84,6 @@ __pycache__/
 migrations
 .local/
 .venv/
+
+# Local Flask database files
+src/instance/*.db
