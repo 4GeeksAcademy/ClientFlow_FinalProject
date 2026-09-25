@@ -1,3 +1,4 @@
+from api.appointments import register_appointments
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ from api.auth import email_value, limited, password_valid, set_password, tenant_
 from api.models import (
     Activity,
     Attachment,
+    Appointment,
     Client,
     ClientAddress,
     Company,
@@ -27,9 +29,8 @@ from api.models import (
     db,
     utc_now,
 )
-api = Blueprint("api",__name__)
+api = Blueprint("api", __name__)
 # Allow CORS requests to this API
-
 
 
 def _lead_to_dict(lead):
@@ -1406,6 +1407,90 @@ def create_lead_next_action(lead_id):
     }), 201
 
 
+@api.route("/clients/<int:client_id>/next-actions", methods=["POST"])
+@tenant_required
+def create_client_next_action(client_id):
+    client = db.session.scalar(
+        select(Client).where(
+            Client.id == client_id,
+            Client.company_id == g.company_id,
+        )
+    )
+
+    if client is None:
+        return jsonify({"error": "Cliente no encontrado."}), 404
+
+    data = _get_json_payload()
+
+    if data is None:
+        return jsonify({"error": "El cuerpo debe ser un objeto JSON."}), 400
+
+    allowed_fields = {"title", "description",
+                      "due_at", "assigned_membership_id"}
+
+    unknown_fields = set(data) - allowed_fields
+    if unknown_fields:
+        return jsonify({
+            "error": f"Campos no permitidos: {', '.join(sorted(unknown_fields))}."
+        }), 400
+
+    if not isinstance(data.get("title"), str) or not data["title"].strip():
+        return jsonify({"error": "El título es obligatorio."}), 400
+
+    if len(data["title"].strip()) > 180:
+        return jsonify({"error": "El título no puede superar los 180 caracteres."}), 400
+
+    if not isinstance(data.get("due_at"), str):
+        return jsonify({"error": "due_at es obligatorio y debe ser una fecha ISO."}), 400
+
+    try:
+        due_at = datetime.fromisoformat(data["due_at"].replace("Z", "+00:00"))
+    except ValueError:
+        return jsonify({"error": "due_at debe tener un formato ISO válido."}), 400
+
+    if not isinstance(data.get("assigned_membership_id"), int) or data["assigned_membership_id"] <= 0:
+        return jsonify({"error": "assigned_membership_id debe ser un entero positivo."}), 400
+
+    membership = db.session.scalar(
+        select(CompanyMembership).where(
+            CompanyMembership.id == data["assigned_membership_id"],
+            CompanyMembership.company_id == g.company_id,
+        )
+    )
+
+    if membership is None:
+        return jsonify({
+            "error": "El miembro asignado no pertenece a esta empresa."
+        }), 400
+
+    action = NextAction(
+        company_id=g.company_id,
+        assigned_membership_id=data["assigned_membership_id"],
+        created_by_membership_id=g.membership.id,
+        client_id=client.id,
+        title=data["title"].strip(),
+        description=data.get("description"),
+        due_at=due_at,
+    )
+
+    db.session.add(action)
+    db.session.commit()
+
+    return jsonify({
+        "id": action.id,
+        "client_id": action.client_id,
+        "assigned_membership_id": action.assigned_membership_id,
+        "created_by_membership_id": action.created_by_membership_id,
+        "title": action.title,
+        "description": action.description,
+        "due_at": action.due_at.isoformat(),
+        "status": action.status.value,
+        "completed_at": None,
+        "created_at": action.created_at.isoformat(),
+        "updated_at": action.updated_at.isoformat(),
+    }), 201
+
+
 @api.route("/leads/<int:lead_id>", methods=["PATCH"])
 @tenant_required
 def update_lead(lead_id):
@@ -1806,5 +1891,4 @@ def register():
 
 
 # Register appointment routes on the existing API blueprint.
-from api.appointments import register_appointments
 register_appointments(api)

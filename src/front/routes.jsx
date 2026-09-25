@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }) => {
         if (!token) return;
 
         const controller = new AbortController();
-        const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+        const apiUrl = "";
 
         const checkAccess = async () => {
             try {

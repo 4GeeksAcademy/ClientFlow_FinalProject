@@ -1,5 +1,5 @@
 const API_URL = (
-    import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+    import.meta.env.VITE_BACKEND_URL || ""
 ).replace(/\/$/, "");
 
 async function request(path, { token, companyId, signal, method = "GET", body }) {
@@ -37,5 +37,28 @@ export const clientService = {
         });
 
         return request(`/clients?${query}`, options);
+    },
+     get(options, clientId) {
+        return request(`/clients/${clientId}`, options);
+    },
+
+    getAddresses(options, clientId) {
+        return request(`/clients/${clientId}/addresses`, options);
+    },
+
+    getNextActions(options, clientId) {
+        return request(`/clients/${clientId}/next-actions`, options);
+    },
+
+    getJobs(options, clientId) {
+        return request(`/clients/${clientId}/jobs`, options);
+    },
+
+    getAppointments(options, clientId) {
+        return request(`/clients/${clientId}/appointments`, options);
+    },
+
+    getActivities(options, clientId) {
+        return request(`/clients/${clientId}/activities`, options);
     },
 };
