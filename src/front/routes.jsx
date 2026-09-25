@@ -29,7 +29,7 @@ const ProtectedRoute = ({ children }) => {
         if (!token) return;
 
         const controller = new AbortController();
-        const apiUrl = "";
+        const apiUrl = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
 
         const checkAccess = async () => {
             try {

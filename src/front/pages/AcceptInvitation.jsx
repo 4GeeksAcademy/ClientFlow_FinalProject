@@ -13,7 +13,7 @@ export const AcceptInvitation = () => {
         if (busy) return;
         const fields = Object.fromEntries(new FormData(event.currentTarget));
         setBusy(true); setError("");
-        const base = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3001").replace(/\/$/, "");
+        const base = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
         const post = async (path, body, token) => {
             const response = await fetch(`${base}/api${path}`, {
                 method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },

@@ -27,7 +27,7 @@ export const Members = () => {
         setError("");
         const timer = window.setTimeout(async () => {
             try {
-                const base = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3001").replace(/\/$/, "");
+                const base = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
                 const response = await fetch(`${base}/api/me`, {
                     headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
                 });

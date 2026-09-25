@@ -29,11 +29,13 @@ async function request(path, { token, companyId, signal, method = "GET", body })
 }
 
 export const clientService = {
-    list(options, page = 1, search = "") {
+    create(options, body) { return request("/clients", { ...options, method: "POST", body }); },
+    list(options, page = 1, search = "", status = "all") {
         const query = new URLSearchParams({
             page,
             per_page: 20,
             search,
+            status,
         });
 
         return request(`/clients?${query}`, options);
