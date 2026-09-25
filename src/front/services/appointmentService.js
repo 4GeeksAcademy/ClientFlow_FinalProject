@@ -1,4 +1,4 @@
-const API_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3001").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
 
 async function request(path, { token, companyId, signal }, method = "GET", body) {
     const response = await fetch(`${API_URL}/api${path}`, {
