@@ -266,7 +266,7 @@ export const Inbox = () => {
                     </nav>}
                     {actionError && <p role="alert" className="inbox-error">{actionError}</p>}
                     {selected?.control_mode === "ai" && <div className="inbox-control"><span>La IA está atendiendo esta conversación.</span><button type="button" disabled={sending} onClick={takeControl}>Asumir el control</button></div>}
-                    {selected && <AIReplyPanel key={`${companyId}-${selected.id}`} conversationId={selected.id} token={token} companyId={companyId} onChanged={() => { setRefresh(v => v + 1); inboxService.listConversations({token, companyId}, conversationPage).then(data => setConversations(data.conversations)).catch(() => setActionError("No se pudo actualizar la lista.")); }} />}
+                    {selected && <AIReplyPanel latestInbound={currentHistory?.messages.filter(message => message.direction === "inbound").sort((a, b) => b.id - a.id)[0]} key={`${companyId}-${selected.id}`} conversationId={selected.id} token={token} companyId={companyId} onChanged={() => { setRefresh(v => v + 1); inboxService.listConversations({token, companyId}, conversationPage).then(data => setConversations(data.conversations)).catch(() => setActionError("No se pudo actualizar la lista.")); }} />}
                     <form className="inbox-composer" onSubmit={sendMessage}>
                         <label className="visually-hidden" htmlFor="inbox-message">Mensaje</label>
                         <textarea id="inbox-message" rows="2" maxLength={10000} placeholder="Escribe un mensaje…" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={!selected || sending || selected.control_mode === "ai"} />
