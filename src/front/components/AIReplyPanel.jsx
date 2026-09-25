@@ -1,8 +1,9 @@
 import {useEffect, useState} from 'react';
+import {aiMessages} from '../i18n/ai';
 import {aiRequest} from '../services/aiService';
 import {inboxService} from '../services/inboxService';
 
-export function AIReplyPanel({conversationId, token, companyId, onChanged}) {
+export function AIReplyPanel({conversationId, token, companyId, onChanged, latestInbound}) {
     const [agents, setAgents] = useState([]);
     const [agentId, setAgentId] = useState('');
     const [question, setQuestion] = useState('');
@@ -37,12 +38,14 @@ export function AIReplyPanel({conversationId, token, companyId, onChanged}) {
             <button className="btn btn-outline-primary" disabled={busy || !agentId} onClick={()=>run(()=>inboxService.updateControl(conversationId,'ai',Number(agentId),options))}>Asignar</button>
         </div>
         {!agents.length && <p>Configura un agente en Agentes IA y vincula documentos procesados.</p>}
+        {latestInbound && <button type="button" className="btn btn-link px-0" disabled={busy}
+            onClick={() => setQuestion(latestInbound.content)}>{aiMessages.es.latestMessage}</button>}
         <textarea className="form-control" aria-label="Pregunta para el agente" placeholder="Pregunta del cliente que quieres responder" maxLength={4000} value={question} onChange={e=>setQuestion(e.target.value)} disabled={busy}/>
         <button className="btn btn-primary my-2" disabled={busy || !question.trim()} onClick={()=>run(()=>aiRequest(`/conversations/${conversationId}/ai-drafts`,options,{question}))}>{busy?'Procesando…':'Generar borrador'}</button>
         {drafts.map(d=><article className="border rounded p-2 my-2" key={d.id}>
             <strong>{{pending_review:'Pendiente de revisión',approved:'Aprobado · guardado en la conversación',rejected:'Rechazado',handoff:'Requiere atención humana'}[d.status]}</strong>
             {d.reply && <p style={{whiteSpace:'pre-wrap'}}>{d.reply}</p>}
-            {d.status==='handoff' && <p>No se envió ninguna respuesta. Revisa las fuentes o la conexión y continúa el atención manualmente.</p>}
+            {d.status==='handoff' && <p>{aiMessages.es.reasons[d.reason] || aiMessages.es.fallback}</p>}
             {d.sources.map(s=><details key={s.chunk_id}><summary>Documento {s.document_id} · fragmento {s.chunk_index+1}</summary><p>{s.content}</p></details>)}
             {d.status==='pending_review' && <div className="d-flex gap-2 mt-2">
                 <button className="btn btn-success" disabled={busy} onClick={()=>run(()=>aiRequest(`/ai/drafts/${d.id}/decision`,options,{action:'approve'}))}>Aprobar respuesta</button>

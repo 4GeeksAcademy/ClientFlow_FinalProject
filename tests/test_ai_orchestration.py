@@ -7,19 +7,19 @@ from api.ai_orchestration import generate_reply_draft
 
 
 class AIOrchestrationTest(unittest.TestCase):
-    def test_no_sources_does_not_call_agent(self):
-        with (
-            patch(
-                "api.ai_orchestration.build_conversation_context",
-                return_value={"needs_human": True},
-            ),
-            patch("api.ai_orchestration.request_agent_reply") as request,
+    def test_no_sources_allows_clarification_but_not_factual_answer(self):
+        context = {"needs_human": True, "sources": [], "history": [],
+                   "agent": {"main_instruction": "Help with customer requests."},
+                   "question": "I want to install something."}
+        for raw, expected in (
+            ('{"reply":"What would you like to install?","source_ids":[],"needs_human":false,"response_type":"clarification"}', 'pending_review'),
+            ('{"reply":"Installation costs 50 euros.","source_ids":[],"needs_human":false,"response_type":"answer"}', 'handoff'),
         ):
-            result = generate_reply_draft(1, 3, "What is the price?")
-
-        request.assert_not_called()
-        self.assertEqual(result["status"], "handoff")
-        self.assertIsNone(result["reply"])
+            with patch('api.ai_orchestration.build_conversation_context', return_value=context), \
+                 patch('api.ai_orchestration.request_agent_reply', return_value=raw):
+                result = generate_reply_draft(1, 3, context['question'])
+            self.assertEqual(result['status'], expected)
+            self.assertTrue(result['requires_approval'])
 
     def test_invented_source_requires_handoff(self):
         context = {
@@ -59,11 +59,11 @@ class AIOrchestrationTest(unittest.TestCase):
         self.assertEqual(result['status'], 'pending_review')
         self.assertTrue(result['requires_approval'])
 
-    def test_low_similarity_does_not_call_agent(self):
-        with (
-            patch('api.ai_orchestration.build_conversation_context', return_value={'needs_human':False,'sources':[{'score':0.1}]}),
-            patch('api.ai_orchestration.request_agent_reply') as request,
-        ):
-            result=generate_reply_draft(1,3,'Unknown?')
-        request.assert_not_called()
-        self.assertEqual(result['reason'],'insufficient_relevance')
+    def test_low_similarity_is_not_used_as_evidence(self):
+        context = {"needs_human": False, "sources": [{"chunk_id":10,"score":0.1,"content":"Unrelated."}],
+                   "history": [], "agent":{"main_instruction":"Help."}, "question":"Unknown?"}
+        with patch('api.ai_orchestration.build_conversation_context', return_value=context), \
+             patch('api.ai_orchestration.request_agent_reply', return_value='{"reply":"The team must confirm that.","source_ids":[],"needs_human":true,"response_type":"handoff"}') as request:
+            result = generate_reply_draft(1,3,'Unknown?')
+        self.assertNotIn('Unrelated.', request.call_args.args[0])
+        self.assertEqual(result['reason'], 'agent_requested_human')

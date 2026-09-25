@@ -16,8 +16,14 @@ def generate_reply_draft(company_id, conversation_id, question):
     except EmbeddingServiceError:
         return handoff_result("knowledge_service_unavailable")
 
-    if context["needs_human"]:
-        return handoff_result("no_authorized_sources")
+    if context.get("opening_reply"):
+        return {
+            "status": "pending_review",
+            "reply": context["opening_reply"],
+            "sources": [],
+            "requires_approval": True,
+            "reason": None,
+        }
 
     try:
         minimum = float(os.getenv("AI_MIN_SIMILARITY", "0.5"))
@@ -25,9 +31,15 @@ def generate_reply_draft(company_id, conversation_id, question):
             raise ValueError("Invalid similarity threshold")
     except ValueError:
         return handoff_result("invalid_retrieval_configuration")
-    context["sources"] = [s for s in context["sources"] if s.get("score", -1) >= minimum]
-    if not context["sources"]:
-        return handoff_result("insufficient_relevance")
+    candidates = context["sources"]
+    anchors = [s for s in candidates if s.get("score", -1) >= minimum]
+    # Retain adjacent authorized excerpts so a split paragraph does not lose its subject.
+    context["sources"] = [s for s in candidates if s in anchors or any(
+        s.get("document_id") is not None
+        and s.get("document_id") == anchor.get("document_id")
+        and abs(s.get("chunk_index", -100) - anchor.get("chunk_index", 100)) == 1
+        for anchor in anchors
+    )]
 
     try:
         prepared = build_agent_message(context)
@@ -43,6 +55,7 @@ def generate_reply_draft(company_id, conversation_id, question):
         answer = validate_agent_reply(
             raw_reply,
             prepared["source_ids"],
+            allow_clarification=True,
         )
     except ValueError:
         return handoff_result("invalid_agent_response")
