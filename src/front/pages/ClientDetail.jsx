@@ -23,12 +23,13 @@ export const ClientDetail = () => {
                 setLoading(true);
                 setError("");
 
-                const response = await fetch("/api/me", {
+                const response = await fetch(`${(import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "")}/api/me`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
                 });
 
+                if (!response.ok) throw new Error("Unable to load your account.");
                 const account = await response.json();
                 const current = account.companies?.[0];
 

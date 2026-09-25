@@ -114,6 +114,13 @@ def list_clients():
         Client.company_id == g.company_id
     )
 
+    status = request.args.get("status", "all")
+    if status not in {"all", "active", "inactive"}:
+        return jsonify({"error": "Invalid client status."}), 400
+    if status != "all":
+        query = query.where(Client.is_active.is_(status == "active"))
+        count_query = count_query.where(Client.is_active.is_(status == "active"))
+
     if search:
         pattern = f"%{search}%"
 
