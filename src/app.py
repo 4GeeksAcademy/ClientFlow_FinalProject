@@ -54,7 +54,8 @@ app.register_blueprint(inbox, url_prefix="/api")
 app.register_blueprint(members, url_prefix="/api")
 app.register_blueprint(knowledge, url_prefix="/api")
 init_auth(app)
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": [origin.strip() for origin in os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").split(",") if origin.strip()]}})
+
 
 # Handle/serialize errors like a JSON object
 
