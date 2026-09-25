@@ -21,7 +21,7 @@ export const PlanSelection = () => {
 
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"}/api/plans`,
+                    `${import.meta.env.VITE_BACKEND_URL || ""}/api/plans`,
                     { signal: controller.signal }
                 );
 
