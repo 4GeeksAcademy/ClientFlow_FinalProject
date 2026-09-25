@@ -1,5 +1,5 @@
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
-const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const API_URL = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
 
 export const authService = {
   login: async (email, password) => {
@@ -45,9 +45,9 @@ export const authService = {
           if (!formData.email || !formData.password || !formData.firstName) {
             reject(new Error("Faltan campos obligatorios (Simulado)"));
           } else {
-            resolve({ 
-              token: "mock-access-token-xyz", 
-              message: "Usuario registrado con éxito (Simulado)" 
+            resolve({
+              token: "mock-access-token-xyz",
+              message: "Usuario registrado con éxito (Simulado)"
             });
           }
         }, 1000);

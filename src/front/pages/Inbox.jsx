@@ -45,7 +45,7 @@ export const Inbox = () => {
                 }
 
                 const apiUrl = (
-                    import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+                    import.meta.env.VITE_BACKEND_URL || ""
                 ).replace(/\/+$/, "");
 
                 const response = await fetch(`${apiUrl}/api/me`, {
