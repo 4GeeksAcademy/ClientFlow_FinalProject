@@ -1,3 +1,6 @@
+"""
+API routes for ClientFlow.
+"""
 from api.appointments import register_appointments
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -1895,6 +1898,78 @@ def register():
         ), 409
 
     return jsonify(message="Account created successfully. Please sign in."), 201
+
+
+@api.route("/seed-plans", methods=["GET"])
+def seed_plans():
+    plans_data = [
+        {
+            "code": "starter",
+            "name": "Starter",
+            "description": "Plan básico para pequeñas empresas.",
+            "price_eur": 0,
+            "billing_interval": "monthly",
+            "trial_days": 3,
+            "limits": {
+                "users": 2,
+                "clients": 50,
+                "ai_agents": 1,
+            },
+            "is_active": True,
+        },
+        {
+            "code": "professional",
+            "name": "Professional",
+            "description": "Plan para equipos en crecimiento.",
+            "price_eur": 29.99,
+            "billing_interval": "monthly",
+            "trial_days": 3,
+            "limits": {
+                "users": 10,
+                "clients": 500,
+                "ai_agents": 3,
+            },
+            "is_active": True,
+        },
+        {
+            "code": "business",
+            "name": "Business",
+            "description": "Plan avanzado para empresas.",
+            "price_eur": 79.99,
+            "billing_interval": "monthly",
+            "trial_days": 3,
+            "limits": {
+                "users": 50,
+                "clients": 5000,
+                "ai_agents": 10,
+            },
+            "is_active": True,
+        },
+    ]
+
+    created = []
+    skipped = []
+
+    for plan_data in plans_data:
+        existing_plan = db.session.scalar(
+            select(Plan).where(Plan.code == plan_data["code"])
+        )
+
+        if existing_plan:
+            skipped.append(plan_data["code"])
+            continue
+
+        plan = Plan(**plan_data)
+        db.session.add(plan)
+        created.append(plan_data["code"])
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Plans seeded successfully.",
+        "created": created,
+        "skipped": skipped,
+    }), 200
 
 
 # Register appointment routes on the existing API blueprint.
