@@ -1,6 +1,6 @@
 
-import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { clientService } from "../services/clientService";
 
 export const Clients = () => {
@@ -165,14 +165,20 @@ export const Clients = () => {
                                     <div>
                                         <div className="d-flex justify-content-between align-items-start mb-3">
                                             <div className="d-flex align-items-center gap-3">
-                                                <img
-                                                    src={client.avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(fullName || "Cliente")}
-                                                    alt={`Avatar de ${fullName || "Cliente"}`}
-                                                    className="rounded-circle"
-                                                    style={{ width: "50px", height: "50px", objectFit: "cover" }}
-                                                />
-                                                <div>
-                                                    <h5 className="fw-bold text-dark mb-0">{fullName}</h5>
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="rounded-circle bg-light text-primary d-inline-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                                                    style={{ width: "50px", height: "50px" }}
+                                                >
+                                                    {fullName
+                                                        .split(/\s+/)
+                                                        .filter(Boolean)
+                                                        .slice(0, 2)
+                                                        .map(part => part[0])
+                                                        .join("")
+                                                        .toUpperCase() || "?"}
+                                                </span>
+                                                <div>                                                    <h5 className="fw-bold text-dark mb-0">{fullName}</h5>
                                                     <span className="text-secondary small">{client.company}</span>
                                                 </div>
                                             </div>

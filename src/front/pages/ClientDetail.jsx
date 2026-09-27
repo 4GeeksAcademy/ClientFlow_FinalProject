@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { clientService } from "../services/clientService";
 
 
@@ -110,12 +110,19 @@ export const ClientDetail = () => {
                 <div className="card-body p-4">
                     <div className="row g-4 align-items-center">
                         <div className="col-12 col-lg-8 d-flex align-items-center gap-4">
-                            <img
-                                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || "Cliente")}`}
-                                alt={fullName || "Cliente"}
-                                className="rounded-circle shadow-sm"
-                                style={{ width: "90px", height: "90px", objectFit: "cover" }}
-                            />
+                            <span
+                                aria-hidden="true"
+                                className="rounded-circle shadow-sm bg-light text-primary d-inline-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                                style={{ width: "90px", height: "90px", fontSize: "2rem" }}
+                            >
+                                {fullName
+                                    .split(/\s+/)
+                                    .filter(Boolean)
+                                    .slice(0, 2)
+                                    .map(part => part[0])
+                                    .join("")
+                                    .toUpperCase() || "?"}
+                            </span>
                             <div>
                                 <span className="text-muted small fw-semibold">ID: {client.id}</span>
                                 <h2 className="fw-bold text-dark mb-1">{fullName}</h2>

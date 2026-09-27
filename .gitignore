@@ -71,7 +71,7 @@ dist/*
 !.gitkeep
 !.htaccess
 !.eslintrc
-.env    
+.env
 !.env.example
 .now
 
@@ -87,3 +87,15 @@ migrations
 
 # Local Flask database files
 src/instance/*.db
+
+
+# Local databases and SQLite temporary files
+*.db
+*.db-*
+*.sqlite3
+*.sqlite3-*
+*.sqlite-*
+
+# Private key files
+*.pem
+*.key
