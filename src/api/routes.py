@@ -123,7 +123,8 @@ def list_clients():
         return jsonify({"error": "Invalid client status."}), 400
     if status != "all":
         query = query.where(Client.is_active.is_(status == "active"))
-        count_query = count_query.where(Client.is_active.is_(status == "active"))
+        count_query = count_query.where(
+            Client.is_active.is_(status == "active"))
 
     if search:
         pattern = f"%{search}%"
@@ -1901,6 +1902,103 @@ def register():
     return jsonify(message="Account created successfully. Please sign in."), 201
 
 
+@api.route('/jobs', methods=['GET'])
+def get_jobs():
+    try:
+        status_filter = request.args.get('status')
+        query = Job.query
+
+        if status_filter:
+            query = query.filter_by(status=status_filter)
+
+        jobs = query.all()
+        return jsonify([job.serialize() for job in jobs]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api.route('/jobs/<int:job_id>', methods=['GET'])
+def get_job(job_id):
+    try:
+        job = Job.query.get(job_id)
+        if not job:
+            return jsonify({"error": "Job not found"}), 404
+        return jsonify(job.serialize()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api.route('/jobs', methods=['POST'])
+def create_job():
+    try:
+        body = request.get_json()
+
+        if not body or 'title' not in body or 'company_id' not in body:
+            return jsonify({"error": "Missing required fields (title, company_id)"}), 400
+
+        new_job = Job(
+            company_id=body.get('company_id'),
+            client_id=body.get('client_id'),
+            service_type_id=body.get('service_type_id'),
+            service_zone_id=body.get('service_zone_id'),
+            assigned_membership_id=body.get('assigned_membership_id'),
+            title=body.get('title'),
+            description=body.get('description'),
+            status=body.get('status', 'draft'),
+            priority=body.get('priority', 'normal'),
+            # Representado en euros según requerimiento
+            quoted_amount=body.get('quoted_amount', 0.0),
+        )
+
+        db.session.add(new_job)
+        db.session.commit()
+
+        return jsonify(new_job.serialize()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@api.route('/jobs/<int:job_id>', methods=['PUT'])
+def update_job(job_id):
+    try:
+        job = Job.query.get(job_id)
+        if not job:
+            return jsonify({"error": "Job not found"}), 404
+
+        body = request.get_json()
+
+        if 'status' in body:
+            job.status = body.get('status')
+        if 'title' in body:
+            job.title = body.get('title')
+        if 'description' in body:
+            job.description = body.get('description')
+        if 'quoted_amount' in body:
+            job.quoted_amount = body.get('quoted_amount')
+        if 'priority' in body:
+            job.priority = body.get('priority')
+
+        db.session.commit()
+        return jsonify(job.serialize()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@api.route('/jobs/<int:job_id>', methods=['DELETE'])
+def delete_job(job_id):
+    try:
+        job = Job.query.get(job_id)
+        if not job:
+            return jsonify({"error": "Job not found"}), 404
+
+        db.session.delete(job)
+        db.session.commit()
+        return jsonify({"message": "Job deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 # Register appointment routes on the existing API blueprint.

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { clientService } from "../services/clientService";
@@ -12,6 +11,7 @@ export const Clients = () => {
     const [saving, setSaving] = useState(false);
     const [createError, setCreateError] = useState("");
     const [options, setOptions] = useState(null);
+
     const createClient = async (event) => {
         event.preventDefault();
         setSaving(true);
@@ -25,6 +25,35 @@ export const Clients = () => {
         } catch (error) { setCreateError(error.message); }
         finally { setSaving(false); }
     };
+
+    // Función para eliminar un cliente
+    const handleDelete = async (clientId) => {
+        if (!window.confirm("¿Estás seguro de que deseas eliminar este cliente?")) return;
+
+        try {
+            const token = localStorage.getItem("access_token") || localStorage.getItem("token");
+            const base = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+
+            const response = await fetch(`${base}/api/clients/${clientId}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    ...(options?.companyId ? { "X-Company-ID": String(options.companyId) } : {})
+                }
+            });
+
+            if (response.ok) {
+                setReload(value => value + 1);
+            } else {
+                const errData = await response.json();
+                alert(`No se pudo eliminar el cliente: ${errData.error || "Error desconocido"}`);
+            }
+        } catch (error) {
+            console.error("Error de red al eliminar el cliente:", error);
+            alert("Error de red al intentar eliminar el cliente.");
+        }
+    };
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
@@ -33,7 +62,7 @@ export const Clients = () => {
     useEffect(() => {
         const controller = new AbortController();
         const loadClients = async () => {
-            const token = localStorage.getItem("access_token");
+            const token = localStorage.getItem("access_token") || localStorage.getItem("token");
 
             try {
                 setLoading(true);
@@ -178,7 +207,7 @@ export const Clients = () => {
                                                         .join("")
                                                         .toUpperCase() || "?"}
                                                 </span>
-                                                <div>                                                    <h5 className="fw-bold text-dark mb-0">{fullName}</h5>
+                                                <div>        <h5 className="fw-bold text-dark mb-0">{fullName}</h5>
                                                     <span className="text-secondary small">{client.company}</span>
                                                 </div>
                                             </div>
@@ -192,18 +221,22 @@ export const Clients = () => {
                                             <p className="text-secondary small mb-1">
                                                 <i className="fa-solid fa-phone me-2 text-success"></i>{client.phone}
                                             </p>
-
                                         </div>
                                     </div>
 
                                     <div className="d-flex justify-content-between align-items-center pt-3 border-top border-light">
-
                                         <Link
                                             to={`/clients/${client.id}`}
                                             className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2"
                                         >
                                             Ver Detalles <i className="fa-solid fa-arrow-right"></i>
                                         </Link>
+                                        <button
+                                            className="btn btn-sm btn-outline-danger d-flex align-items-center gap-2"
+                                            onClick={() => handleDelete(client.id)}
+                                        >
+                                            <i className="fa-solid fa-trash-can"></i> Eliminar
+                                        </button>
                                     </div>
                                 </div>
                             </div>
