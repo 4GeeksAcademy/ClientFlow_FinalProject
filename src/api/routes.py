@@ -123,7 +123,8 @@ def list_clients():
         return jsonify({"error": "Invalid client status."}), 400
     if status != "all":
         query = query.where(Client.is_active.is_(status == "active"))
-        count_query = count_query.where(Client.is_active.is_(status == "active"))
+        count_query = count_query.where(
+            Client.is_active.is_(status == "active"))
 
     if search:
         pattern = f"%{search}%"
@@ -1900,19 +1901,21 @@ def register():
 
     return jsonify(message="Account created successfully. Please sign in."), 201
 
+
 @api.route('/jobs', methods=['GET'])
 def get_jobs():
     try:
         status_filter = request.args.get('status')
         query = Job.query
-        
+
         if status_filter:
             query = query.filter_by(status=status_filter)
-            
+
         jobs = query.all()
         return jsonify([job.serialize() for job in jobs]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @api.route('/jobs/<int:job_id>', methods=['GET'])
 def get_job(job_id):
@@ -1924,11 +1927,12 @@ def get_job(job_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @api.route('/jobs', methods=['POST'])
 def create_job():
     try:
         body = request.get_json()
-        
+
         if not body or 'title' not in body or 'company_id' not in body:
             return jsonify({"error": "Missing required fields (title, company_id)"}), 400
 
@@ -1942,7 +1946,8 @@ def create_job():
             description=body.get('description'),
             status=body.get('status', 'draft'),
             priority=body.get('priority', 'normal'),
-            quoted_amount=body.get('quoted_amount', 0.0), # Representado en euros según requerimiento
+            # Representado en euros según requerimiento
+            quoted_amount=body.get('quoted_amount', 0.0),
         )
 
         db.session.add(new_job)
@@ -1952,6 +1957,7 @@ def create_job():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 @api.route('/jobs/<int:job_id>', methods=['PUT'])
 def update_job(job_id):
@@ -1979,6 +1985,7 @@ def update_job(job_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+
 @api.route('/jobs/<int:job_id>', methods=['DELETE'])
 def delete_job(job_id):
     try:
@@ -1992,8 +1999,6 @@ def delete_job(job_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
-
 
 
 # Register appointment routes on the existing API blueprint.

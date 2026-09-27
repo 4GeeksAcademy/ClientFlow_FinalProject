@@ -5,7 +5,7 @@ import { sharedAppointments } from "../../data/sharedAppointments";
 export const JobDetail = () => {
     const { id } = useParams();
     const location = useLocation();
-    
+
     const [job, setJob] = useState(location.state?.job || null);
     const [loading, setLoading] = useState(!location.state?.job);
 
@@ -96,7 +96,7 @@ export const JobDetail = () => {
     };
 
     const getStageBadgeStyle = (status) => {
-        switch(status) {
+        switch (status) {
             case "completed":
                 return { backgroundColor: "#198754", color: "#ffffff", padding: "6px 12px", borderRadius: "6px", fontWeight: "600", fontSize: "0.85rem", display: "inline-block" };
             case "in_progress":
@@ -107,7 +107,7 @@ export const JobDetail = () => {
     };
 
     const getStageText = (status) => {
-        switch(status) {
+        switch (status) {
             case "completed": return "Completado";
             case "in_progress": return "En curso";
             default: return "Pendiente";
@@ -149,7 +149,7 @@ export const JobDetail = () => {
                             <h2 className="fw-bold text-dark mb-2">{job.title}</h2>
                             <p className="text-secondary mb-3">
                                 <i className="fa-solid fa-user text-primary me-2"></i>
-                                <strong className="text-dark">{job.client?.name || job.client_name || "Cliente general"}</strong> 
+                                <strong className="text-dark">{job.client?.name || job.client_name || "Cliente general"}</strong>
                                 <span className="text-muted"> ({job.client?.email || job.client_email || "Sin email"} &bull; {job.client?.phone || job.client_phone || "Sin teléfono"})</span>
                             </p>
                             <p className="text-secondary small mb-0">
@@ -186,9 +186,9 @@ export const JobDetail = () => {
                             <span className="fw-bold text-primary">{job.progress || 0}%</span>
                         </div>
                         <div className="progress bg-light" style={{ height: "8px" }}>
-                            <div 
-                                className="progress-bar rounded-pill" 
-                                role="progressbar" 
+                            <div
+                                className="progress-bar rounded-pill"
+                                role="progressbar"
                                 style={{ width: `${job.progress || 0}%`, backgroundColor: "#635bff" }}
                             ></div>
                         </div>
@@ -230,19 +230,19 @@ export const JobDetail = () => {
                                                     </td>
                                                     <td className="py-3 text-end" style={{ backgroundColor: "#ffffff" }}>
                                                         <div className="btn-group btn-group-sm">
-                                                            <button 
+                                                            <button
                                                                 className={`btn btn-outline-secondary ${stage.status === 'pending' ? 'active' : ''}`}
                                                                 onClick={() => handleStageChange(stage.id, 'pending')}
                                                             >
                                                                 Pendiente
                                                             </button>
-                                                            <button 
+                                                            <button
                                                                 className={`btn btn-outline-primary ${stage.status === 'in_progress' ? 'active' : ''}`}
                                                                 onClick={() => handleStageChange(stage.id, 'in_progress')}
                                                             >
                                                                 En curso
                                                             </button>
-                                                            <button 
+                                                            <button
                                                                 className={`btn btn-outline-success ${stage.status === 'completed' ? 'active' : ''}`}
                                                                 onClick={() => handleStageChange(stage.id, 'completed')}
                                                             >

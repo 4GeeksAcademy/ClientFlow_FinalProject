@@ -125,9 +125,9 @@ export const Jobs = () => {
     const filteredJobs = jobs.filter(job => {
         const jobTitle = job.title || "";
         const clientName = job.client?.name || job.client_name || "";
-        
+
         const matchesSearch = jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            clientName.toLowerCase().includes(searchTerm.toLowerCase());
+            clientName.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === "all" || job.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -185,7 +185,7 @@ export const Jobs = () => {
     };
 
     const getStatusBadge = (status) => {
-        switch(status?.toLowerCase()) {
+        switch (status?.toLowerCase()) {
             case "completed":
                 return (
                     <span className="badge px-3 py-2 fw-semibold" style={{ backgroundColor: "#198754", color: "#ffffff", fontSize: "0.8rem" }}>
@@ -225,8 +225,8 @@ export const Jobs = () => {
                     <p className="text-secondary small mb-0">Control operativo de encargos, etapas, materiales y entregables.</p>
                 </div>
                 <div className="d-flex gap-2">
-                    <button 
-                        className="btn btn-primary d-flex align-items-center gap-2 shadow-sm" 
+                    <button
+                        className="btn btn-primary d-flex align-items-center gap-2 shadow-sm"
                         style={{ backgroundColor: "#635bff", border: "none" }}
                         onClick={() => setShowModal(true)}
                     >
@@ -242,16 +242,16 @@ export const Jobs = () => {
                         <span className="input-group-text bg-light border-end-0 text-secondary">
                             <i className="fa-solid fa-magnifying-glass"></i>
                         </span>
-                        <input 
-                            type="text" 
-                            className="form-control border-start-0 bg-light text-dark shadow-none" 
-                            placeholder="Buscar por título o cliente..." 
+                        <input
+                            type="text"
+                            className="form-control border-start-0 bg-light text-dark shadow-none"
+                            placeholder="Buscar por título o cliente..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <div className="d-flex gap-2 w-100 w-md-auto justify-content-end">
-                        <select 
+                        <select
                             className="form-select bg-light text-dark shadow-none"
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
@@ -293,7 +293,7 @@ export const Jobs = () => {
 
                                             <p className="text-secondary small mb-3">
                                                 <i className="fa-solid fa-user me-2 text-primary"></i>
-                                                <strong className="text-dark">{clientFullName}</strong> &bull; 
+                                                <strong className="text-dark">{clientFullName}</strong> &bull;
                                                 <i className="fa-solid fa-location-dot ms-2 me-1 text-danger"></i>
                                                 {job.address || job.description || "Dirección no especificada"}
                                             </p>
@@ -305,9 +305,9 @@ export const Jobs = () => {
                                                     <span className="fw-semibold text-dark">{job.progress || 0}%</span>
                                                 </div>
                                                 <div className="progress bg-light" style={{ height: "6px" }}>
-                                                    <div 
-                                                        className="progress-bar rounded-pill" 
-                                                        role="progressbar" 
+                                                    <div
+                                                        className="progress-bar rounded-pill"
+                                                        role="progressbar"
                                                         style={{ width: `${job.progress || 0}%`, backgroundColor: "#635bff" }}
                                                     ></div>
                                                 </div>
@@ -327,13 +327,13 @@ export const Jobs = () => {
                                         </div>
 
                                         <div className="d-flex justify-content-between align-items-center pt-2 border-top border-light">
-                                            <Link 
+                                            <Link
                                                 to={`/jobs/${job.id}`} state={{ job }}
                                                 className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2"
                                             >
                                                 Ver Espacio de Trabajo <i className="fa-solid fa-arrow-right"></i>
                                             </Link>
-                                            <button 
+                                            <button
                                                 className="btn btn-sm btn-outline-danger d-flex align-items-center gap-2"
                                                 onClick={() => handleDeleteJob(job.id)}
                                             >
@@ -361,23 +361,23 @@ export const Jobs = () => {
                                 <div className="modal-body">
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold text-dark">Título del Encargo / Trabajo</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control bg-light text-dark shadow-none" 
-                                            required 
+                                        <input
+                                            type="text"
+                                            className="form-control bg-light text-dark shadow-none"
+                                            required
                                             value={newJob.title}
-                                            onChange={e => setNewJob({...newJob, title: e.target.value})}
+                                            onChange={e => setNewJob({ ...newJob, title: e.target.value })}
                                             placeholder="Ej. Fabricación de Armario Empotrado"
                                         />
                                     </div>
                                     <div className="row g-2 mb-3">
                                         <div className="col-12 col-md-6">
                                             <label className="form-label small fw-semibold text-dark">Cliente</label>
-                                            <select 
-                                                className="form-select bg-light text-dark shadow-none" 
-                                                required 
+                                            <select
+                                                className="form-select bg-light text-dark shadow-none"
+                                                required
                                                 value={newJob.client_id}
-                                                onChange={e => setNewJob({...newJob, client_id: e.target.value})}
+                                                onChange={e => setNewJob({ ...newJob, client_id: e.target.value })}
                                             >
                                                 <option value="">Seleccionar cliente...</option>
                                                 {clients.map(client => {
@@ -392,44 +392,44 @@ export const Jobs = () => {
                                         </div>
                                         <div className="col-12 col-md-6">
                                             <label className="form-label small fw-semibold text-dark">Presupuesto (€)</label>
-                                            <input 
-                                                type="number" 
-                                                className="form-control bg-light text-dark shadow-none" 
-                                                required 
+                                            <input
+                                                type="number"
+                                                className="form-control bg-light text-dark shadow-none"
+                                                required
                                                 value={newJob.budget}
-                                                onChange={e => setNewJob({...newJob, budget: e.target.value})}
+                                                onChange={e => setNewJob({ ...newJob, budget: e.target.value })}
                                             />
                                         </div>
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold text-dark">Dirección de la Obra</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control bg-light text-dark shadow-none" 
-                                            required 
+                                        <input
+                                            type="text"
+                                            className="form-control bg-light text-dark shadow-none"
+                                            required
                                             value={newJob.address}
-                                            onChange={e => setNewJob({...newJob, address: e.target.value})}
+                                            onChange={e => setNewJob({ ...newJob, address: e.target.value })}
                                         />
                                     </div>
                                     <div className="row g-2 mb-3">
                                         <div className="col">
                                             <label className="form-label small fw-semibold text-dark">Fecha de Inicio</label>
-                                            <input 
-                                                type="date" 
-                                                className="form-control bg-light text-dark shadow-none" 
-                                                required 
+                                            <input
+                                                type="date"
+                                                className="form-control bg-light text-dark shadow-none"
+                                                required
                                                 value={newJob.startDate}
-                                                onChange={e => setNewJob({...newJob, startDate: e.target.value})}
+                                                onChange={e => setNewJob({ ...newJob, startDate: e.target.value })}
                                             />
                                         </div>
                                         <div className="col">
                                             <label className="form-label small fw-semibold text-dark">Fecha de Entrega</label>
-                                            <input 
-                                                type="date" 
-                                                className="form-control bg-light text-dark shadow-none" 
-                                                required 
+                                            <input
+                                                type="date"
+                                                className="form-control bg-light text-dark shadow-none"
+                                                required
                                                 value={newJob.dueDate}
-                                                onChange={e => setNewJob({...newJob, dueDate: e.target.value})}
+                                                onChange={e => setNewJob({ ...newJob, dueDate: e.target.value })}
                                             />
                                         </div>
                                     </div>
