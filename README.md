@@ -144,9 +144,28 @@ made public. Restart the development servers after changing `.env`.
 
 ### Database preparation
 
-The shared migration chain is pending integration in #43.
-The current branch contains migration configuration but no versioned revisions.
-Do not assume `flask db upgrade` can create a complete database yet.
+For a new empty database, configure `DATABASE_URL` and `JWT_SECRET_KEY`, then run:
+
+```bash
+pipenv run flask db upgrade
+pipenv run flask seed-plans
+```
+
+Revision `cf17_initial` creates the current schema. Roles are enum values in
+company memberships, not a separate catalog requiring seed rows. Plans are
+seeded separately; the protected browser seed remains available.
+
+On a disposable database, `pipenv run flask db downgrade base` removes the
+schema and its data; `pipenv run flask db upgrade` recreates it. Never use
+this rollback on a database whose data must be preserved.
+
+Existing databases created by bootstrap or older revisions require a schema
+comparison and migration reconciliation in #43. Do not blindly stamp or run
+the initial migration against an existing schema. PostgreSQL integration
+validation remains part of #43.
+
+The following bootstrap is an alternative for local demo accounts, not a step
+to run after `db upgrade`:
 
 For a new, empty, disposable local database only:
 
