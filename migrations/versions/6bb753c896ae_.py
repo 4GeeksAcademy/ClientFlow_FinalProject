@@ -1,8 +1,8 @@
-"""Initial current ClientFlow schema
+"""empty message
 
-Revision ID: cf17_initial
-Revises:
-Create Date: 2026-09-27 15:59:28.947840
+Revision ID: 6bb753c896ae
+Revises: 
+Create Date: 2026-09-27 17:18:02.555234
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'cf17_initial'
+revision = '6bb753c896ae'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -631,13 +631,3 @@ def downgrade():
 
     op.drop_table('auth_rate_limits')
     # ### end Alembic commands ###
-
-    # PostgreSQL enum types outlive their tables and must be removed on rollback.
-    if op.get_bind().dialect.name == "postgresql":
-        for name in (
-            "membershiprole", "subscriptionstatus", "jobstatus", "leadstatus",
-            "appointmentstatus", "channeltype", "conversationstatus",
-            "materialstatus", "jobstagestatus", "nextactionstatus",
-            "messagedirection",
-        ):
-            sa.Enum(name=name).drop(op.get_bind(), checkfirst=True)
