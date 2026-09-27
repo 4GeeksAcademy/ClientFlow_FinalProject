@@ -299,7 +299,7 @@ pipenv run flask seed-plans
 
 This command creates missing plans without changing existing plans or prices.
 It does not restore deleted accounts, clients, or conversations; those require
-a database backup. The public `/api/seed-plans` endpoint has been removed.
+a database backup. The `/api/seed-plans` page supports protected browser setup as described below.
 Customers can still read active plans through `/api/plans`.
 
 ### Operational safeguards
@@ -326,3 +326,16 @@ before sending real customer information.
 The review includes automated tests for authentication, tenant isolation,
 member permissions, uploads, and plan seeding. Passing tests cover the tested
 scenarios and do not replace a production deployment review.
+
+## Plan setup from a browser
+
+For hosting without a terminal, open `/api/seed-plans` on the backend domain.
+GET only displays the form. To enable creation, configure `PLAN_SEED_KEY` in the
+hosting environment with a randomly generated secret of 32–512 characters.
+Generate it on your own computer with `python3 -c "import secrets; print(secrets.token_hex(32))"`.
+Enter it in the password field and click **Create plans**. The form submits POST;
+do not put the key in the URL. Use HTTPS outside local development.
+The database tables must already exist. Missing plans are created; existing
+prices are preserved. This does not recover deleted accounts or client data.
+Remove `PLAN_SEED_KEY` after setup to disable browser writes. The terminal
+command `pipenv run flask seed-plans` remains available independently.
