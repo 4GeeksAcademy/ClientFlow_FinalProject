@@ -1,5 +1,7 @@
 # ClientFlow
 
+[English](README.md) | [Español](README.es.md)
+
 ClientFlow es el proyecto final desarrollado para 4Geeks Academy por un equipo de cuatro desarrolladores Full Stack.
 
 Es una plataforma CRM multilingüe y de operaciones con clientes impulsada por inteligencia artificial, diseñada para centralizar la gestión de clientes, conversaciones, citas, trabajos y automatizaciones inteligentes.
@@ -8,11 +10,10 @@ Es una plataforma CRM multilingüe y de operaciones con clientes impulsada por i
 
 - Gestión de clientes potenciales y clientes
 - Gestión de citas y seguimiento de trabajos
-- Conversaciones omnicanal
+- Bandeja de conversaciones y adaptadores de canales
 - Orquestación de agentes de IA
 - Sistema de conocimiento basado en RAG
 - Memoria de conversaciones
-- Asignación automática de clientes potenciales
 - Roles y permisos de usuario
 - Autenticación y recuperación de contraseña
 - Interfaz multilingüe: inglés y español
@@ -43,7 +44,7 @@ Es una plataforma CRM multilingüe y de operaciones con clientes impulsada por i
 - API de modelos de lenguaje (LLM)
 - RAG
 - Embeddings vectoriales
-- API de WhatsApp
+- Las integraciones externas de canales requieren configurar un proveedor
 
 ## Estado del proyecto
 
@@ -52,13 +53,242 @@ Es una plataforma CRM multilingüe y de operaciones con clientes impulsada por i
 ## Equipo
 
 - Carlos Alberto — Desarrollador Full Stack / Líder técnico
-- Eudlad — Desarrollador Full Stack
+- Eudald — Desarrollador Full Stack
 - Jesus — Desarrollador Full Stack
 - Marian Mircea — Desarrollador Full Stack
 
 ## Estructura del proyecto
 
-La documentación técnica, los diagramas de arquitectura, los wireframes y la documentación de la API estarán disponibles en el directorio `/docs`.
+`src/front` contiene la interfaz React, `src/api` la API Flask y `tests` las pruebas automatizadas. La documentación técnica y las fuentes de arquitectura están enlazadas más abajo.
+
+## Desarrollo local
+
+### Requisitos
+
+- Python 3.13 y Pipenv.
+- Node.js 20 o posterior y npm.
+- Git.
+- Una base de datos configurada. El despliegue compartido utiliza PostgreSQL;
+  algunos entornos locales y pruebas automatizadas utilizan SQLite.
+
+### Instalar dependencias
+
+Ejecuta estos comandos desde la raíz del repositorio:
+
+```bash
+pipenv sync
+npm ci
+```
+
+Estos comandos instalan las versiones registradas en `Pipfile.lock` y
+`package-lock.json`. No crean la base de datos ni inician la aplicación.
+
+### Servidores de desarrollo
+
+Después de configurar el entorno y preparar la base de datos, utiliza dos terminales.
+
+Backend:
+
+```bash
+pipenv run start
+```
+
+Frontend:
+
+```bash
+npm run start
+```
+
+El frontend utiliza el puerto 3000 y el backend utiliza el puerto 3001.
+Vite incluye un proxy `/api` cuyo destino predeterminado es
+`http://127.0.0.1:3001`.
+`BACKEND_PROXY_TARGET` permite cambiar ese destino interno.
+
+En Codespaces, abre la dirección del frontend correspondiente al puerto 3000
+en la pestaña Ports.
+Una petición del navegador a `localhost` apunta al ordenador del usuario,
+no al Codespace remoto.
+
+### Configuración del entorno
+
+Si `.env` no existe, copia `.env.example` a `.env`.
+Conserva cualquier configuración existente y nunca subas credenciales reales.
+
+Configura estos valores:
+
+| Variable            | Función                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`      | URL de conexión de tu propia base de datos. La URL PostgreSQL de ejemplo debe adaptarse a tu entorno. |
+| `FLASK_APP`         | Establece `src/app.py`.                                                                               |
+| `FLASK_DEBUG`       | Utiliza `1` localmente y `0` en producción.                                                           |
+| `JWT_SECRET_KEY`    | Un secreto privado y aleatorio para firmar tokens.                                                    |
+| `VITE_USE_MOCK_API` | Establece `false` para utilizar el backend.                                                           |
+| `VITE_BACKEND_URL`  | Dirección base de la API, sin `/api` ni `/api/login`.                                                 |
+| `FRONTEND_ORIGIN`   | Origen exacto del frontend autorizado por el backend.                                                 |
+| `AUTH_RESET_URL`    | Dirección de la página de recuperación de contraseña.                                                 |
+| `ENABLE_DEV_ADMIN`  | Mantén `0` salvo que habilites expresamente el administrador local de desarrollo.                     |
+
+Genera un secreto JWT localmente:
+
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Guarda el resultado únicamente en tu configuración privada del entorno.
+
+En desarrollo local, `VITE_BACKEND_URL` puede ser `http://localhost:3001`.
+En Codespaces, puedes establecer `/`: Vite redirige las peticiones `/api`
+al backend dentro del Codespace. No lo dejes vacío: el frontend actual
+muestra una pantalla de configuración cuando falta este valor.
+
+Al utilizar el proxy del mismo origen, no es necesario hacer público
+el puerto del backend. Reinicia los servidores después de modificar `.env`.
+
+### Preparación de la base de datos
+
+La cadena compartida de migraciones está pendiente de integración en #43.
+La rama actual contiene la configuración, pero no revisiones versionadas.
+No se debe asumir que `flask db upgrade` puede crear una base completa todavía.
+
+Solo para una base local nueva, vacía y desechable:
+
+1. Configura `DATABASE_URL` para esa base.
+2. Establece localmente `FLASK_DEBUG=1` y `AUTH_ALLOW_LOCAL_BOOTSTRAP=1`.
+3. Configura `JWT_SECRET_KEY` y crea la carpeta de SQLite si es necesario.
+4. Ejecuta:
+
+```bash
+pipenv run flask auth-local-bootstrap
+```
+
+Sigue las instrucciones para crear la cuenta propietaria local.
+El comando rechaza bases que ya contienen tablas.
+Crea las tablas de los modelos actuales y los registros iniciales de demostración;
+no migra una base existente.
+
+No borres una base existente para evitar esta comprobación.
+Haz una copia de seguridad y coordina los cambios de esquema con el equipo.
+
+El PR #68 traslada la creación de planes al comando
+`pipenv run flask seed-plans`, disponible únicamente en ramas que incluyan
+ese cambio. Recupera los planes que faltan, no los datos eliminados de clientes.
+
+Consulta la [configuración de autenticación](docs/auth/README.md)
+para conocer los detalles de la preparación local.
+El despliegue PostgreSQL compartido debe utilizar las migraciones validadas en #43.
+
+### Configuración opcional de IA
+
+Las funciones de IA necesitan acceso a los servicios de embeddings y respuestas.
+La dirección privada de ejemplo no es un endpoint público.
+Si se utiliza el Mac Mini mediante Tailscale, la máquina que ejecuta el backend
+debe tener acceso autorizado a esa red. Esto también se aplica a Codespaces.
+
+Configura estas variables únicamente en el backend:
+
+- `KNOWLEDGE_EMBEDDINGS_URL`, `KNOWLEDGE_EMBEDDINGS_API_KEY`,
+  `KNOWLEDGE_EMBEDDINGS_MODEL` y `KNOWLEDGE_EMBEDDINGS_DIMENSIONS`.
+- `AI_SERVICE_URL` y `AI_SERVICE_MODEL`.
+- Para el modo de autenticación predeterminado `company`, utiliza
+  `AI_SERVICE_COMPANY_KEYS` para asociar los IDs de empresa de ClientFlow
+  con sus credenciales del servicio. Para una sola empresa, utiliza
+  `AI_SERVICE_COMPANY_ID` junto con `AI_SERVICE_API_KEY`.
+
+Establece explícitamente `AI_SERVICE_AUTH_MODE=platform_stateless` para seleccionar este modo.
+El modo `platform_stateless` utiliza `AI_SERVICE_PLATFORM_KEY` y requiere
+un servicio de inferencia verificado que no conserve estado.
+ClientFlow debe seguir comprobando la autorización y seleccionando únicamente
+el contexto autorizado de esa empresa. No habilites este modo con un servicio
+que conserve un historial compartido de conversaciones.
+
+La configuración de embeddings de ejemplo utiliza `embeddinggemma`
+con 768 dimensiones. El modelo y las dimensiones deben coincidir con
+el servicio y los vectores almacenados.
+
+Para preparar una demostración de IA:
+
+1. Sube y procesa correctamente un documento de la empresa seleccionada.
+2. Crea un agente y vincula sus documentos autorizados.
+3. Asigna el agente a una conversación.
+4. Genera un borrador, revisa sus fuentes y apruébalo o recházalo.
+
+La falta de configuración o los fallos del servicio pueden requerir atención humana.
+Que el CRM funcione no confirma que el servicio de IA esté accesible.
+Nunca coloques credenciales del servicio en variables del frontend.
+
+Consulta [procesamiento de conocimiento](docs/knowledge.md) y
+[orquestación de IA](docs/ai-32.md) para conocer la configuración y sus límites.
+
+
+## API y arquitectura
+
+| Método y ruta | Función |
+| --- | --- |
+| `GET /api/plans` | Consultar planes activos. |
+| `POST /api/register` | Registrar cuenta y empresa. |
+| `POST /api/login` | Obtener un token. |
+| `GET /api/me` | Consultar empresas del usuario. |
+| `GET /api/auth/context` | Validar acceso a la empresa. |
+| `GET /api/clients` | Listar clientes. |
+| `POST /api/clients` | Crear un cliente. |
+| `GET /api/leads` | Listar leads. |
+| `POST /api/leads` | Crear un lead. |
+| `POST /api/leads/<id>/convert` | Convertir lead en cliente. |
+| `GET /api/conversations` | Listar conversaciones. |
+| `GET /api/conversations/<id>/messages` | Consultar mensajes. |
+| `POST /api/conversations/<id>/messages` | Enviar mensaje desde la bandeja. |
+| `GET /api/knowledge/documents` | Listar documentos. |
+| `POST /api/knowledge/documents` | Subir un documento. |
+| `POST /api/knowledge/documents/<id>/process` | Procesar un documento. |
+
+Las rutas protegidas de empresa requieren `Authorization: Bearer <token>` y `X-Company-ID: <id>`. El servidor valida la pertenencia; los permisos adicionales dependen de la acción.
+
+- [System architecture / Arquitectura](docs/architecture/system-architecture.md)
+- [Database model / Modelo de datos (DBML)](docs/architecture/database.dbml)
+- [MVP scope / Alcance](docs/architecture/mvp-scope.md)
+- [Authentication / Autenticación](docs/auth/README.md)
+- [Registration / Registro](docs/onboarding/README.md)
+- [Members / Miembros](docs/members.md)
+- [Appointments / Agenda](docs/agenda/README.md)
+- [Conversations / Conversaciones](docs/inbox.md)
+- [Channels / Canales](docs/channels-30.md)
+- [Knowledge / Conocimiento](docs/knowledge.md)
+- [AI / IA](docs/ai-32.md)
+
+## Guion de demostración
+
+Utiliza una empresa ficticia y ensaya el flujo completo en el entorno que se presentará.
+Una sola persona comparte pantalla; los tres bloques se reparten entre los ponentes.
+
+1. **Acceso y producto:** presentar el problema, el equipo y las tecnologías; mostrar los planes, entrar con la cuenta de demostración y explicar la empresa seleccionada.
+2. **Gestión del cliente:** crear un lead ficticio, convertirlo en cliente, abrir su ficha y mostrar una cita previamente verificada. Mostrar trabajos solo si el flujo funciona con datos reales del backend en esa versión.
+3. **Atención asistida:** mostrar el documento procesado y el agente; abrir una conversación web, recibir «Hola, quiero cambiar mi vestidor», generar un borrador, revisar sus fuentes, aprobarlo y comprobar la recepción. Continuar con una segunda pregunta para mostrar el contexto.
+
+Antes del ensayo, comprueba la suscripción activa, los permisos, los documentos procesados y la conexión del backend con la IA. Comprueba también el acceso web del participante; no uses la cuenta administrativa como sustituto de esa sesión.
+Si la IA falla, demuestra la atención manual y explica la limitación; no presentes una respuesta preparada como una generación en directo.
+
+### Cuenta de demostración
+
+No hay una contraseña compartida publicada en el repositorio. Crea una cuenta ficticia mediante el registro o el bootstrap local documentado arriba. Este último solicita una contraseña de 12–128 caracteres y crea una prueba de tres días.
+Comparte las credenciales con el equipo y el profesor por un canal privado. Verifica su acceso antes del ensayo; una prueba caducada bloquea los módulos protegidos. No publiques tokens ni contraseñas en diapositivas.
+
+## Verificación y límites conocidos
+
+Desde la raíz del repositorio:
+
+```bash
+AUTH_TEST_DATABASE_URL=sqlite:// PYTHONPATH=src:tests pipenv run python -m unittest discover -s tests -p 'test_*.py' -v
+node --test tests/frontend/calendar.test.mjs
+npm run build
+```
+
+- Las migraciones PostgreSQL compartidas siguen pendientes de integración en #43; SQLite local no demuestra compatibilidad completa con producción.
+- El registro admite una simulación de pago: no procesa cobros reales. Consulta el contrato de registro enlazado arriba.
+- Los adaptadores de canales no demuestran una integración externa activa. No anuncies WhatsApp o correo como operativos sin probar sus proveedores y credenciales.
+- La IA necesita servicios externos accesibles y revisión humana de los borradores. El acceso del Mac no garantiza el acceso desde Codespaces.
+- Verifica los módulos de trabajos, dashboard y ajustes en la versión que se vaya a presentar; excluye del recorrido funciones pendientes o simuladas.
+- Los PRs #67 (CI) y #68 (seguridad) se documentan como cambios separados: confirma su integración antes de utilizar sus comandos o afirmar que están desplegados.
+- Antes de producción deben revisarse secretos, HTTPS, recuperación por correo, copias de seguridad y conservación de datos. Esta guía no certifica esos servicios.
 
 ## Licencia
 
