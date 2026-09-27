@@ -6,7 +6,7 @@ from sqlalchemy import select
 from api.models import Plan, db
 
 
-def seed_plans():
+def create_missing_plans():
     """Insert missing plans without modifying existing ones."""
     plans = [
         {
@@ -49,4 +49,10 @@ def seed_plans():
             created.append(values["code"])
 
     db.session.commit()
+    return created
+
+
+def seed_plans():
+    """Create missing plans from the Flask command line."""
+    created = create_missing_plans()
     click.echo(f"Created plans: {', '.join(created) or 'none'}.")
