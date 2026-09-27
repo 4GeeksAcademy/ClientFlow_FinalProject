@@ -1,7 +1,7 @@
 """Initial current ClientFlow schema
 
 Revision ID: cf17_initial
-Revises: 
+Revises:
 Create Date: 2026-09-27 15:59:28.947840
 
 """
