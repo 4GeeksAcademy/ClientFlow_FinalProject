@@ -32,8 +32,6 @@ services:
         value: "0"
       - key: VITE_BASENAME
         value: /
-      - key: VITE_BACKEND_URL
-        value: ""
       - key: VITE_USE_MOCK_API
         value: "false"
       - key: JWT_SECRET_KEY
