@@ -167,9 +167,9 @@ it does not migrate an existing database.
 Do not delete an existing database to bypass this check.
 Back up existing data and coordinate schema updates with the team.
 
-Plan seeding is being moved to `pipenv run flask seed-plans` in PR #68.
-That command is available only in branches containing that change.
-It restores missing catalog plans, not deleted customer records.
+Create missing catalog plans with `pipenv run flask seed-plans`, or use the
+protected `/api/seed-plans` browser form described below when no terminal is
+available. Neither method restores deleted customer records.
 
 See [authentication setup](docs/auth/README.md) for local bootstrap details.
 Shared PostgreSQL deployment must use the migration chain validated in #43.
@@ -282,7 +282,7 @@ npm run build
 - Channel adapters do not demonstrate an active external integration. Do not advertise WhatsApp or email as operational without testing their providers and credentials.
 - AI requires reachable services and human review of drafts. Access from the Mac does not guarantee access from Codespaces.
 - Verify jobs, dashboard and settings in the version being presented; exclude pending or simulated features from the walkthrough.
-- PRs #67 (CI) and #68 (security) are documented as separate changes: confirm integration before using their commands or claiming they are deployed.
+- Automated quality checks and the security changes are integrated in this branch. Check the deployed revision separately; a merge does not prove deployment.
 - Review secrets, HTTPS, email recovery, backups and data retention before production. This guide does not certify those services.
 
 ## License

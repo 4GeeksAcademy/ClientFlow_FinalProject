@@ -169,9 +169,9 @@ no migra una base existente.
 No borres una base existente para evitar esta comprobación.
 Haz una copia de seguridad y coordina los cambios de esquema con el equipo.
 
-El PR #68 traslada la creación de planes al comando
-`pipenv run flask seed-plans`, disponible únicamente en ramas que incluyan
-ese cambio. Recupera los planes que faltan, no los datos eliminados de clientes.
+Crea los planes que faltan con `pipenv run flask seed-plans` o utiliza el
+formulario protegido `/api/seed-plans`, descrito abajo, si no hay terminal.
+Ninguna de las dos opciones recupera datos de clientes eliminados.
 
 Consulta la [configuración de autenticación](docs/auth/README.md)
 para conocer los detalles de la preparación local.
@@ -287,7 +287,7 @@ npm run build
 - Los adaptadores de canales no demuestran una integración externa activa. No anuncies WhatsApp o correo como operativos sin probar sus proveedores y credenciales.
 - La IA necesita servicios externos accesibles y revisión humana de los borradores. El acceso del Mac no garantiza el acceso desde Codespaces.
 - Verifica los módulos de trabajos, dashboard y ajustes en la versión que se vaya a presentar; excluye del recorrido funciones pendientes o simuladas.
-- Los PRs #67 (CI) y #68 (seguridad) se documentan como cambios separados: confirma su integración antes de utilizar sus comandos o afirmar que están desplegados.
+- Las comprobaciones automáticas y los cambios de seguridad están integrados en esta rama. Comprueba por separado la revisión desplegada; un merge no confirma el despliegue.
 - Antes de producción deben revisarse secretos, HTTPS, recuperación por correo, copias de seguridad y conservación de datos. Esta guía no certifica esos servicios.
 
 ## Licencia
