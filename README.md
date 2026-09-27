@@ -159,10 +159,56 @@ On a disposable database, `pipenv run flask db downgrade base` removes the
 schema and its data; `pipenv run flask db upgrade` recreates it. Never use
 this rollback on a database whose data must be preserved.
 
-Existing databases created by bootstrap or older revisions require a schema
-comparison and migration reconciliation in #43. Do not blindly stamp or run
-the initial migration against an existing schema. PostgreSQL integration
-validation remains part of #43.
+### Existing databases
+
+Before updating a database that contains data:
+
+1. Make a backup and verify restoration to a separate database.
+2. Inspect the restored copy's schema and recorded Alembic revision.
+3. Compare the schema with the current models and review the required changes.
+4. Test the update on that copy, including checks that existing records survive.
+5. Apply the reviewed procedure to the shared database only after validation.
+
+Do not run the initial migration against existing tables. Do not use
+`flask db stamp` to hide differences: it only records a revision, without
+updating the schema. Databases created by bootstrap or older migrations need
+individual reconciliation; this ticket does not provide an automatic legacy
+conversion. The closed PR #42 is not part of the current migration chain.
+
+### PostgreSQL migration validation
+
+Local validation on PostgreSQL 16 passed upgrade, schema comparison, plan
+seeding without duplicates, downgrade and re-upgrade. The cycle test repeats
+creation, seeding and rollback twice in a newly created disposable database.
+
+Prepare a dedicated PostgreSQL database named `clientflow_db43`. Its test user
+must have permission to create databases. Set `MIGRATION_TEST_DATABASE_URL`
+to its connection URL in your terminal; do not use production credentials.
+For the local socket setup used during development, in the same terminal:
+
+```bash
+export MIGRATION_TEST_DATABASE_URL="${PG43_URL:?Set PG43_URL to the dedicated test database URL}"
+```
+
+From the project root, with `FLASK_APP=src/app.py` and a valid test
+`JWT_SECRET_KEY` configured, run:
+
+```bash
+PIPENV_DONT_LOAD_ENV=1 DATABASE_URL="${MIGRATION_TEST_DATABASE_URL:?Set the test database URL}" pipenv run flask db upgrade
+PIPENV_DONT_LOAD_ENV=1 DATABASE_URL="${MIGRATION_TEST_DATABASE_URL:?Set the test database URL}" pipenv run flask db check
+PIPENV_DONT_LOAD_ENV=1 MIGRATION_TEST_DATABASE_URL="${MIGRATION_TEST_DATABASE_URL:?Set the test database URL}" PYTHONPATH=src:tests pipenv run python -m unittest test_postgres_migrations test_postgres_migration_cycle -v
+```
+
+`PIPENV_DONT_LOAD_ENV=1` prevents Pipenv from replacing the selected test URL
+with the database URL in `.env`. The schema test reads the prepared database.
+The cycle test creates and removes only its own uniquely named database.
+Without `MIGRATION_TEST_DATABASE_URL`, both PostgreSQL tests are skipped.
+
+GitHub Actions is configured to run these checks with a temporary PostgreSQL
+16 service within the required **Backend tests** job. Confirm that job passes
+on the PR before merging; local results do not prove the hosted run succeeded.
+
+### Alternative local demo bootstrap
 
 The following bootstrap is an alternative for local demo accounts, not a step
 to run after `db upgrade`:
@@ -191,7 +237,7 @@ protected `/api/seed-plans` browser form described below when no terminal is
 available. Neither method restores deleted customer records.
 
 See [authentication setup](docs/auth/README.md) for local bootstrap details.
-Shared PostgreSQL deployment must use the migration chain validated in #43.
+Shared PostgreSQL deployment must use the versioned migration chain and validate it against the target environment before release.
 
 ### Optional AI configuration
 
@@ -296,7 +342,7 @@ node --test tests/frontend/calendar.test.mjs
 npm run build
 ```
 
-- Shared PostgreSQL migrations remain pending integration in #43; local SQLite does not prove full production compatibility.
+- PostgreSQL 16 migration tests passed locally. Existing databases require backup, schema reconciliation and testing on a restored copy; these tests do not certify a production deployment.
 - Registration supports simulated payment, not real charges. See the linked registration contract.
 - Channel adapters do not demonstrate an active external integration. Do not advertise WhatsApp or email as operational without testing their providers and credentials.
 - AI requires reachable services and human review of drafts. Access from the Mac does not guarantee access from Codespaces.
