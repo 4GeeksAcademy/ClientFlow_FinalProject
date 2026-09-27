@@ -135,12 +135,12 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 Store the result only in your private environment configuration.
 
 For local development, `VITE_BACKEND_URL` can be `http://localhost:3001`.
-In Codespaces, you can set it to `/`: Vite then proxies `/api` requests
-to the backend inside the Codespace. Do not leave it empty: the current
-frontend displays a configuration screen when this value is missing.
+When frontend and backend share the same origin, it can be omitted or left
+empty; requests then use relative `/api` addresses. In Codespaces, Vite proxies
+these requests to the backend inside the Codespace.
 
-When using the same-origin proxy, the backend port does not need to be
-made public. Restart the development servers after changing `.env`.
+When using the same-origin proxy, the backend port does not need to be public.
+Restart the development servers after changing `.env`.
 
 ### Database preparation
 
@@ -403,3 +403,31 @@ The database tables must already exist. Missing plans are created; existing
 prices are preserved. This does not recover deleted accounts or client data.
 Remove `PLAN_SEED_KEY` after setup to disable browser writes. The terminal
 command `pipenv run flask seed-plans` remains available independently.
+
+## Staging deployment
+
+The shared staging environment is available at:
+
+- https://clientflow-staging.onrender.com
+
+Render provisions the Flask and React web service together with a PostgreSQL 16
+database using `render.yaml`. The build uses Python 3.13, Pipenv and Node.js 22.
+Database migrations run automatically before Gunicorn starts, and the frontend
+communicates with the API through the same public origin.
+
+Public deployment settings are stored in `render.yaml`. Private values such as
+`JWT_SECRET_KEY` and `PLAN_SEED_KEY` must remain in Render environment variables
+and must never be committed.
+
+For a new empty staging database, open `/api/seed-plans` and provide the private
+`PLAN_SEED_KEY`. Confirm the resulting catalog through `/api/plans`.
+
+The staging smoke test must verify:
+
+1. `/api/health` returns a successful response.
+2. The three catalog plans are available.
+3. A new account can register and sign in.
+4. Created client data remains available after refreshing and signing in again.
+
+After this staging pull request is merged, configure the Render service to track
+the `develop` branch.
