@@ -153,7 +153,7 @@ pipenv run flask db upgrade
 pipenv run flask seed-plans
 ```
 
-La revisión `cf17_initial` crea el esquema actual. Los roles son valores enum
+La revisión `6bb753c896ae` crea el esquema actual. Los roles son valores enum
 de las membresías, no un catálogo independiente que necesite registros seed.
 Los planes se crean por separado; el seed protegido del navegador sigue disponible.
 
@@ -287,27 +287,26 @@ Nunca coloques credenciales del servicio en variables del frontend.
 Consulta [procesamiento de conocimiento](docs/knowledge.md) y
 [orquestación de IA](docs/ai-32.md) para conocer la configuración y sus límites.
 
-
 ## API y arquitectura
 
-| Método y ruta | Función |
-| --- | --- |
-| `GET /api/plans` | Consultar planes activos. |
-| `POST /api/register` | Registrar cuenta y empresa. |
-| `POST /api/login` | Obtener un token. |
-| `GET /api/me` | Consultar empresas del usuario. |
-| `GET /api/auth/context` | Validar acceso a la empresa. |
-| `GET /api/clients` | Listar clientes. |
-| `POST /api/clients` | Crear un cliente. |
-| `GET /api/leads` | Listar leads. |
-| `POST /api/leads` | Crear un lead. |
-| `POST /api/leads/<id>/convert` | Convertir lead en cliente. |
-| `GET /api/conversations` | Listar conversaciones. |
-| `GET /api/conversations/<id>/messages` | Consultar mensajes. |
-| `POST /api/conversations/<id>/messages` | Enviar mensaje desde la bandeja. |
-| `GET /api/knowledge/documents` | Listar documentos. |
-| `POST /api/knowledge/documents` | Subir un documento. |
-| `POST /api/knowledge/documents/<id>/process` | Procesar un documento. |
+| Método y ruta                                | Función                          |
+| -------------------------------------------- | -------------------------------- |
+| `GET /api/plans`                             | Consultar planes activos.        |
+| `POST /api/register`                         | Registrar cuenta y empresa.      |
+| `POST /api/login`                            | Obtener un token.                |
+| `GET /api/me`                                | Consultar empresas del usuario.  |
+| `GET /api/auth/context`                      | Validar acceso a la empresa.     |
+| `GET /api/clients`                           | Listar clientes.                 |
+| `POST /api/clients`                          | Crear un cliente.                |
+| `GET /api/leads`                             | Listar leads.                    |
+| `POST /api/leads`                            | Crear un lead.                   |
+| `POST /api/leads/<id>/convert`               | Convertir lead en cliente.       |
+| `GET /api/conversations`                     | Listar conversaciones.           |
+| `GET /api/conversations/<id>/messages`       | Consultar mensajes.              |
+| `POST /api/conversations/<id>/messages`      | Enviar mensaje desde la bandeja. |
+| `GET /api/knowledge/documents`               | Listar documentos.               |
+| `POST /api/knowledge/documents`              | Subir un documento.              |
+| `POST /api/knowledge/documents/<id>/process` | Procesar un documento.           |
 
 Las rutas protegidas de empresa requieren `Authorization: Bearer <token>` y `X-Company-ID: <id>`. El servidor valida la pertenencia; los permisos adicionales dependen de la acción.
 
