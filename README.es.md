@@ -161,10 +161,59 @@ En una base desechable, `pipenv run flask db downgrade base` elimina el esquema
 y sus datos; `pipenv run flask db upgrade` lo vuelve a crear. No ejecutes esa
 reversión sobre una base cuyos datos deban conservarse.
 
-Las bases existentes creadas mediante bootstrap o revisiones anteriores requieren
-comparación del esquema y reconciliación en #43. No ejecutes la migración inicial
-ni marques revisiones como aplicadas sin comprobar el esquema existente.
-La validación de integración PostgreSQL queda en #43.
+### Bases de datos existentes
+
+Antes de actualizar una base que contiene datos:
+
+1. Crea una copia de seguridad y verifica su restauración en otra base.
+2. Revisa el esquema y la revisión Alembic registrada en la copia restaurada.
+3. Compara el esquema con los modelos actuales y revisa los cambios necesarios.
+4. Prueba la actualización en esa copia y comprueba que conserva los registros.
+5. Aplica el procedimiento revisado a la base compartida solo tras validarlo.
+
+No ejecutes la migración inicial sobre tablas existentes. No uses
+`flask db stamp` para ocultar diferencias: solo registra una revisión, sin
+actualizar el esquema. Las bases creadas mediante bootstrap o migraciones
+antiguas necesitan reconciliación individual; este ticket no ofrece una
+conversión automática de bases antiguas. El PR #42 cerrado no forma parte
+de la cadena actual de migraciones.
+
+### Validación de migraciones PostgreSQL
+
+La validación local en PostgreSQL 16 superó creación, comparación del esquema,
+seed sin duplicados, reversión y recreación. La prueba de ciclo repite creación,
+seed y reversión dos veces en una nueva base desechable.
+
+Prepara una base PostgreSQL dedicada llamada `clientflow_db43`. Su usuario de
+pruebas debe tener permiso para crear bases. Configura en el terminal
+`MIGRATION_TEST_DATABASE_URL` con su URL; no uses credenciales de producción.
+Para la configuración local mediante socket utilizada durante el desarrollo,
+en el mismo terminal:
+
+```bash
+export MIGRATION_TEST_DATABASE_URL="${PG43_URL:?Set PG43_URL to the dedicated test database URL}"
+```
+
+Desde la raíz del proyecto, con `FLASK_APP=src/app.py` y una
+`JWT_SECRET_KEY` de pruebas válida configuradas, ejecuta:
+
+```bash
+PIPENV_DONT_LOAD_ENV=1 DATABASE_URL="${MIGRATION_TEST_DATABASE_URL:?Set the test database URL}" pipenv run flask db upgrade
+PIPENV_DONT_LOAD_ENV=1 DATABASE_URL="${MIGRATION_TEST_DATABASE_URL:?Set the test database URL}" pipenv run flask db check
+PIPENV_DONT_LOAD_ENV=1 MIGRATION_TEST_DATABASE_URL="${MIGRATION_TEST_DATABASE_URL:?Set the test database URL}" PYTHONPATH=src:tests pipenv run python -m unittest test_postgres_migrations test_postgres_migration_cycle -v
+```
+
+`PIPENV_DONT_LOAD_ENV=1` evita que Pipenv sustituya la URL de pruebas por la
+URL del archivo `.env`. La prueba del esquema consulta la base preparada.
+La prueba de ciclo crea y elimina únicamente su propia base con nombre único.
+Sin `MIGRATION_TEST_DATABASE_URL`, las dos pruebas PostgreSQL se omiten.
+
+GitHub Actions está configurado para ejecutar estas comprobaciones con un
+servicio PostgreSQL 16 temporal dentro de **Backend tests**, que es obligatorio.
+Confirma que esa comprobación pasa en el PR antes de fusionarlo; el resultado
+local no demuestra que la ejecución en GitHub haya terminado correctamente.
+
+### Bootstrap alternativo para demostración local
 
 El siguiente bootstrap es una alternativa para cuentas de demostración locales,
 no un paso posterior a `db upgrade`:
@@ -194,7 +243,7 @@ Ninguna de las dos opciones recupera datos de clientes eliminados.
 
 Consulta la [configuración de autenticación](docs/auth/README.md)
 para conocer los detalles de la preparación local.
-El despliegue PostgreSQL compartido debe utilizar las migraciones validadas en #43.
+El despliegue PostgreSQL compartido debe utilizar la cadena de migraciones versionada y validarla en el entorno de destino antes de publicar.
 
 ### Configuración opcional de IA
 
@@ -301,7 +350,7 @@ node --test tests/frontend/calendar.test.mjs
 npm run build
 ```
 
-- Las migraciones PostgreSQL compartidas siguen pendientes de integración en #43; SQLite local no demuestra compatibilidad completa con producción.
+- Las pruebas de migraciones en PostgreSQL 16 pasaron localmente. Las bases existentes requieren copia de seguridad, reconciliación del esquema y pruebas en una copia restaurada; esto no certifica un despliegue de producción.
 - El registro admite una simulación de pago: no procesa cobros reales. Consulta el contrato de registro enlazado arriba.
 - Los adaptadores de canales no demuestran una integración externa activa. No anuncies WhatsApp o correo como operativos sin probar sus proveedores y credenciales.
 - La IA necesita servicios externos accesibles y revisión humana de los borradores. El acceso del Mac no garantiza el acceso desde Codespaces.
