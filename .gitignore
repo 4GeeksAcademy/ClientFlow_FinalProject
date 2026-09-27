@@ -98,3 +98,5 @@ src/instance/*.db
 # Private key files
 *.pem
 *.key
+
+!.python-version
