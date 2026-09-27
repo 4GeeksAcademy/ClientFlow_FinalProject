@@ -34,6 +34,10 @@ services:
         value: /
       - key: VITE_USE_MOCK_API
         value: "false"
+      - key: FRONTEND_ORIGIN
+        value: https://clientflow-staging.onrender.com
+      - key: AUTH_RESET_URL
+        value: https://clientflow-staging.onrender.com/reset-password
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: PLAN_SEED_KEY
