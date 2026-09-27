@@ -146,9 +146,28 @@ el puerto del backend. Reinicia los servidores después de modificar `.env`.
 
 ### Preparación de la base de datos
 
-La cadena compartida de migraciones está pendiente de integración en #43.
-La rama actual contiene la configuración, pero no revisiones versionadas.
-No se debe asumir que `flask db upgrade` puede crear una base completa todavía.
+Para una base nueva y vacía, configura `DATABASE_URL` y `JWT_SECRET_KEY` y ejecuta:
+
+```bash
+pipenv run flask db upgrade
+pipenv run flask seed-plans
+```
+
+La revisión `cf17_initial` crea el esquema actual. Los roles son valores enum
+de las membresías, no un catálogo independiente que necesite registros seed.
+Los planes se crean por separado; el seed protegido del navegador sigue disponible.
+
+En una base desechable, `pipenv run flask db downgrade base` elimina el esquema
+y sus datos; `pipenv run flask db upgrade` lo vuelve a crear. No ejecutes esa
+reversión sobre una base cuyos datos deban conservarse.
+
+Las bases existentes creadas mediante bootstrap o revisiones anteriores requieren
+comparación del esquema y reconciliación en #43. No ejecutes la migración inicial
+ni marques revisiones como aplicadas sin comprobar el esquema existente.
+La validación de integración PostgreSQL queda en #43.
+
+El siguiente bootstrap es una alternativa para cuentas de demostración locales,
+no un paso posterior a `db upgrade`:
 
 Solo para una base local nueva, vacía y desechable:
 
