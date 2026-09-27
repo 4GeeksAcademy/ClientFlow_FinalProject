@@ -151,7 +151,7 @@ pipenv run flask db upgrade
 pipenv run flask seed-plans
 ```
 
-Revision `cf17_initial` creates the current schema. Roles are enum values in
+Revision `6bb753c896ae` creates the current schema. Roles are enum values in
 company memberships, not a separate catalog requiring seed rows. Plans are
 seeded separately; the protected browser seed remains available.
 
@@ -279,27 +279,26 @@ Never place service credentials in frontend variables.
 See [knowledge processing](docs/knowledge.md) and
 [AI orchestration](docs/ai-32.md) for the detailed configuration and limitations.
 
-
 ## API and architecture
 
-| Method and path | Purpose |
-| --- | --- |
-| `GET /api/plans` | List active plans. |
-| `POST /api/register` | Register an account and company. |
-| `POST /api/login` | Obtain an access token. |
-| `GET /api/me` | Read user memberships. |
-| `GET /api/auth/context` | Validate company access. |
-| `GET /api/clients` | List clients. |
-| `POST /api/clients` | Create a client. |
-| `GET /api/leads` | List leads. |
-| `POST /api/leads` | Create a lead. |
-| `POST /api/leads/<id>/convert` | Convert a lead into a client. |
-| `GET /api/conversations` | List conversations. |
-| `GET /api/conversations/<id>/messages` | Read messages. |
-| `POST /api/conversations/<id>/messages` | Send an inbox message. |
-| `GET /api/knowledge/documents` | List documents. |
-| `POST /api/knowledge/documents` | Upload a document. |
-| `POST /api/knowledge/documents/<id>/process` | Process a document. |
+| Method and path                              | Purpose                          |
+| -------------------------------------------- | -------------------------------- |
+| `GET /api/plans`                             | List active plans.               |
+| `POST /api/register`                         | Register an account and company. |
+| `POST /api/login`                            | Obtain an access token.          |
+| `GET /api/me`                                | Read user memberships.           |
+| `GET /api/auth/context`                      | Validate company access.         |
+| `GET /api/clients`                           | List clients.                    |
+| `POST /api/clients`                          | Create a client.                 |
+| `GET /api/leads`                             | List leads.                      |
+| `POST /api/leads`                            | Create a lead.                   |
+| `POST /api/leads/<id>/convert`               | Convert a lead into a client.    |
+| `GET /api/conversations`                     | List conversations.              |
+| `GET /api/conversations/<id>/messages`       | Read messages.                   |
+| `POST /api/conversations/<id>/messages`      | Send an inbox message.           |
+| `GET /api/knowledge/documents`               | List documents.                  |
+| `POST /api/knowledge/documents`              | Upload a document.               |
+| `POST /api/knowledge/documents/<id>/process` | Process a document.              |
 
 Protected company routes require `Authorization: Bearer <token>` and `X-Company-ID: <id>`. The server validates membership; additional permissions depend on the action.
 
