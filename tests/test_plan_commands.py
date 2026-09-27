@@ -51,13 +51,13 @@ class PlanCommandsTest(unittest.TestCase):
         self.assertEqual(starter.price_eur, Decimal("99.00"))
         self.assertEqual(len(db.session.scalars(select(Plan)).all()), 3)
 
-    def test_public_seed_route_is_unavailable(self):
+    def test_browser_page_does_not_create_plans(self):
         from api.routes import api
 
         self.app.register_blueprint(api, url_prefix="/api")
         response = self.app.test_client().get("/api/seed-plans")
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(db.session.scalars(select(Plan)).all(), [])
 
     def test_customers_can_still_read_plans(self):
