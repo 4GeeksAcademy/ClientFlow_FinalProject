@@ -293,3 +293,43 @@ npm run build
 ## Licencia
 
 Este proyecto fue desarrollado con fines educativos como parte del programa de Desarrollo Full Stack de 4Geeks Academy.
+
+## Preparación de la base de datos y seguridad
+
+Después de recrear las tablas mediante las migraciones, recupera los planes predeterminados:
+
+```bash
+pipenv run flask seed-plans
+```
+
+Este comando crea los planes que faltan sin modificar los existentes ni sus precios.
+No recupera cuentas, clientes ni conversaciones eliminadas; para eso se necesita
+una copia de seguridad. Se ha eliminado la ruta pública `/api/seed-plans`.
+Los clientes pueden seguir consultando los planes activos mediante `/api/plans`.
+
+### Medidas operativas
+
+- Guarda las credenciales en variables de entorno del backend. Nunca incluyas
+  secretos en variables `VITE_*`, código, capturas de pantalla ni registros.
+- Renueva las credenciales que se hayan compartido o expuesto.
+- Mantén las copias de seguridad y las claves privadas fuera del repositorio.
+- Desactiva el modo debug en producción y configura el origen permitido del frontend.
+- Los avatares se generan localmente sin enviar nombres a un servicio externo.
+
+### Datos personales
+
+Utiliza datos ficticios en las demostraciones. Antes de utilizar datos reales,
+define el aviso de privacidad, los requisitos de consentimiento aplicables,
+los plazos de conservación y los procedimientos de acceso y eliminación,
+incluidas las copias de seguridad.
+
+Este cambio no implementa la conservación ni la eliminación automática de datos.
+Revisa por separado los controles de acceso, los registros y la conservación
+del servicio de IA antes de enviar información real de clientes.
+
+### Verificación
+
+La revisión incluye pruebas automatizadas de autenticación, aislamiento entre
+empresas, permisos de miembros, archivos subidos y creación de planes.
+Las pruebas cubren los escenarios comprobados y no sustituyen una revisión
+del despliegue en producción.
