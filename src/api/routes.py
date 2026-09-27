@@ -2,6 +2,7 @@
 API routes for ClientFlow.
 """
 from api.appointments import register_appointments
+from api.plan_setup import register_plan_setup
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -1997,3 +1998,5 @@ def delete_job(job_id):
 
 # Register appointment routes on the existing API blueprint.
 register_appointments(api)
+
+register_plan_setup(api)
