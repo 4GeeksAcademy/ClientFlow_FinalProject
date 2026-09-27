@@ -129,11 +129,11 @@ export const Sidebar = ({ isOpen, onClose }) => {
                                 <i className="fa-solid fa-user-shield" style={{ width: "16px" }}></i> Usuarios
                             </Link>
                         </li>
-                        <li>
+                        {/*<li>
                             <Link to="/zones" onClick={handleLinkClick} className={getLinkClass("/zones")}>
                                 <i className="fa-solid fa-map-location-dot" style={{ width: "16px" }}></i> Zonas de servicio
                             </Link>
-                        </li>
+                        </li>*/}
                         <li>
                             <Link to="/settings" onClick={handleLinkClick} className={getLinkClass("/settings")}>
                                 <i className="fa-solid fa-gear" style={{ width: "16px" }}></i> Configuración
