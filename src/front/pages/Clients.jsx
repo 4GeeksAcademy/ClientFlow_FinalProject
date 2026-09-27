@@ -29,7 +29,7 @@ export const Clients = () => {
     // Función para eliminar un cliente
     const handleDelete = async (clientId) => {
         if (!window.confirm("¿Estás seguro de que deseas eliminar este cliente?")) return;
-        
+
         try {
             const token = localStorage.getItem("access_token") || localStorage.getItem("token");
             const base = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
