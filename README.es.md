@@ -437,7 +437,23 @@ La prueba rápida de staging debe verificar:
 1. `/api/health` devuelve una respuesta correcta.
 2. Los tres planes del catálogo están disponibles.
 3. Se puede registrar una cuenta nueva e iniciar sesión.
-4. Los clientes creados permanecen después de actualizar y volver a iniciar sesión.
+4. Se puede crear y editar un lead y convertirlo en cliente.
+5. La dirección del cliente, el trabajo y la cita permanecen después de actualizar.
+6. La bandeja, el conocimiento, la revisión del borrador de IA y el dashboard se abren sin errores JSON ni de red.
+7. Cerrar sesión revoca la sesión del servidor y elimina el token del navegador.
 
-Después de fusionar este pull request de staging, configura el servicio de Render
-para seguir la rama `develop`.
+El servicio compartido de Render sigue la rama `develop`. Si un servicio existente
+todavía muestra `feature/deploy-39-staging`, cambia **Settings → Branch** a
+`develop` antes del despliegue final y publica el último commit limpiando la caché
+de compilación.
+
+La pantalla de ajustes y el selector global de idioma incompletos quedan fuera del
+recorrido académico hasta completar los issues #29 y #18.
+
+### Reversión de staging
+
+Si falla el despliegue final, abre el historial de despliegues del servicio de
+Render, selecciona el último despliegue correcto verificado y elige **Rollback**.
+No ejecutes comandos destructivos sobre la base de datos. Si el fallo procede de
+una migración, restaura una copia de seguridad comprobada o publica una migración
+correctiva probada antes de permitir nuevas escrituras.

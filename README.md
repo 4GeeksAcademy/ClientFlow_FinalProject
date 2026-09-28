@@ -427,7 +427,21 @@ The staging smoke test must verify:
 1. `/api/health` returns a successful response.
 2. The three catalog plans are available.
 3. A new account can register and sign in.
-4. Created client data remains available after refreshing and signing in again.
+4. A lead can be created, edited and converted into a client.
+5. The client address, job and appointment workflows persist after refreshing.
+6. Inbox, knowledge, AI draft review and dashboard analytics open without JSON or network errors.
+7. Signing out revokes the server session and removes the browser token.
 
-After this staging pull request is merged, configure the Render service to track
-the `develop` branch.
+The shared Render service tracks `develop`. If an existing Render service still
+shows `feature/deploy-39-staging`, change **Settings → Branch** to `develop` before
+the final deploy, then deploy the latest commit with a cleared build cache.
+
+The incomplete settings screen and the incomplete global language selector are
+excluded from the academic walkthrough until issues #29 and #18 are complete.
+
+### Staging rollback
+
+If the final deploy fails, open the Render service deployment history, select the
+last verified successful deploy and choose **Rollback**. Do not run destructive
+database commands. If a migration caused the failure, restore a verified database
+backup or deploy a tested corrective migration before allowing new writes.

@@ -9,6 +9,15 @@ export const translations = {
             team: "Team",
             conversations: "Inbox",
             knowledge: "Knowledge",
+            agents: "AI Agents",
+            workspace: "Workspace",
+            administration: "Administration",
+            account: "Account",
+            role: {
+                owner: "Owner",
+                admin: "Administrator",
+                member: "Member"
+            },
             logout: "Logout"
         },
         common: {
@@ -68,6 +77,15 @@ export const translations = {
             team: "Equipo",
             conversations: "Bandeja",
             knowledge: "Base de conocimiento",
+            agents: "Agentes IA",
+            workspace: "Espacio de trabajo",
+            administration: "Administración",
+            account: "Cuenta",
+            role: {
+                owner: "Propietario",
+                admin: "Administrador",
+                member: "Miembro"
+            },
             logout: "Cerrar sesión"
         },
         common: {
@@ -127,6 +145,15 @@ export const translations = {
             team: "Equipe",
             conversations: "Caixa de entrada",
             knowledge: "Base de conhecimento",
+            agents: "Agentes de IA",
+            workspace: "Espaço de trabalho",
+            administration: "Administração",
+            account: "Conta",
+            role: {
+                owner: "Proprietário",
+                admin: "Administrador",
+                member: "Membro"
+            },
             logout: "Sair"
         },
         common: {
