@@ -19,7 +19,26 @@ async function request(path, { token, companyId, signal, method = "GET", body })
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    let data;
+
+    if (contentType.includes("application/json")) {
+        data = await response.json();
+    } else {
+        const text = await response.text();
+
+        if (!response.ok) {
+            throw new Error(
+                `El servidor devolvió un error (${response.status}) al cargar los datos del cliente.`
+            );
+        }
+
+        throw new Error(
+            text
+                ? "El servidor devolvió una respuesta no válida."
+                : "El servidor devolvió una respuesta vacía."
+        );
+    }
 
     if (!response.ok) {
         throw new Error(data.message || data.error || "No se pudo completar la operación.");
