@@ -8,6 +8,7 @@ export const JobDetail = () => {
 
     const [job, setJob] = useState(location.state?.job || null);
     const [loading, setLoading] = useState(!location.state?.job);
+    const [error, setError] = useState("");
 
     // Helper para obtener la URL base limpia y el token de autenticación
     const getBaseUrl = () => (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
@@ -19,19 +20,39 @@ export const JobDetail = () => {
             try {
                 const base = getBaseUrl();
                 const token = getToken();
+                setError("");
+
+                const accountResponse = await fetch(`${base}/api/me`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!accountResponse.ok) {
+                    throw new Error("No se pudo cargar la empresa activa.");
+                }
+                const account = await accountResponse.json();
+                const companyId = account.companies?.[0]?.id;
+                if (!companyId) {
+                    throw new Error("No se encontró una empresa activa.");
+                }
 
                 const response = await fetch(`${base}/api/jobs/${id}`, {
                     headers: {
                         "Content-Type": "application/json",
-                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        Authorization: `Bearer ${token}`,
+                        "X-Company-ID": String(companyId),
                     }
                 });
 
-                if (!response.ok) throw new Error("No se pudo cargar el trabajo");
-                const data = await response.json();
+                const contentType = response.headers.get("content-type") || "";
+                const data = contentType.includes("application/json")
+                    ? await response.json()
+                    : null;
+                if (!response.ok || !data) {
+                    throw new Error(data?.error || "No se pudo cargar el trabajo.");
+                }
                 setJob(data);
             } catch (err) {
-                console.error("Error cargando el detalle del trabajo:", err);
+                setError(err.message || "No se pudo cargar el trabajo.");
+                setJob(null);
             } finally {
                 setLoading(false);
             }
@@ -78,7 +99,8 @@ export const JobDetail = () => {
                 method: "PUT", // O PATCH según tu backend
                 headers: {
                     "Content-Type": "application/json",
-                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    Authorization: `Bearer ${token}`,
+                    "X-Company-ID": String(job.company_id),
                 },
                 body: JSON.stringify({
                     stages: updatedStages,
@@ -88,10 +110,15 @@ export const JobDetail = () => {
             });
 
             if (!response.ok) {
-                console.error("Error al actualizar la etapa en el servidor");
+                setJob(job);
+                setError("No se pudo actualizar la etapa.");
+            } else {
+                const data = await response.json();
+                setJob(data);
             }
         } catch (error) {
-            console.error("Error de red al actualizar la etapa:", error);
+            setJob(job);
+            setError(error.message || "No se pudo actualizar la etapa.");
         }
     };
 
@@ -124,10 +151,11 @@ export const JobDetail = () => {
         );
     }
 
-    if (!job) return <div className="alert alert-danger m-4" role="alert">Trabajo no encontrado.</div>;
+    if (!job) return <div className="alert alert-danger m-4" role="alert">{error || "Trabajo no encontrado."}</div>;
 
     return (
         <div className="container-fluid px-0">
+            {error && <div className="alert alert-danger" role="alert">{error}</div>}
             {/* Navegación superior */}
             <div className="d-flex align-items-center justify-content-between mb-4">
                 <Link to="/jobs" className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
