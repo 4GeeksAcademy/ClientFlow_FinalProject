@@ -53,7 +53,23 @@ def payload(body, existing=None):
             continue
         if type(value) is not int or value <= 0:
             raise ValueError(f'Invalid {key}.')
-        related = db.session.scalar(select(model).where(model.id == value, model.company_id == g.company_id))
+        if model is Job:
+            # Select only the relationship fields. Legacy SQLite databases can
+            # contain lowercase job status values that older ORM mappings
+            # cannot deserialize.
+            related = db.session.execute(
+                select(Job.id, Job.client_id).where(
+                    Job.id == value,
+                    Job.company_id == g.company_id,
+                )
+            ).one_or_none()
+        else:
+            related = db.session.scalar(
+                select(model).where(
+                    model.id == value,
+                    model.company_id == g.company_id,
+                )
+            )
         if related is None or (hasattr(related, 'is_active') and not related.is_active):
             raise ValueError(f'{key} is not available in this company.')
         if key == 'assigned_membership_id' and not db.session.get(User, related.user_id).is_active:
@@ -115,9 +131,14 @@ def register_appointments(api):
     def appointment_options():
         def rows(model):
             return db.session.scalars(select(model).where(model.company_id == g.company_id).order_by(model.id)).all()
+        jobs = db.session.execute(
+            select(Job.id, Job.client_id, Job.title)
+            .where(Job.company_id == g.company_id)
+            .order_by(Job.id)
+        ).all()
         return jsonify(
             clients=[{'id': item.id, 'name': f'{item.first_name} {item.last_name or ""}'.strip()} for item in rows(Client) if item.is_active],
-            jobs=[{'id': item.id, 'client_id': item.client_id, 'title': item.title} for item in rows(Job)],
+            jobs=[{'id': item.id, 'client_id': item.client_id, 'title': item.title} for item in jobs],
             members=[{'id': item.id, 'name': f'{item.user.first_name} {item.user.last_name or ""}'.strip()} for item in rows(CompanyMembership) if item.is_active and item.user.is_active],
             services=[{'id': item.id, 'name': item.name, 'colour': item.colour} for item in rows(ServiceType) if item.is_active])
 

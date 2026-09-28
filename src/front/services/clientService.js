@@ -19,7 +19,26 @@ async function request(path, { token, companyId, signal, method = "GET", body })
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    let data;
+
+    if (contentType.includes("application/json")) {
+        data = await response.json();
+    } else {
+        const text = await response.text();
+
+        if (!response.ok) {
+            throw new Error(
+                `El servidor devolvió un error (${response.status}) al cargar los datos del cliente.`
+            );
+        }
+
+        throw new Error(
+            text
+                ? "El servidor devolvió una respuesta no válida."
+                : "El servidor devolvió una respuesta vacía."
+        );
+    }
 
     if (!response.ok) {
         throw new Error(data.message || data.error || "No se pudo completar la operación.");
@@ -30,6 +49,13 @@ async function request(path, { token, companyId, signal, method = "GET", body })
 
 export const clientService = {
     create(options, body) { return request("/clients", { ...options, method: "POST", body }); },
+    update(options, clientId, body) {
+        return request(`/clients/${clientId}`, {
+            ...options,
+            method: "PATCH",
+            body,
+        });
+    },
     list(options, page = 1, search = "", status = "all") {
         const query = new URLSearchParams({
             page,
@@ -40,12 +66,28 @@ export const clientService = {
 
         return request(`/clients?${query}`, options);
     },
-     get(options, clientId) {
+    get(options, clientId) {
         return request(`/clients/${clientId}`, options);
     },
 
     getAddresses(options, clientId) {
         return request(`/clients/${clientId}/addresses`, options);
+    },
+
+    createAddress(options, clientId, body) {
+        return request(`/clients/${clientId}/addresses`, {
+            ...options,
+            method: "POST",
+            body,
+        });
+    },
+
+    updateAddress(options, clientId, addressId, body) {
+        return request(`/clients/${clientId}/addresses/${addressId}`, {
+            ...options,
+            method: "PATCH",
+            body,
+        });
     },
 
     getNextActions(options, clientId) {

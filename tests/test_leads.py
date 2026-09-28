@@ -198,6 +198,27 @@ class LeadActivitiesTest(unittest.TestCase):
         self.assertEqual(data["first_name"], "Ana María")
         self.assertEqual(data["phone"], "611222333")
 
+    def test_update_lead_consent_tracks_and_clears_timestamp(self):
+        grant_response = self.client.patch(
+            f"/api/leads/{self.lead.id}",
+            json={"consent_given": True},
+            headers=self.headers(),
+        )
+
+        self.assertEqual(grant_response.status_code, 200)
+        self.assertTrue(grant_response.get_json()["consent_given"])
+        self.assertIsNotNone(grant_response.get_json()["consent_at"])
+
+        revoke_response = self.client.patch(
+            f"/api/leads/{self.lead.id}",
+            json={"consent_given": False},
+            headers=self.headers(),
+        )
+
+        self.assertEqual(revoke_response.status_code, 200)
+        self.assertFalse(revoke_response.get_json()["consent_given"])
+        self.assertIsNone(revoke_response.get_json()["consent_at"])
+
     def test_list_lead_activities(self):
         response = self.client.get(
             f"/api/leads/{self.lead.id}/activities",
@@ -215,6 +236,67 @@ class LeadActivitiesTest(unittest.TestCase):
             data[0]["description"],
             "Primera interacción con el lead.",
         )
+
+    def test_create_list_and_complete_lead_next_action(self):
+        create_response = self.client.post(
+            f"/api/leads/{self.lead.id}/next-actions",
+            json={
+                "title": "Llamar para confirmar medidas",
+                "description": "Confirmar ancho y altura del armario.",
+                "due_at": "2026-09-29T10:30:00+00:00",
+                "assigned_membership_id": self.membership.id,
+            },
+            headers=self.headers(),
+        )
+
+        self.assertEqual(create_response.status_code, 201)
+        created = create_response.get_json()
+        self.assertEqual(created["lead_id"], self.lead.id)
+        self.assertEqual(created["status"], "pending")
+
+        list_response = self.client.get(
+            f"/api/leads/{self.lead.id}/next-actions",
+            headers=self.headers(),
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(len(list_response.get_json()), 1)
+        self.assertEqual(
+            list_response.get_json()[0]["title"],
+            "Llamar para confirmar medidas",
+        )
+
+        complete_response = self.client.patch(
+            f"/api/next-actions/{created['id']}",
+            json={"status": "completed"},
+            headers=self.headers(),
+        )
+
+        self.assertEqual(complete_response.status_code, 200)
+        completed = complete_response.get_json()
+        self.assertEqual(completed["status"], "completed")
+        self.assertIsNotNone(completed["completed_at"])
+
+    def test_cannot_create_next_action_for_other_company_lead(self):
+        other_lead = Lead(
+            company_id=self.other_company.id,
+            first_name="Lead",
+            last_name="Externo",
+        )
+        db.session.add(other_lead)
+        db.session.commit()
+
+        response = self.client.post(
+            f"/api/leads/{other_lead.id}/next-actions",
+            json={
+                "title": "Acción no permitida",
+                "due_at": "2026-09-29T10:30:00+00:00",
+                "assigned_membership_id": self.membership.id,
+            },
+            headers=self.headers(),
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_cannot_access_lead_from_other_company(self):
         other_lead = Lead(
