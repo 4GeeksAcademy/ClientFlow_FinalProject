@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from flask import Flask
+from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -239,6 +240,21 @@ class ClientRelatedResourcesTest(unittest.TestCase):
         self.assertEqual(data[0]["client_id"], self.client.id)
         self.assertEqual(data[0]["title"], "Instalación principal")
         self.assertEqual(data[0]["status"], "scheduled")
+
+    def test_list_client_jobs_accepts_legacy_lowercase_status(self):
+        db.session.execute(
+            text("UPDATE jobs SET status = 'draft' WHERE id = :job_id"),
+            {"job_id": self.job.id},
+        )
+        db.session.commit()
+
+        response = self.client_http.get(
+            f"/api/clients/{self.client.id}/jobs",
+            headers=self.headers(),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json[0]["status"], "draft")
 
 
     def test_list_client_leads(self):

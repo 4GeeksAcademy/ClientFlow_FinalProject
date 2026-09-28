@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from flask import Blueprint, g, jsonify, request
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from api.auth import email_value, limited, password_valid, set_password, tenant_required
@@ -925,8 +925,24 @@ def list_client_jobs(client_id):
     if client is None:
         return jsonify({"error": "Cliente no encontrado."}), 404
 
-    jobs = db.session.scalars(
-        select(Job)
+    jobs = db.session.execute(
+        select(
+            Job.id,
+            Job.client_id,
+            Job.service_type_id,
+            Job.service_zone_id,
+            Job.assigned_membership_id,
+            Job.title,
+            Job.description,
+            cast(Job.status, String).label("status"),
+            Job.priority,
+            Job.quoted_amount,
+            Job.scheduled_start,
+            Job.scheduled_end,
+            Job.completed_at,
+            Job.created_at,
+            Job.updated_at,
+        )
         .where(
             Job.client_id == client_id,
             Job.company_id == g.company_id,
@@ -943,7 +959,9 @@ def list_client_jobs(client_id):
             "assigned_membership_id": job.assigned_membership_id,
             "title": job.title,
             "description": job.description,
-            "status": job.status.value,
+            # Older SQLite development databases may contain enum values in
+            # lowercase. Casting keeps client details readable for those rows.
+            "status": job.status.lower(),
             "priority": job.priority,
             "quoted_amount": (
                 float(job.quoted_amount)
