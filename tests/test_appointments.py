@@ -1,9 +1,9 @@
 import unittest
 from flask import Blueprint
-from sqlalchemy import select
+from sqlalchemy import select, text
 import test_auth
 from api.appointments import register_appointments
-from api.models import Client, CompanyMembership, db
+from api.models import Client, CompanyMembership, Job, JobStatus, db
 
 
 class AppointmentTest(unittest.TestCase):
@@ -20,8 +20,17 @@ class AppointmentTest(unittest.TestCase):
         own = Client(company_id=self.company_id, first_name='Own client')
         other = Client(company_id=self.other_id, first_name='Other client')
         db.session.add_all([own, other])
+        job = Job(
+            company_id=self.company_id,
+            client=own,
+            title='Legacy job',
+            status=JobStatus.DRAFT,
+            priority='normal',
+        )
+        db.session.add(job)
         db.session.commit()
         self.other_client = other.id
+        self.job_id = job.id
         self.auth = self.headers() | {'X-Company-ID': str(self.company_id)}
         self.data = dict(title='Visit', client_id=own.id,
                         assigned_membership_id=db.session.scalar(select(CompanyMembership.id)),
@@ -49,6 +58,20 @@ class AppointmentTest(unittest.TestCase):
         self.assertEqual(options.status_code, 200, options.json)
         self.assertEqual([item['name'] for item in options.json['clients']], ['Own client'])
         self.assertEqual(self.client.get('/api/appointments', headers=self.auth | {'X-Company-ID': str(self.other_id)}).status_code, 403)
+
+    def test_options_and_creation_accept_legacy_lowercase_job_status(self):
+        db.session.execute(
+            text("UPDATE jobs SET status = 'draft' WHERE id = :job_id"),
+            {'job_id': self.job_id},
+        )
+        db.session.commit()
+
+        options = self.client.get('/api/appointments/options', headers=self.auth)
+
+        self.assertEqual(options.status_code, 200, options.json)
+        self.assertEqual(options.json['jobs'][0]['id'], self.job_id)
+        response = self.create(job_id=self.job_id)
+        self.assertEqual(response.status_code, 201, response.json)
 
     def test_reactivation_cannot_overlap_and_ranges(self):
         cancelled = self.create(status='cancelled').json['id']
