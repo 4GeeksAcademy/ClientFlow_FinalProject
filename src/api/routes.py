@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from flask import Blueprint, g, jsonify, request
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, cast, delete, func, or_, select, update, and_
 from sqlalchemy.exc import IntegrityError
 
 from api.auth import email_value, limited, password_valid, set_password, tenant_required
@@ -20,6 +20,9 @@ from api.models import (
     Company,
     CompanyMembership,
     Job,
+    JobStage,
+    JobStageStatus,
+    JobStatus,
     Lead,
     LeadStatus,
     MembershipRole,
@@ -78,6 +81,131 @@ def _client_to_dict(client):
         "created_at": client.created_at.isoformat() if client.created_at else None,
         "updated_at": client.updated_at.isoformat() if client.updated_at else None,
     }
+
+
+def _job_select():
+    """Select job data without deserializing legacy enum values."""
+    return (
+        select(
+            Job.id,
+            Job.company_id,
+            Job.client_id,
+            Job.service_type_id,
+            Job.service_zone_id,
+            Job.assigned_membership_id,
+            Job.title,
+            Job.description,
+            cast(Job.status, String).label("status"),
+            Job.priority,
+            Job.quoted_amount,
+            Job.scheduled_start,
+            Job.scheduled_end,
+            Job.completed_at,
+            Job.created_at,
+            Job.updated_at,
+            Client.first_name.label("client_first_name"),
+            Client.last_name.label("client_last_name"),
+            Client.email.label("client_email"),
+            Client.phone.label("client_phone"),
+        )
+        .join(Client, Client.id == Job.client_id)
+    )
+
+
+def _job_to_dict(job, include_details=False):
+    client_name = " ".join(
+        part for part in (job.client_first_name, job.client_last_name) if part
+    )
+    data = {
+        "id": job.id,
+        "company_id": job.company_id,
+        "client_id": job.client_id,
+        "service_type_id": job.service_type_id,
+        "service_zone_id": job.service_zone_id,
+        "assigned_membership_id": job.assigned_membership_id,
+        "title": job.title,
+        "description": job.description,
+        "status": job.status.lower(),
+        "priority": job.priority,
+        "quoted_amount": (
+            float(job.quoted_amount) if job.quoted_amount is not None else None
+        ),
+        "scheduled_start": (
+            job.scheduled_start.isoformat() if job.scheduled_start else None
+        ),
+        "scheduled_end": (
+            job.scheduled_end.isoformat() if job.scheduled_end else None
+        ),
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "updated_at": job.updated_at.isoformat() if job.updated_at else None,
+        "client_name": client_name,
+        "client_email": job.client_email,
+        "client_phone": job.client_phone,
+        "client": {
+            "id": job.client_id,
+            "first_name": job.client_first_name,
+            "last_name": job.client_last_name,
+            "email": job.client_email,
+            "phone": job.client_phone,
+            "name": client_name,
+        },
+    }
+
+    if not include_details:
+        return data
+
+    stages = db.session.execute(
+        select(
+            JobStage.id,
+            JobStage.title,
+            JobStage.description,
+            JobStage.position,
+            cast(JobStage.status, String).label("status"),
+            JobStage.due_at,
+            JobStage.completed_at,
+        )
+        .where(JobStage.job_id == job.id)
+        .order_by(JobStage.position, JobStage.id)
+    ).all()
+    completed = sum(stage.status.lower() == "completed" for stage in stages)
+    data["stages"] = [
+        {
+            "id": stage.id,
+            "name": stage.title,
+            "title": stage.title,
+            "description": stage.description,
+            "position": stage.position,
+            "status": stage.status.lower(),
+            "due_at": stage.due_at.isoformat() if stage.due_at else None,
+            "completed_at": (
+                stage.completed_at.isoformat() if stage.completed_at else None
+            ),
+        }
+        for stage in stages
+    ]
+    data["progress"] = round(completed * 100 / len(stages)) if stages else 0
+
+    activities = db.session.execute(
+        select(Activity.id, Activity.description, Activity.created_at)
+        .where(
+            Activity.job_id == job.id,
+            Activity.company_id == job.company_id,
+        )
+        .order_by(Activity.created_at.desc(), Activity.id.desc())
+        .limit(10)
+    ).all()
+    data["recentActivity"] = [
+        {
+            "id": activity.id,
+            "description": activity.description,
+            "date": (
+                activity.created_at.isoformat() if activity.created_at else None
+            ),
+        }
+        for activity in activities
+    ]
+    return data
 
 
 def _get_json_payload():
@@ -925,8 +1053,24 @@ def list_client_jobs(client_id):
     if client is None:
         return jsonify({"error": "Cliente no encontrado."}), 404
 
-    jobs = db.session.scalars(
-        select(Job)
+    jobs = db.session.execute(
+        select(
+            Job.id,
+            Job.client_id,
+            Job.service_type_id,
+            Job.service_zone_id,
+            Job.assigned_membership_id,
+            Job.title,
+            Job.description,
+            cast(Job.status, String).label("status"),
+            Job.priority,
+            Job.quoted_amount,
+            Job.scheduled_start,
+            Job.scheduled_end,
+            Job.completed_at,
+            Job.created_at,
+            Job.updated_at,
+        )
         .where(
             Job.client_id == client_id,
             Job.company_id == g.company_id,
@@ -943,7 +1087,9 @@ def list_client_jobs(client_id):
             "assigned_membership_id": job.assigned_membership_id,
             "title": job.title,
             "description": job.description,
-            "status": job.status.value,
+            # Older SQLite development databases may contain enum values in
+            # lowercase. Casting keeps client details readable for those rows.
+            "status": job.status.lower(),
             "priority": job.priority,
             "quoted_amount": (
                 float(job.quoted_amount)
@@ -1580,9 +1726,10 @@ def update_lead(lead_id):
         lead.source = data["source"]
     if "consent_given" in data:
         lead.consent_given = data["consent_given"]
-
-    if data.get("consent_given") and lead.consent_at is None:
-        lead.consent_at = utc_now()
+        if data["consent_given"] and lead.consent_at is None:
+            lead.consent_at = utc_now()
+        elif not data["consent_given"]:
+            lead.consent_at = None
 
     if "status" in data:
         lead.status = LeadStatus(data["status"])
@@ -1903,102 +2050,360 @@ def register():
 
 
 @api.route('/jobs', methods=['GET'])
+@tenant_required
 def get_jobs():
-    try:
-        status_filter = request.args.get('status')
-        query = Job.query
+    status_filter = request.args.get('status', '').strip().lower()
+    query = _job_select().where(Job.company_id == g.company_id)
 
-        if status_filter:
-            query = query.filter_by(status=status_filter)
+    if status_filter:
+        try:
+            JobStatus(status_filter)
+        except ValueError:
+            return jsonify({"error": "Invalid job status"}), 400
+        query = query.where(
+            func.lower(cast(Job.status, String)) == status_filter
+        )
 
-        jobs = query.all()
-        return jsonify([job.serialize() for job in jobs]), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    jobs = db.session.execute(
+        query.order_by(Job.created_at.desc(), Job.id.desc())
+    ).all()
+    return jsonify([_job_to_dict(job) for job in jobs]), 200
 
 
 @api.route('/jobs/<int:job_id>', methods=['GET'])
+@tenant_required
 def get_job(job_id):
-    try:
-        job = Job.query.get(job_id)
-        if not job:
-            return jsonify({"error": "Job not found"}), 404
-        return jsonify(job.serialize()), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    job = db.session.execute(
+        _job_select().where(
+            Job.id == job_id,
+            Job.company_id == g.company_id,
+        )
+    ).one_or_none()
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify(_job_to_dict(job, include_details=True)), 200
 
 
 @api.route('/jobs', methods=['POST'])
+@tenant_required
 def create_job():
     try:
-        body = request.get_json()
+        body = request.get_json(silent=True)
 
-        if not body or 'title' not in body or 'company_id' not in body:
-            return jsonify({"error": "Missing required fields (title, company_id)"}), 400
+        if not isinstance(body, dict) or not isinstance(body.get('title'), str):
+            return jsonify({"error": "A title is required"}), 400
+        if not body['title'].strip() or len(body['title'].strip()) > 180:
+            return jsonify({"error": "Invalid job title"}), 400
+        if type(body.get('client_id')) is not int:
+            return jsonify({"error": "A client is required"}), 400
+        client = db.session.scalar(
+            select(Client).where(
+                Client.id == body['client_id'],
+                Client.company_id == g.company_id,
+            )
+        )
+        if client is None:
+            return jsonify({"error": "Client not found"}), 404
+        try:
+            status = JobStatus(body.get('status', JobStatus.DRAFT.value))
+        except ValueError:
+            return jsonify({"error": "Invalid job status"}), 400
 
         new_job = Job(
-            company_id=body.get('company_id'),
-            client_id=body.get('client_id'),
+            company_id=g.company_id,
+            client_id=body['client_id'],
             service_type_id=body.get('service_type_id'),
             service_zone_id=body.get('service_zone_id'),
             assigned_membership_id=body.get('assigned_membership_id'),
-            title=body.get('title'),
+            title=body['title'].strip(),
             description=body.get('description'),
-            status=body.get('status', 'draft'),
+            status=status,
             priority=body.get('priority', 'normal'),
-            # Representado en euros según requerimiento
             quoted_amount=body.get('quoted_amount', 0.0),
         )
 
         db.session.add(new_job)
         db.session.commit()
-
-        return jsonify(new_job.serialize()), 201
-    except Exception as e:
+        job = db.session.execute(
+            _job_select().where(Job.id == new_job.id)
+        ).one()
+        return jsonify(_job_to_dict(job, include_details=True)), 201
+    except (TypeError, ValueError):
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Invalid job data"}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Unable to create job"}), 503
 
 
 @api.route('/jobs/<int:job_id>', methods=['PUT'])
+@tenant_required
 def update_job(job_id):
     try:
-        job = Job.query.get(job_id)
-        if not job:
+        job = db.session.execute(
+            _job_select().where(
+                Job.id == job_id,
+                Job.company_id == g.company_id,
+            )
+        ).one_or_none()
+        if job is None:
             return jsonify({"error": "Job not found"}), 404
 
-        body = request.get_json()
-
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            return jsonify({"error": "Expected a JSON object"}), 400
+        values = {}
         if 'status' in body:
-            job.status = body.get('status')
+            try:
+                values['status'] = JobStatus(body['status'])
+            except (TypeError, ValueError):
+                return jsonify({"error": "Invalid job status"}), 400
         if 'title' in body:
-            job.title = body.get('title')
+            if not isinstance(body['title'], str) or not body['title'].strip():
+                return jsonify({"error": "Invalid job title"}), 400
+            values['title'] = body['title'].strip()
         if 'description' in body:
-            job.description = body.get('description')
+            values['description'] = body['description']
         if 'quoted_amount' in body:
-            job.quoted_amount = body.get('quoted_amount')
+            values['quoted_amount'] = body['quoted_amount']
         if 'priority' in body:
-            job.priority = body.get('priority')
+            values['priority'] = body['priority']
+
+        if values:
+            db.session.execute(
+                update(Job)
+                .where(Job.id == job_id, Job.company_id == g.company_id)
+                .values(**values)
+            )
+
+        if 'stages' in body:
+            if not isinstance(body['stages'], list):
+                return jsonify({"error": "Invalid stages"}), 400
+            for stage in body['stages']:
+                if not isinstance(stage, dict) or type(stage.get('id')) is not int:
+                    return jsonify({"error": "Invalid stage"}), 400
+                try:
+                    stage_status = JobStageStatus(stage.get('status'))
+                except (TypeError, ValueError):
+                    return jsonify({"error": "Invalid stage status"}), 400
+                result = db.session.execute(
+                    update(JobStage)
+                    .where(JobStage.id == stage['id'], JobStage.job_id == job_id)
+                    .values(status=stage_status)
+                )
+                if result.rowcount != 1:
+                    return jsonify({"error": "Stage not found"}), 404
 
         db.session.commit()
-        return jsonify(job.serialize()), 200
-    except Exception as e:
+        updated_job = db.session.execute(
+            _job_select().where(
+                Job.id == job_id,
+                Job.company_id == g.company_id,
+            )
+        ).one()
+        return jsonify(_job_to_dict(updated_job, include_details=True)), 200
+    except (TypeError, ValueError):
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Invalid job data"}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Unable to update job"}), 503
 
 
 @api.route('/jobs/<int:job_id>', methods=['DELETE'])
+@tenant_required
 def delete_job(job_id):
     try:
-        job = Job.query.get(job_id)
-        if not job:
+        result = db.session.execute(
+            delete(Job).where(
+                Job.id == job_id,
+                Job.company_id == g.company_id,
+            )
+        )
+        if result.rowcount != 1:
+            db.session.rollback()
             return jsonify({"error": "Job not found"}), 404
-
-        db.session.delete(job)
         db.session.commit()
         return jsonify({"message": "Job deleted successfully"}), 200
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Unable to delete job"}), 503
+
+@api.route("/dashboard/analytics", methods=["GET"])
+@tenant_required
+def get_dashboard_analytics():
+    # 1. Parámetros de consulta (Fechas y Agrupación)
+    period = request.args.get("period", "30d")  # 7d, 30d, 90d, 1y
+    group_by = request.args.get("group_by", "day")  # day, month, year
+
+    end_date = datetime.utcnow()
+
+    if period == "7d":
+        delta = timedelta(days=7)
+    elif period == "30d":
+        delta = timedelta(days=30)
+    elif period == "90d":
+        delta = timedelta(days=90)
+    elif period == "1y":
+        delta = timedelta(days=365)
+    else:
+        delta = timedelta(days=30)
+
+    start_date = end_date - delta
+
+    # Periodo anterior para las comparativas (mismo rango de tiempo hacia atrás)
+    prev_end_date = start_date
+    prev_start_date = prev_end_date - delta
+
+    company_id = g.company_id
+
+    # Función auxiliar para calcular métrica y su cambio porcentual
+    def get_metric_data(model, date_field):
+        current_count = db.session.scalar(
+            select(func.count(model.id)).where(
+                model.company_id == company_id,
+                date_field >= start_date,
+                date_field <= end_date
+            )
+        ) or 0
+
+        previous_count = db.session.scalar(
+            select(func.count(model.id)).where(
+                model.company_id == company_id,
+                date_field >= prev_start_date,
+                date_field < prev_end_date
+            )
+        ) or 0
+
+        change = 0
+        if previous_count > 0:
+            change = round(
+                ((current_count - previous_count) / previous_count) * 100, 2)
+        elif current_count > 0:
+            change = 100.0
+
+        return {
+            "total": current_count,
+            "previous": previous_count,
+            "change_percentage": change
+        }
+
+    # 2. Cálculo de KPIs actuales vs periodo anterior
+    # Leads
+    leads_metric = get_metric_data(Lead, Lead.created_at)
+
+    # Conversiones (Leads que tienen converted_at no nulo en el periodo)
+    conversions_current = db.session.scalar(
+        select(func.count(Lead.id)).where(
+            Lead.company_id == company_id,
+            Lead.converted_at >= start_date,
+            Lead.converted_at <= end_date
+        )
+    ) or 0
+    conversions_prev = db.session.scalar(
+        select(func.count(Lead.id)).where(
+            Lead.company_id == company_id,
+            Lead.converted_at >= prev_start_date,
+            Lead.converted_at < prev_end_date
+        )
+    ) or 0
+    conversions_change = round(((conversions_current - conversions_prev) / conversions_prev)
+                               * 100, 2) if conversions_prev > 0 else (100.0 if conversions_current > 0 else 0)
+
+    leads_metric["conversions"] = {
+        "total": conversions_current,
+        "previous": conversions_prev,
+        "change_percentage": conversions_change
+    }
+
+    # Clientes Activos (Total de clientes con is_active == True creados o activos en el rango, o total actual)
+    active_clients_metric = get_metric_data(Client, Client.created_at)
+
+    # Trabajos (Jobs)
+    jobs_metric = get_metric_data(Job, Job.created_at)
+
+    # Citas (Appointments) - Asumiendo modelo Appointment con created_at o scheduled_start
+    try:
+        appointments_metric = get_metric_data(
+            Appointment, Appointment.created_at)
+    except NameError:
+        appointments_metric = {"total": 0,
+                               "previous": 0, "change_percentage": 0}
+
+    # Cotizaciones e Ingresos en Euros (usando quoted_amount de Job o Quote)
+    revenue_current = db.session.scalar(
+        select(func.sum(Job.quoted_amount)).where(
+            Job.company_id == company_id,
+            Job.created_at >= start_date,
+            Job.created_at <= end_date
+        )
+    ) or 0.0
+
+    revenue_prev = db.session.scalar(
+        select(func.sum(Job.quoted_amount)).where(
+            Job.company_id == company_id,
+            Job.created_at >= prev_start_date,
+            Job.created_at < prev_end_date
+        )
+    ) or 0.0
+
+    revenue_change = round(((revenue_current - revenue_prev) / revenue_prev)
+                           * 100, 2) if revenue_prev > 0 else (100.0 if revenue_current > 0 else 0)
+
+    revenue_metric = {
+        "total": float(revenue_current),
+        "previous": float(revenue_prev),
+        "change_percentage": revenue_change
+    }
+
+    # 3. Agrupación para gráficos (Soporta day, month, year)
+    if group_by == "month":
+        date_trunc_func = func.date_trunc('month', Job.created_at)
+    elif group_by == "year":
+        date_trunc_func = func.date_trunc('year', Job.created_at)
+    else:
+        date_trunc_func = func.date_trunc('day', Job.created_at)
+
+    chart_results = db.session.execute(
+        select(
+            date_trunc_func.label("period_date"),
+            func.count(Job.id).label("jobs_count"),
+            func.sum(Job.quoted_amount).label("revenue_sum")
+        ).where(
+            Job.company_id == company_id,
+            Job.created_at >= start_date,
+            Job.created_at <= end_date
+        ).group_by("period_date").order_by("period_date")
+    ).all()
+
+    chart_data = [
+        {
+            "date": row.period_date.isoformat() if row.period_date else None,
+            "jobs": row.jobs_count,
+            "revenue": float(row.revenue_sum or 0.0)
+        }
+        for row in chart_results
+    ]
+
+    return jsonify({
+        "range": {
+            "period": period,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat()
+        },
+        "kpis": {
+            "leads": leads_metric,
+            "active_clients": active_clients_metric,
+            "jobs": jobs_metric,
+            "appointments": appointments_metric,
+            "revenue_euros": revenue_metric
+        },
+        "charts": {
+            "timeline": chart_data
+        }
+    }), 200
+
+
 
 
 # Register appointment routes on the existing API blueprint.

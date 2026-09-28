@@ -137,12 +137,12 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 Guarda el resultado únicamente en tu configuración privada del entorno.
 
 En desarrollo local, `VITE_BACKEND_URL` puede ser `http://localhost:3001`.
-En Codespaces, puedes establecer `/`: Vite redirige las peticiones `/api`
-al backend dentro del Codespace. No lo dejes vacío: el frontend actual
-muestra una pantalla de configuración cuando falta este valor.
+Cuando frontend y backend comparten el mismo origen, se puede omitir o dejar
+vacío; las peticiones utilizan direcciones relativas `/api`. En Codespaces,
+Vite redirige estas peticiones al backend dentro del Codespace.
 
-Al utilizar el proxy del mismo origen, no es necesario hacer público
-el puerto del backend. Reinicia los servidores después de modificar `.env`.
+Al utilizar el proxy del mismo origen, no es necesario hacer público el puerto
+del backend. Reinicia los servidores después de modificar `.env`.
 
 ### Preparación de la base de datos
 
@@ -413,3 +413,31 @@ Las tablas deben existir previamente. Se crean los planes que faltan y se conser
 los precios existentes. No recupera cuentas ni datos de clientes eliminados.
 Elimina `PLAN_SEED_KEY` después para deshabilitar la escritura desde el navegador.
 El comando `pipenv run flask seed-plans` sigue disponible de forma independiente.
+
+## Despliegue de staging
+
+El entorno compartido de staging está disponible en:
+
+- https://clientflow-staging.onrender.com
+
+Render crea el servicio web de Flask y React junto con una base PostgreSQL 16
+mediante `render.yaml`. La compilación utiliza Python 3.13, Pipenv y Node.js 22.
+Las migraciones se ejecutan automáticamente antes de iniciar Gunicorn, y el
+frontend se comunica con la API mediante el mismo origen público.
+
+La configuración pública del despliegue está en `render.yaml`. Los valores
+privados, como `JWT_SECRET_KEY` y `PLAN_SEED_KEY`, deben permanecer en las
+variables de entorno de Render y nunca deben guardarse en el repositorio.
+
+Para una base de staging nueva y vacía, abre `/api/seed-plans` e introduce la
+clave privada `PLAN_SEED_KEY`. Comprueba el catálogo resultante en `/api/plans`.
+
+La prueba rápida de staging debe verificar:
+
+1. `/api/health` devuelve una respuesta correcta.
+2. Los tres planes del catálogo están disponibles.
+3. Se puede registrar una cuenta nueva e iniciar sesión.
+4. Los clientes creados permanecen después de actualizar y volver a iniciar sesión.
+
+Después de fusionar este pull request de staging, configura el servicio de Render
+para seguir la rama `develop`.
