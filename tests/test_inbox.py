@@ -2,7 +2,15 @@
 import unittest
 import test_auth as auth_fixture
 from api.inbox import inbox, receive_message
-from api.models import db, Conversation, ConversationParticipant, CompanyMembership, AIAgent, ChannelType
+from api.models import (
+    db,
+    AIAgent,
+    ChannelType,
+    Client,
+    CompanyMembership,
+    Conversation,
+    ConversationParticipant,
+)
 
 
 class InboxTest(unittest.TestCase):
@@ -39,9 +47,78 @@ class InboxTest(unittest.TestCase):
         base = f'/api/conversations/{foreign.id}'
         self.assertEqual(self.client.get('/api/conversations').status_code, 401)
         self.assertEqual(self.client.get('/api/conversations', headers=self.headers).json['total'], 0)
-        for method, suffix, data in [('get', '/messages', None), ('post', '/messages', {'content': 'No'}), ('patch', '/read', {'message_id': 1}), ('patch', '/control', {'mode': 'human'}), ('patch', '/assignment', {'membership_id': None})]:
+        for method, suffix, data in [('get', '/messages', None), ('post', '/messages', {'content': 'No'}), ('patch', '/read', {'message_id': 1}), ('patch', '/control', {'mode': 'human'}), ('patch', '/assignment', {'membership_id': None}), ('patch', '/client', {'client_id': None})]:
             response = getattr(self.client, method)(base + suffix, headers=self.headers, json=data)
             self.assertEqual(response.status_code, 404)
+
+    def test_create_conversation_with_client_and_initial_message(self):
+        client = Client(
+            company_id=self.fixture.company_id,
+            first_name='Ana',
+            last_name='Ruiz',
+            email='ana@example.com',
+        )
+        db.session.add(client)
+        db.session.commit()
+
+        response = self.client.post(
+            '/api/conversations',
+            headers=self.headers,
+            json={
+                'subject': 'Nuevo armario',
+                'channel': 'email',
+                'client_id': client.id,
+                'initial_message': 'Buenos días, Ana.',
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        conversation = response.json['conversation']
+        self.assertEqual(conversation['client_id'], client.id)
+        history = self.client.get(
+            f"/api/conversations/{conversation['id']}/messages",
+            headers=self.headers,
+        ).json
+        self.assertEqual(history['total'], 1)
+        self.assertEqual(history['messages'][0]['content'], 'Buenos días, Ana.')
+        self.assertEqual(history['messages'][0]['direction'], 'outbound')
+
+    def test_client_assignment_is_company_scoped_and_can_be_removed(self):
+        conversation_id = self.create()
+        own_client = Client(
+            company_id=self.fixture.company_id,
+            first_name='Ana',
+        )
+        foreign_client = Client(
+            company_id=self.fixture.other_id,
+            first_name='Private',
+        )
+        db.session.add_all([own_client, foreign_client])
+        db.session.commit()
+        url = f'/api/conversations/{conversation_id}/client'
+
+        response = self.client.patch(
+            url,
+            headers=self.headers,
+            json={'client_id': own_client.id},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['conversation']['client_id'], own_client.id)
+        self.assertEqual(
+            self.client.patch(
+                url,
+                headers=self.headers,
+                json={'client_id': foreign_client.id},
+            ).status_code,
+            404,
+        )
+        response = self.client.patch(
+            url,
+            headers=self.headers,
+            json={'client_id': None},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json['conversation']['client_id'])
 
     def test_inbound_read_marker_and_validation(self):
         cid = self.create()
