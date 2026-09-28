@@ -1580,9 +1580,10 @@ def update_lead(lead_id):
         lead.source = data["source"]
     if "consent_given" in data:
         lead.consent_given = data["consent_given"]
-
-    if data.get("consent_given") and lead.consent_at is None:
-        lead.consent_at = utc_now()
+        if data["consent_given"] and lead.consent_at is None:
+            lead.consent_at = utc_now()
+        elif not data["consent_given"]:
+            lead.consent_at = None
 
     if "status" in data:
         lead.status = LeadStatus(data["status"])

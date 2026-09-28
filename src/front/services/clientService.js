@@ -30,6 +30,13 @@ async function request(path, { token, companyId, signal, method = "GET", body })
 
 export const clientService = {
     create(options, body) { return request("/clients", { ...options, method: "POST", body }); },
+    update(options, clientId, body) {
+        return request(`/clients/${clientId}`, {
+            ...options,
+            method: "PATCH",
+            body,
+        });
+    },
     list(options, page = 1, search = "", status = "all") {
         const query = new URLSearchParams({
             page,
@@ -40,12 +47,28 @@ export const clientService = {
 
         return request(`/clients?${query}`, options);
     },
-     get(options, clientId) {
+    get(options, clientId) {
         return request(`/clients/${clientId}`, options);
     },
 
     getAddresses(options, clientId) {
         return request(`/clients/${clientId}/addresses`, options);
+    },
+
+    createAddress(options, clientId, body) {
+        return request(`/clients/${clientId}/addresses`, {
+            ...options,
+            method: "POST",
+            body,
+        });
+    },
+
+    updateAddress(options, clientId, addressId, body) {
+        return request(`/clients/${clientId}/addresses/${addressId}`, {
+            ...options,
+            method: "PATCH",
+            body,
+        });
     },
 
     getNextActions(options, clientId) {
