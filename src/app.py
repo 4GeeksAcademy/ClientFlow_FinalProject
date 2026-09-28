@@ -17,6 +17,7 @@ from api.ai_routes import ai
 from api.auth import init_auth
 from api.channel_routes import channels
 from api.commands import setup_commands
+from api.dashboard import dashboard
 from api.inbox import inbox
 from api.knowledge import knowledge
 from api.members import members
@@ -53,6 +54,7 @@ setup_commands(app)
 
 # Add all endpoints form the API with a "api" prefix
 app.register_blueprint(api, url_prefix="/api")
+app.register_blueprint(dashboard, url_prefix="/api")
 app.register_blueprint(channels, url_prefix="/api")
 app.register_blueprint(inbox, url_prefix="/api")
 app.register_blueprint(ai, url_prefix="/api")
