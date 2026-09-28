@@ -3,23 +3,32 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-    // Estado del tema: 'light', 'dark' o 'system'
     const [theme, setTheme] = useState(() => {
         return localStorage.getItem("theme") || "system";
     });
+    const [systemTheme, setSystemTheme] = useState(() =>
+        window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    );
 
-    // Función para obtener la preferencia nativa del sistema operativo
-    const getSystemTheme = () => 
-        window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const resolvedTheme = theme === "system" ? systemTheme : theme;
 
     useEffect(() => {
-        const root = document.documentElement;
-        const currentTheme = theme === "system" ? getSystemTheme() : theme;
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const handleSystemTheme = (event) => setSystemTheme(event.matches ? "dark" : "light");
 
-        // Aplicar el atributo data-bs-theme para Bootstrap o clases nativas
-        root.setAttribute("data-bs-theme", currentTheme);
+        mediaQuery.addEventListener("change", handleSystemTheme);
+        return () => mediaQuery.removeEventListener("change", handleSystemTheme);
+    }, []);
+
+    useEffect(() => {
+        document.documentElement.setAttribute("data-bs-theme", resolvedTheme);
+        document.documentElement.style.colorScheme = resolvedTheme;
         localStorage.setItem("theme", theme);
-    }, [theme]);
+    }, [resolvedTheme, theme]);
+
+    const toggleTheme = () => {
+        setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    };
 
     // Sistema de notificaciones simple (Toast) si lo requiere tu proyecto
     const showToast = (message, type = "success") => {
@@ -27,7 +36,7 @@ export const AppProvider = ({ children }) => {
     };
 
     return (
-        <AppContext.Provider value={{ theme, setTheme, showToast }}>
+        <AppContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme, showToast }}>
             {children}
         </AppContext.Provider>
     );

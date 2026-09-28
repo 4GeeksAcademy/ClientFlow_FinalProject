@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import ScrollToTop from "../components/ScrollToTop";
 import { Sidebar } from "../components/Sidebar";
+import { WorkspacePreferences } from "../components/WorkspacePreferences";
 
 export const Layout = () => {
     const location = useLocation();
@@ -25,7 +26,7 @@ export const Layout = () => {
     // SI ES UNA RUTA PRIVADA: Renderizamos el panel con su Sidebar y estructura completa
     return (
         <ScrollToTop>
-            <div className="d-flex" style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
+            <div className="d-flex workspace-shell" style={{ minHeight: "100vh" }}>
                 
                 {/* Sidebar para ordenador y móvil */}
                 <Sidebar
@@ -36,9 +37,9 @@ export const Layout = () => {
                 <div className="flex-grow-1 w-100">
                     
                     {/* Barra superior para móviles */}
-                    <div 
-                        className="d-md-none text-white p-3 d-flex align-items-center justify-content-between shadow-sm sticky-top"
-                        style={{ backgroundColor: "#0f172a", zIndex: 1020 }}
+                    <div
+                        className="d-md-none text-white p-3 d-flex align-items-center justify-content-between shadow-sm sticky-top mobile-workspace-bar"
+                        style={{ zIndex: 1020 }}
                     >
                         <div className="d-flex align-items-center">
                             <button
@@ -50,7 +51,11 @@ export const Layout = () => {
                             </button>
                             <span className="fw-bold fs-6">ClientFlow</span>
                         </div>
+                        <WorkspacePreferences compact />
+                    </div>
 
+                    <div className="d-none d-md-flex justify-content-end px-4 pt-3 workspace-toolbar">
+                        <WorkspacePreferences />
                     </div>
 
                     {/* Contenido dinámico de las vistas privadas */}

@@ -2,15 +2,18 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { translations } from "../i18n/translations";
 
 const LanguageContext = createContext();
+const supportedLocales = ["es", "en", "pt"];
 
 export const LanguageProvider = ({ children }) => {
     // Recupera el idioma guardado o por defecto usa español ('es')
     const [locale, setLocale] = useState(() => {
-        return localStorage.getItem("app_locale") || "es";
+        const storedLocale = localStorage.getItem("app_locale");
+        return supportedLocales.includes(storedLocale) ? storedLocale : "es";
     });
 
     useEffect(() => {
         localStorage.setItem("app_locale", locale);
+        document.documentElement.lang = locale;
     }, [locale]);
 
     // Función traductora recursiva (ej: t('agenda.title'))
@@ -35,7 +38,7 @@ export const LanguageProvider = ({ children }) => {
     };
 
     return (
-        <LanguageContext.Provider value={{ locale, setLocale, t }}>
+        <LanguageContext.Provider value={{ locale, setLocale, supportedLocales, t }}>
             {children}
         </LanguageContext.Provider>
     );

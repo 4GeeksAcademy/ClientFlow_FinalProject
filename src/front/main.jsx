@@ -5,6 +5,7 @@ import { AppProvider } from "./context/AppContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import { StoreProvider } from "./hooks/useGlobalReducer";
 import "./index.css";
+import "./theme.css";
 import { router } from "./routes";
 
 const Main = () => (
