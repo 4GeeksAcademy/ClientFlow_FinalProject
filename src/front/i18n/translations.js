@@ -29,6 +29,13 @@ export const translations = {
             actions: "Actions",
             search: "Search..."
         },
+        preferences: {
+            language: "Language",
+            dark: "Dark",
+            light: "Light",
+            useDark: "Use dark theme",
+            useLight: "Use light theme"
+        },
         agenda: {
             title: "Calendar",
             subtitle: "Appointments and daily planning",
@@ -97,6 +104,13 @@ export const translations = {
             actions: "Acciones",
             search: "Buscar..."
         },
+        preferences: {
+            language: "Idioma",
+            dark: "Oscuro",
+            light: "Claro",
+            useDark: "Usar tema oscuro",
+            useLight: "Usar tema claro"
+        },
         agenda: {
             title: "Agenda",
             subtitle: "Citas y planificación diaria",
@@ -164,6 +178,13 @@ export const translations = {
             loading: "Carregando...",
             actions: "Ações",
             search: "Pesquisar..."
+        },
+        preferences: {
+            language: "Idioma",
+            dark: "Escuro",
+            light: "Claro",
+            useDark: "Usar tema escuro",
+            useLight: "Usar tema claro"
         },
         agenda: {
             title: "Agenda",

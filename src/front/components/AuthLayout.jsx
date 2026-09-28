@@ -1,20 +1,6 @@
-import React, { useEffect } from "react";
+import React from "react";
 
 export const AuthLayout = ({ children }) => {
-    useEffect(() => {
-        // Detecta y aplica el tema del navegador automáticamente
-        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-        const applyTheme = (e) => {
-            const theme = e.matches ? "dark" : "light";
-            document.documentElement.setAttribute("data-bs-theme", theme);
-        };
-
-        applyTheme(mediaQuery);
-        mediaQuery.addEventListener("change", applyTheme);
-
-        return () => mediaQuery.removeEventListener("change", applyTheme);
-    }, []);
-
     return (
         <div className="container-fluid min-vh-100 p-0 m-0">
             <div className="row g-0 min-vh-100">
