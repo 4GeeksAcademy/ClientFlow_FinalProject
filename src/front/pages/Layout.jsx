@@ -2,11 +2,9 @@ import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import ScrollToTop from "../components/ScrollToTop";
 import { Sidebar } from "../components/Sidebar";
-import { useLanguage } from "../context/LanguageContext"; // 1. Importar el hook de idioma
 
 export const Layout = () => {
     const location = useLocation();
-    const { locale, setLocale } = useLanguage(); // 2. Obtener el idioma y la función para cambiarlo
 
     // Estado para saber si el sidebar móvil está abierto o cerrado
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,7 +35,7 @@ export const Layout = () => {
 
                 <div className="flex-grow-1 w-100">
                     
-                    {/* Barra superior para móviles con el botón de la hamburguesa y selector de idioma */}
+                    {/* Barra superior para móviles */}
                     <div 
                         className="d-md-none text-white p-3 d-flex align-items-center justify-content-between shadow-sm sticky-top"
                         style={{ backgroundColor: "#0f172a", zIndex: 1020 }}
@@ -53,17 +51,6 @@ export const Layout = () => {
                             <span className="fw-bold fs-6">ClientFlow</span>
                         </div>
 
-                        {/* Selector de idioma rápido en móvil */}
-                        <select 
-                            value={locale} 
-                            onChange={(e) => setLocale(e.target.value)}
-                            className="form-select form-select-sm w-auto bg-dark text-white border-secondary"
-                            aria-label="Seleccionar idioma"
-                        >
-                            <option value="es">ES</option>
-                            <option value="en">EN</option>
-                            <option value="pt">PT</option>
-                        </select>
                     </div>
 
                     {/* Contenido dinámico de las vistas privadas */}
