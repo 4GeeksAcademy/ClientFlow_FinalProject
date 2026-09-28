@@ -4,7 +4,7 @@ services:
     runtime: python
     region: frankfurt
     plan: free
-    branch: feature/deploy-39-staging
+    branch: develop
     buildCommand: bash render_build.sh
     startCommand: >-
       ./.venv/bin/flask db upgrade &&
