@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { addDays, defaultJobSchedule } from "../utils/jobSchedule.mjs";
+
+const emptyJob = () => ({
+    title: "",
+    client_id: "",
+    address: "",
+    budget: "",
+    ...defaultJobSchedule(),
+});
 
 export const Jobs = () => {
     const [jobs, setJobs] = useState([]);
@@ -7,17 +16,17 @@ export const Jobs = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [reload, setReload] = useState(0);
+    const [formError, setFormError] = useState("");
 
     // Estados para el Modal de Nuevo Trabajo
     const [showModal, setShowModal] = useState(false);
-    const [newJob, setNewJob] = useState({
-        title: "",
-        client_id: "",
-        address: "Av. de la Constitución 12, 41001 Sevilla",
-        budget: 1200,
-        startDate: new Date().toISOString().split('T')[0],
-        dueDate: "2026-06-30"
-    });
+    const [newJob, setNewJob] = useState(emptyJob);
+
+    const openCreate = () => {
+        setFormError("");
+        setNewJob(emptyJob());
+        setShowModal(true);
+    };
 
     // 1. Cargar trabajos y clientes reales usando el mismo flujo de autenticación de la app
     useEffect(() => {
@@ -135,6 +144,11 @@ export const Jobs = () => {
     // 2. Enviar el nuevo trabajo mediante POST al backend omitiendo estados custom para usar los por defecto
     const handleCreateJob = async (e) => {
         e.preventDefault();
+        if (newJob.dueDate < newJob.startDate) {
+            setFormError("La fecha de entrega no puede ser anterior a la fecha de inicio.");
+            return;
+        }
+        setFormError("");
         try {
             const token = localStorage.getItem("access_token") || localStorage.getItem("jwt_token") || localStorage.getItem("token");
             const base = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
@@ -158,22 +172,15 @@ export const Jobs = () => {
                     client_id: newJob.client_id ? Number(newJob.client_id) : null,
                     quoted_amount: Number(newJob.budget),
                     description: `Obra en ${newJob.address}`,
-                    start_date: newJob.startDate,
-                    due_date: newJob.dueDate
+                    scheduled_start: `${newJob.startDate}T00:00:00`,
+                    scheduled_end: `${newJob.dueDate}T23:59:59`
                 })
             });
 
             if (response.ok) {
                 setShowModal(false);
                 setReload(value => value + 1);
-                setNewJob({
-                    title: "",
-                    client_id: "",
-                    address: "Av. de la Constitución 12, 41001 Sevilla",
-                    budget: 1200,
-                    startDate: new Date().toISOString().split('T')[0],
-                    dueDate: "2026-06-30"
-                });
+                setNewJob(emptyJob());
             } else {
                 const errData = await response.json();
                 console.error("Error al crear el trabajo:", errData);
@@ -228,7 +235,7 @@ export const Jobs = () => {
                     <button
                         className="btn btn-primary d-flex align-items-center gap-2 shadow-sm"
                         style={{ backgroundColor: "#635bff", border: "none" }}
-                        onClick={() => setShowModal(true)}
+                        onClick={openCreate}
                     >
                         <i className="fa-solid fa-plus"></i> Nuevo Trabajo
                     </button>
@@ -321,7 +328,7 @@ export const Jobs = () => {
                                                 </div>
                                                 <div>
                                                     <i className="fa-solid fa-calendar me-1"></i>
-                                                    <span className="text-dark">Entrega: {job.dueDate || job.due_date || "Por definir"}</span>
+                                                    <span className="text-dark">Entrega: {job.scheduled_end ? job.scheduled_end.slice(0, 10) : "Por definir"}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -419,7 +426,14 @@ export const Jobs = () => {
                                                 className="form-control bg-light text-dark shadow-none"
                                                 required
                                                 value={newJob.startDate}
-                                                onChange={e => setNewJob({ ...newJob, startDate: e.target.value })}
+                                                onChange={e => {
+                                                    const startDate = e.target.value;
+                                                    setNewJob({
+                                                        ...newJob,
+                                                        startDate,
+                                                        dueDate: newJob.dueDate < startDate ? addDays(startDate, 30) : newJob.dueDate,
+                                                    });
+                                                }}
                                             />
                                         </div>
                                         <div className="col">
@@ -428,11 +442,13 @@ export const Jobs = () => {
                                                 type="date"
                                                 className="form-control bg-light text-dark shadow-none"
                                                 required
+                                                min={newJob.startDate}
                                                 value={newJob.dueDate}
                                                 onChange={e => setNewJob({ ...newJob, dueDate: e.target.value })}
                                             />
                                         </div>
                                     </div>
+                                    {formError && <p className="text-danger small mb-0" role="alert">{formError}</p>}
                                 </div>
                                 <div className="modal-footer border-0 pt-0">
                                     <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setShowModal(false)}>Cancelar</button>

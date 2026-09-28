@@ -208,6 +208,15 @@ def _job_to_dict(job, include_details=False):
     return data
 
 
+def _job_schedule_value(value):
+    """Parse an optional ISO date or timestamp used by job scheduling."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("Invalid job schedule")
+    return datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+
+
 def _get_json_payload():
     """Return the request JSON payload or an empty dictionary."""
     payload = request.get_json(silent=True)
@@ -2108,6 +2117,10 @@ def create_job():
             status = JobStatus(body.get('status', JobStatus.DRAFT.value))
         except ValueError:
             return jsonify({"error": "Invalid job status"}), 400
+        scheduled_start = _job_schedule_value(body.get('scheduled_start'))
+        scheduled_end = _job_schedule_value(body.get('scheduled_end'))
+        if scheduled_start and scheduled_end and scheduled_end < scheduled_start:
+            return jsonify({"error": "The scheduled end must not precede the start"}), 400
 
         new_job = Job(
             company_id=g.company_id,
@@ -2120,6 +2133,8 @@ def create_job():
             status=status,
             priority=body.get('priority', 'normal'),
             quoted_amount=body.get('quoted_amount', 0.0),
+            scheduled_start=scheduled_start,
+            scheduled_end=scheduled_end,
         )
 
         db.session.add(new_job)
@@ -2168,6 +2183,15 @@ def update_job(job_id):
             values['quoted_amount'] = body['quoted_amount']
         if 'priority' in body:
             values['priority'] = body['priority']
+        if 'scheduled_start' in body:
+            values['scheduled_start'] = _job_schedule_value(body['scheduled_start'])
+        if 'scheduled_end' in body:
+            values['scheduled_end'] = _job_schedule_value(body['scheduled_end'])
+
+        resulting_start = values.get('scheduled_start', job.scheduled_start)
+        resulting_end = values.get('scheduled_end', job.scheduled_end)
+        if resulting_start and resulting_end and resulting_end < resulting_start:
+            return jsonify({"error": "The scheduled end must not precede the start"}), 400
 
         if values:
             db.session.execute(
