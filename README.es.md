@@ -447,8 +447,11 @@ todavía muestra `feature/deploy-39-staging`, cambia **Settings → Branch** a
 `develop` antes del despliegue final y publica el último commit limpiando la caché
 de compilación.
 
-La pantalla de ajustes y el selector global de idioma incompletos quedan fuera del
-recorrido académico hasta completar los issues #29 y #18.
+Los controles globales de idioma y tema están disponibles en la aplicación. La
+pantalla de ajustes queda fuera del recorrido académico hasta completar el issue
+#29. Como la demostración usa el plan gratuito de Render, la primera petición tras
+un periodo de inactividad puede tardar alrededor de un minuto mientras el servicio
+se reactiva.
 
 ### Reversión de staging
 

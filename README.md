@@ -436,8 +436,10 @@ The shared Render service tracks `develop`. If an existing Render service still
 shows `feature/deploy-39-staging`, change **Settings → Branch** to `develop` before
 the final deploy, then deploy the latest commit with a cleared build cache.
 
-The incomplete settings screen and the incomplete global language selector are
-excluded from the academic walkthrough until issues #29 and #18 are complete.
+The global language and theme controls are available in the application shell.
+The settings screen remains outside the academic walkthrough until issue #29 is
+complete. Because the demo uses Render's free tier, the first request after a
+period of inactivity may take about one minute while the service wakes up.
 
 ### Staging rollback
 
