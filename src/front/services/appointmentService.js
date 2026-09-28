@@ -7,7 +7,21 @@ async function request(path, { token, companyId, signal }, method = "GET", body)
             ...(companyId ? { "X-Company-ID": String(companyId) } : {}) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-    const data = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    let data;
+
+    if (contentType.includes("application/json")) {
+        data = await response.json();
+    } else {
+        await response.text();
+        const error = new Error(
+            response.ok
+                ? "El servidor devolvió una respuesta no válida."
+                : `El servidor devolvió un error (${response.status}) al cargar la agenda.`
+        );
+        error.status = response.status;
+        throw error;
+    }
     if (!response.ok) {
         const messages = { 400: "Comprueba las fechas, el cliente, el trabajo y el responsable.",
             401: "Vuelve a iniciar sesión.", 403: "No tienes acceso a esta empresa.",
