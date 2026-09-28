@@ -100,10 +100,14 @@ class JobApiTest(unittest.TestCase):
                 "client_id": self.client_id,
                 "title": "Wardrobe",
                 "quoted_amount": 900,
+                "scheduled_start": "2026-09-28T00:00:00",
+                "scheduled_end": "2026-10-28T23:59:59",
             },
         )
         self.assertEqual(created.status_code, 201, created.json)
         self.assertEqual(created.json["status"], "draft")
+        self.assertEqual(created.json["scheduled_start"], "2026-09-28T00:00:00")
+        self.assertEqual(created.json["scheduled_end"], "2026-10-28T23:59:59")
 
         updated = self.client.put(
             f"/api/jobs/{self.job_id}",
@@ -157,6 +161,24 @@ class JobApiTest(unittest.TestCase):
                 select(Job.title).where(Job.id == self.job_id)
             ),
             "Kitchen",
+        )
+
+    def test_rejects_a_schedule_that_ends_before_it_starts(self):
+        response = self.client.post(
+            "/api/jobs",
+            headers=self.auth,
+            json={
+                "client_id": self.client_id,
+                "title": "Invalid schedule",
+                "scheduled_start": "2026-09-28T00:00:00",
+                "scheduled_end": "2026-09-27T23:59:59",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400, response.json)
+        self.assertEqual(
+            response.json["error"],
+            "The scheduled end must not precede the start",
         )
 
 
