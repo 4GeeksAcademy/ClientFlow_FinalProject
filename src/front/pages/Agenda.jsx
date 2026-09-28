@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { dateKey, parseDate } from "../utils/calendar.mjs";
-import { getAppointmentContext, getAppointmentOptions, getAppointments,
-    createAppointment, updateAppointment, cancelAppointment } from "../services/appointmentService";
+import {
+    getAppointmentContext, getAppointmentOptions, getAppointments,
+    createAppointment, updateAppointment, cancelAppointment
+} from "../services/appointmentService";
 
 const localTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const localStamp = (value) => { const date = new Date(value); return `${dateKey(date)}T${localTime(date)}`; };
@@ -25,8 +27,10 @@ export const Agenda = () => {
     const [currentView, setCurrentView] = useState("month");
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const emptyForm = { title: "", date: selectedDateStr, time: "10:00", duration: 60,
-        clientId: "", assignedId: "", jobId: "", serviceId: "", status: "scheduled", notes: "" };
+    const emptyForm = {
+        title: "", date: selectedDateStr, time: "10:00", duration: 60,
+        clientId: "", assignedId: "", jobId: "", serviceId: "", status: "scheduled", notes: ""
+    };
     const [newApp, setNewApp] = useState(emptyForm);
     const options = { token, companyId: company?.id };
 
@@ -42,9 +46,11 @@ export const Agenda = () => {
                 const [data, lists] = await Promise.all([getAppointments(opts), getAppointmentOptions(opts)]);
                 if (controller.signal.aborted) return;
                 setCompany(current); setChoices(lists);
-                setAppointments(data.map(item => ({ ...item,
+                setAppointments(data.map(item => ({
+                    ...item,
                     duration: Math.round((new Date(item.ends_at) - new Date(item.starts_at)) / 60000),
-                    starts_at: localStamp(item.starts_at), ends_at: localStamp(item.ends_at) })));
+                    starts_at: localStamp(item.starts_at), ends_at: localStamp(item.ends_at)
+                })));
             } catch (error) {
                 if (!controller.signal.aborted) setErrorMsg(error instanceof TypeError ? "No se pudo conectar con la API. Comprueba la configuración del servidor." : error.message);
             } finally { if (!controller.signal.aborted) setLoading(false); }
@@ -69,9 +75,11 @@ export const Agenda = () => {
     };
     const openEdit = (item) => {
         setEditingId(item.id); setFormError("");
-        setNewApp({ title: item.title, date: item.starts_at.split('T')[0], time: item.starts_at.split('T')[1],
+        setNewApp({
+            title: item.title, date: item.starts_at.split('T')[0], time: item.starts_at.split('T')[1],
             duration: item.duration, clientId: String(item.client_id), assignedId: String(item.assigned_membership_id),
-            jobId: String(item.job_id || ""), serviceId: String(item.service_type_id || ""), status: item.status, notes: item.notes || "" });
+            jobId: String(item.job_id || ""), serviceId: String(item.service_type_id || ""), status: item.status, notes: item.notes || ""
+        });
         setShowModal(true);
     };
     const year = currentDate.getFullYear();
@@ -91,11 +99,13 @@ export const Agenda = () => {
         try {
             const start = new Date(`${newApp.date}T${newApp.time}:00`);
             const end = new Date(start.getTime() + Number(newApp.duration) * 60000);
-            const body = { title: newApp.title.trim(), starts_at: start.toISOString(), ends_at: end.toISOString(),
+            const body = {
+                title: newApp.title.trim(), starts_at: start.toISOString(), ends_at: end.toISOString(),
                 client_id: Number(newApp.clientId), assigned_membership_id: Number(newApp.assignedId),
                 job_id: newApp.jobId ? Number(newApp.jobId) : null,
                 service_type_id: newApp.serviceId ? Number(newApp.serviceId) : null,
-                status: newApp.status, notes: newApp.notes };
+                status: newApp.status, notes: newApp.notes
+            };
             if (editingId) await updateAppointment(options, editingId, body);
             else await createAppointment(options, body);
             setShowModal(false); setRevision(value => value + 1);
@@ -389,17 +399,20 @@ export const Agenda = () => {
                             </div>
                             <form onSubmit={handleCreateAppointment}>
                                 <div className="modal-body">
+                                    {/* Título de la Cita */}
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold text-dark">Título de la Cita</label>
                                         <input
                                             type="text"
-                                            className="form-control shadow-none rounded-3 border bg-light text-dark"
+                                            className="form-control shadow-none rounded-3 border bg-white text-dark"
                                             required
                                             value={newApp.title}
                                             onChange={e => setNewApp({ ...newApp, title: e.target.value })}
                                             placeholder="Ej. Toma de medidas salón"
                                         />
                                     </div>
+
+                                    {/* Fecha y Hora */}
                                     <div className="row g-2 mb-3">
                                         <div className="col">
                                             <label className="form-label small fw-semibold text-dark">Fecha</label>
@@ -409,7 +422,7 @@ export const Agenda = () => {
                                                 required
                                                 value={newApp.date}
                                                 onChange={e => setNewApp({ ...newApp, date: e.target.value })}
-                                                style={{ cursor: "pointer" }}
+                                                style={{ cursor: "pointer", colorScheme: "light" }}
                                             />
                                         </div>
                                         <div className="col">
@@ -420,19 +433,106 @@ export const Agenda = () => {
                                                 required
                                                 value={newApp.time}
                                                 onChange={e => setNewApp({ ...newApp, time: e.target.value })}
-                                                style={{ cursor: "pointer" }}
+                                                style={{ cursor: "pointer", colorScheme: "light" }}
                                             />
                                         </div>
                                     </div>
-                                    <label className="form-label d-block">Duración (minutos)<input className="form-control" type="number" min="1" max="10080" required value={newApp.duration} onChange={event => setNewApp({ ...newApp, duration: event.target.value })} /></label>
-                                    <label className="form-label d-block">Cliente<select className="form-select" required value={newApp.clientId} onChange={event => setNewApp({ ...newApp, clientId: event.target.value, jobId: "" })}><option value="">Seleccionar cliente</option>{choices.clients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                                    <label className="form-label d-block">Responsable<select className="form-select" required value={newApp.assignedId} onChange={event => setNewApp({ ...newApp, assignedId: event.target.value })}><option value="">Seleccionar responsable</option>{choices.members.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                                    <label className="form-label d-block">Trabajo (opcional)<select className="form-select" value={newApp.jobId} onChange={event => setNewApp({ ...newApp, jobId: event.target.value })}><option value="">Sin trabajo</option>{choices.jobs.filter(item => item.client_id === Number(newApp.clientId)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
-                                    <label className="form-label d-block">Servicio (opcional)<select className="form-select" value={newApp.serviceId} onChange={event => setNewApp({ ...newApp, serviceId: event.target.value })}><option value="">Sin servicio</option>{choices.services.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                                    <label className="form-label d-block">Estado<select className="form-select" value={newApp.status} onChange={event => setNewApp({ ...newApp, status: event.target.value })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-                                    <label className="form-label d-block">Notas<textarea className="form-control" maxLength={10000} value={newApp.notes} onChange={event => setNewApp({ ...newApp, notes: event.target.value })} /></label>
-                                    {formError && <p className="text-danger" role="alert">{formError}</p>}
+
+                                    {/* Duración */}
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark d-block">Duración (minutos)</label>
+                                        <input
+                                            className="form-control border shadow-none rounded-3 bg-white text-dark"
+                                            type="number"
+                                            min="1"
+                                            max="10080"
+                                            required
+                                            value={newApp.duration}
+                                            onChange={event => setNewApp({ ...newApp, duration: event.target.value })}
+                                        />
+                                    </div>
+
+                                    {/* Cliente */}
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark d-block">Cliente</label>
+                                        <select
+                                            className="form-select border shadow-none rounded-3 bg-white text-dark"
+                                            required
+                                            value={newApp.clientId}
+                                            onChange={event => setNewApp({ ...newApp, clientId: event.target.value, jobId: "" })}
+                                        >
+                                            <option value="">Seleccionar cliente</option>
+                                            {choices.clients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Responsable */}
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark d-block">Responsable</label>
+                                        <select
+                                            className="form-select border shadow-none rounded-3 bg-white text-dark"
+                                            required
+                                            value={newApp.assignedId}
+                                            onChange={event => setNewApp({ ...newApp, assignedId: event.target.value })}
+                                        >
+                                            <option value="">Seleccionar responsable</option>
+                                            {choices.members.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Trabajo (opcional) */}
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark d-block">Trabajo (opcional)</label>
+                                        <select
+                                            className="form-select border shadow-none rounded-3 bg-white text-dark"
+                                            value={newApp.jobId}
+                                            onChange={event => setNewApp({ ...newApp, jobId: event.target.value })}
+                                        >
+                                            <option value="">Sin trabajo</option>
+                                            {choices.jobs.filter(item => item.client_id === Number(newApp.clientId)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Servicio (opcional) */}
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark d-block">Servicio (opcional)</label>
+                                        <select
+                                            className="form-select border shadow-none rounded-3 bg-white text-dark"
+                                            value={newApp.serviceId}
+                                            onChange={event => setNewApp({ ...newApp, serviceId: event.target.value })}
+                                        >
+                                            <option value="">Sin servicio</option>
+                                            {choices.services.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Estado */}
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark d-block">Estado</label>
+                                        <select
+                                            className="form-select border shadow-none rounded-3 bg-white text-dark"
+                                            value={newApp.status}
+                                            onChange={event => setNewApp({ ...newApp, status: event.target.value })}
+                                        >
+                                            {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {/* Notas */}
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark d-block">Notas</label>
+                                        <textarea
+                                            className="form-control border shadow-none rounded-3 bg-white text-dark"
+                                            maxLength={10000}
+                                            rows={3}
+                                            value={newApp.notes}
+                                            onChange={event => setNewApp({ ...newApp, notes: event.target.value })}
+                                        />
+                                    </div>
+
+                                    {formError && <p className="text-danger small mt-2" role="alert">{formError}</p>}
                                 </div>
+
                                 <div className="modal-footer border-0 pt-0">
                                     <button type="button" className="btn btn-outline-secondary btn-sm rounded-3 px-3" onClick={() => setShowModal(false)}>Cancelar</button>
                                     <button type="submit" disabled={busy} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "#635bff", border: "none" }}>Guardar Cita</button>

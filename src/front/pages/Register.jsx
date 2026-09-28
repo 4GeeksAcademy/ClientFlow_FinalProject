@@ -82,7 +82,7 @@ export const Register = () => {
                                 name="firstName"
                                 value={formData.firstName}
                                 onChange={handleChange}
-                                placeholder="Carlos"
+                                placeholder="Nombre"
                                 className="form-control bg-body text-body shadow-none py-2"
                             />
                         </div>
@@ -93,7 +93,7 @@ export const Register = () => {
                                 name="lastName"
                                 value={formData.lastName}
                                 onChange={handleChange}
-                                placeholder="Alberto"
+                                placeholder="Apellido"
                                 className="form-control bg-body text-body shadow-none py-2"
                             />
                         </div>
@@ -130,7 +130,7 @@ export const Register = () => {
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            placeholder="••••••••"
+                            placeholder="Contraseña"
                             className="form-control bg-body text-body shadow-none py-2"
                         />
                     </div>

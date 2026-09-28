@@ -158,7 +158,7 @@ export const Clients = () => {
                             value={statusFilter}
                             onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
                         >
-                            <option value="all">Todos los estados</option>
+                            <option value="all">Todos los estados</option>+
                             <option value="active">Activos</option>
                             <option value="inactive">Inactivos</option>
                         </select>
@@ -166,15 +166,44 @@ export const Clients = () => {
                 </div>
             </div>
 
-            {creating && <form onSubmit={createClient} className="card card-body mb-3">
-                <h3>Nuevo cliente</h3>
-                {[["first_name", "Nombre", true], ["last_name", "Apellidos", false], ["email", "Email", false], ["phone", "Teléfono", false]].map(([name, label, required]) => (
-                    <label key={name}>{label}<input className="form-control mb-2" name={name} required={required} type={name === "email" ? "email" : "text"} maxLength={name === "email" ? 255 : name === "phone" ? 40 : 100} /></label>
-                ))}
-                {createError && <p role="alert">{createError}</p>}
-                <button disabled={saving} className="btn btn-primary">Guardar</button>
-                <button type="button" disabled={saving} onClick={() => setCreating(false)}>Cancelar</button>
-            </form>}
+            {creating && (
+    <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow-lg rounded-4 bg-white text-dark">
+                <div className="modal-header border-0 pb-0">
+                    <h5 className="fw-bold text-dark">Nuevo cliente</h5>
+                    <button type="button" className="btn-close shadow-none" onClick={() => setCreating(false)}></button>
+                </div>
+                <form onSubmit={createClient}>
+                    <div className="modal-body">
+                        {createError && <p className="text-danger small mb-3" role="alert">{createError}</p>}
+                        {[
+                            ["first_name", "Nombre", true], 
+                            ["last_name", "Apellidos", false], 
+                            ["email", "Email", false], 
+                            ["phone", "Teléfono", false]
+                        ].map(([name, label, required]) => (
+                            <div className="mb-3" key={name}>
+                                <label className="form-label small fw-semibold text-dark">{label}</label>
+                                <input 
+                                    className="form-control border shadow-none rounded-3 bg-white text-dark" 
+                                    name={name} 
+                                    required={required} 
+                                    type={name === "email" ? "email" : "text"} 
+                                    maxLength={name === "email" ? 255 : name === "phone" ? 40 : 100} 
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="modal-footer border-0 pt-0">
+                        <button type="button" className="btn btn-outline-secondary btn-sm rounded-3 px-3" disabled={saving} onClick={() => setCreating(false)}>Cancelar</button>
+                        <button type="submit" disabled={saving} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "#635bff", border: "none" }}>Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+)}
             {loading && <p role="status">Cargando clientes…</p>}
             {error && <div role="alert">{error} <button onClick={() => setReload(value => value + 1)}>Reintentar</button></div>}
             {!loading && !error && clients.length === 0 && <p>No se encontraron clientes.</p>}

@@ -13,8 +13,8 @@ export const Jobs = () => {
     const [newJob, setNewJob] = useState({
         title: "",
         client_id: "",
-        address: "Av. de la Constitución 12, 41001 Sevilla",
-        budget: 1200,
+        address: "",
+        budget: 0,
         startDate: new Date().toISOString().split('T')[0],
         dueDate: "2026-06-30"
     });
@@ -169,8 +169,8 @@ export const Jobs = () => {
                 setNewJob({
                     title: "",
                     client_id: "",
-                    address: "Av. de la Constitución 12, 41001 Sevilla",
-                    budget: 1200,
+                    address: "",
+                    budget: 0,
                     startDate: new Date().toISOString().split('T')[0],
                     dueDate: "2026-06-30"
                 });
@@ -409,6 +409,7 @@ export const Jobs = () => {
                                             required
                                             value={newJob.address}
                                             onChange={e => setNewJob({ ...newJob, address: e.target.value })}
+                                            placeholder="Ej. Av. de la Constitución 12, 41001 Sevilla"
                                         />
                                     </div>
                                     <div className="row g-2 mb-3">

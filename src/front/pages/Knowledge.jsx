@@ -122,10 +122,10 @@ export const Knowledge = () => {
                 <footer><button disabled={chunkPage === 1} onClick={() => setChunkPage(chunkPage - 1)}>Anterior</button><span>Página {chunkPage}</span><button disabled={chunkPage * 20 >= history.total} onClick={() => setChunkPage(chunkPage + 1)}>Siguiente</button></footer>
             </>}
         </section>}
-        <dialog ref={dialog} className="knowledge-dialog" aria-labelledby="knowledge-upload-title" onCancel={(event) => { if (busy) event.preventDefault(); }}>
+       <dialog ref={dialog} className="knowledge-dialog" style={{ backgroundColor: "#ffffff", color: "#212529" }} aria-labelledby="knowledge-upload-title" onCancel={(event) => { if (busy) event.preventDefault(); }}>
             <form onSubmit={upload}><h2 id="knowledge-upload-title">Subir documento</h2><p>PDF con texto, DOCX o TXT · Máximo 10 MB</p>
-                <label>Título (opcional)<input name="title" maxLength={200} disabled={busy} /></label>
-                <label>Archivo<input name="file" type="file" accept=".pdf,.docx,.txt" required disabled={busy} /></label>
+                <label>Título (opcional)<input name="title" maxLength={200} disabled={busy} style={{ backgroundColor: "#ffffff", color: "#212529", border: "1px solid #ced4da" }} /></label>
+                <label>Archivo<input name="file" type="file" accept=".pdf,.docx,.txt" required disabled={busy} style={{ backgroundColor: "#ffffff", color: "#212529", border: "1px solid #ced4da", colorScheme: "light" }} /></label>
                 {error && <p role="alert" className="knowledge-failure">{error}</p>}
                 <div className="knowledge-actions"><button type="button" disabled={busy} onClick={() => dialog.current.close()}>Cancelar</button><button className="knowledge-primary" disabled={busy}>Subir y procesar</button></div>
             </form>

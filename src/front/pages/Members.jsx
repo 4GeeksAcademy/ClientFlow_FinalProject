@@ -123,19 +123,19 @@ export const Members = () => {
                     </div></footer>
                 </>}
             </div>
-            <dialog ref={dialog} className="team-dialog" aria-labelledby="member-form-title" onCancel={(event) => { if (busy) event.preventDefault(); }}>
-                <form key={editing?.id || "invite"} onSubmit={submit}>
-                    <h2 id="member-form-title">{editing ? "Editar miembro" : "Invitar miembro"}</h2>
-                    <p>{editing ? `${editing.first_name} ${editing.last_name}` : "La invitación caduca en 48 horas."}</p>
-                    {!editing && <label>Correo electrónico<input autoFocus name="email" type="email" required maxLength={255} disabled={busy} /></label>}
-                    <label>Rol<select name="role" defaultValue={editing?.role || "agent"} disabled={busy}>
-                        {Object.entries(roles).filter(([role]) => role !== "owner" && (role !== "admin" || company?.role === "owner")).map(([role, label]) => <option key={role} value={role}>{label}</option>)}
-                    </select></label>
-                    {editing && <label>Estado<select name="active" defaultValue={String(editing.is_active)} disabled={busy}><option value="true">Activo</option><option value="false">Inactivo</option></select></label>}
-                    {formError && <p role="alert" className="text-danger">{formError}</p>}
-                    <div className="team-dialog-actions"><button type="button" disabled={busy} onClick={() => dialog.current.close()}>Cancelar</button><button className="team-primary" disabled={busy}>{busy ? "Guardando..." : editing ? "Guardar cambios" : "Crear invitación"}</button></div>
-                </form>
-            </dialog>
+           <dialog ref={dialog} className="team-dialog" style={{ backgroundColor: "#ffffff", color: "#212529" }} aria-labelledby="member-form-title" onCancel={(event) => { if (busy) event.preventDefault(); }}>
+    <form key={editing?.id || "invite"} onSubmit={submit}>
+        <h2 id="member-form-title">{editing ? "Editar miembro" : "Invitar miembro"}</h2>
+        <p>{editing ? `${editing.first_name} ${editing.last_name}` : "La invitación caduca en 48 horas."}</p>
+        {!editing && <label>Correo electrónico<input autoFocus name="email" type="email" required maxLength={255} disabled={busy} style={{ backgroundColor: "#ffffff", color: "#212529", border: "1px solid #ced4da" }} /></label>}
+        <label>Rol<select name="role" defaultValue={editing?.role || "agent"} disabled={busy} style={{ backgroundColor: "#ffffff", color: "#212529", border: "1px solid #ced4da" }}>
+            {Object.entries(roles).filter(([role]) => role !== "owner" && (role !== "admin" || company?.role === "owner")).map(([role, label]) => <option key={role} value={role}>{label}</option>)}
+        </select></label>
+        {editing && <label>Estado<select name="active" defaultValue={String(editing.is_active)} disabled={busy} style={{ backgroundColor: "#ffffff", color: "#212529", border: "1px solid #ced4da" }}><option value="true">Activo</option><option value="false">Inactivo</option></select></label>}
+        {formError && <p role="alert" className="text-danger">{formError}</p>}
+        <div className="team-dialog-actions"><button type="button" disabled={busy} onClick={() => dialog.current.close()} style={{ color: "#212529" }}>Cancelar</button><button className="team-primary" disabled={busy}>{busy ? "Guardando..." : editing ? "Guardar cambios" : "Crear invitación"}</button></div>
+    </form>
+</dialog>
         </section>
     );
 };

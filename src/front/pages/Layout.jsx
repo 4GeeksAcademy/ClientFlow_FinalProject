@@ -54,7 +54,7 @@ export const Layout = () => {
                         </div>
 
                         {/* Selector de idioma rápido en móvil */}
-                        <select 
+                        {/* <select 
                             value={locale} 
                             onChange={(e) => setLocale(e.target.value)}
                             className="form-select form-select-sm w-auto bg-dark text-white border-secondary"
@@ -63,7 +63,7 @@ export const Layout = () => {
                             <option value="es">ES</option>
                             <option value="en">EN</option>
                             <option value="pt">PT</option>
-                        </select>
+                        </select> */}
                     </div>
 
                     {/* Contenido dinámico de las vistas privadas */}

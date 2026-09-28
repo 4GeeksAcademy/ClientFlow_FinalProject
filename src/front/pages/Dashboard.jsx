@@ -12,9 +12,9 @@ export const Dashboard = () => {
                 <div className="d-flex justify-content-between align-items-start mb-4">
                     <div>
                         <span className="text-uppercase text-muted fw-bold" style={{ fontSize: "0.65rem", letterSpacing: "0.5px" }}>
-                            CLIENTFLOW • CARPINTERÍA SEVILLA
+                            CLIENTFLOW
                         </span>
-                        <h2 className="fw-bold text-dark mb-1">Buenos días, Carlos</h2>
+                        <h2 className="fw-bold text-dark mb-1">Buenos días</h2>
                         <p className="text-secondary small mb-0">Aquí tienes el resumen de tu negocio hoy.</p>
                         <div className="d-flex align-items-center mt-2">
                             <span className="badge bg-success rounded-pill p-1 me-1" style={{ width: "8px", height: "8px" }}></span>
@@ -23,9 +23,9 @@ export const Dashboard = () => {
                     </div>
                     
                     <div>
-                        <button className="btn btn-primary px-3 py-2 fw-semibold shadow-sm d-flex align-items-center gap-2" style={{ backgroundColor: "#635bff", border: "none" }}>
+                        {/* <button className="btn btn-primary px-3 py-2 fw-semibold shadow-sm d-flex align-items-center gap-2" style={{ backgroundColor: "#635bff", border: "none" }}>
                             <i className="fa-solid fa-plus"></i> Crear nuevo
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 

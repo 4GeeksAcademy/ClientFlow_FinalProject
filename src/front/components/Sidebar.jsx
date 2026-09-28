@@ -134,11 +134,11 @@ export const Sidebar = ({ isOpen, onClose }) => {
                                 <i className="fa-solid fa-map-location-dot" style={{ width: "16px" }}></i> Zonas de servicio
                             </Link>
                         </li>*/}
-                        <li>
+                        {/* <li>
                             <Link to="/settings" onClick={handleLinkClick} className={getLinkClass("/settings")}>
                                 <i className="fa-solid fa-gear" style={{ width: "16px" }}></i> Configuración
                             </Link>
-                        </li>
+                        </li> */}
                         <li>
                             {/* Botón de Cerrar Sesión interactivo */}
                             <a
@@ -157,7 +157,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Perfil del usuario abajo */}
-                <div className="mt-auto pt-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between px-2">
+                {/* <div className="mt-auto pt-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between px-2">
                     <div className="d-flex align-items-center gap-2">
                         <div className="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center shadow-sm" style={{ width: "34px", height: "34px", fontSize: "0.75rem", backgroundColor: "#3b3273" }}>
                             CA
@@ -167,7 +167,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
                             <span className="text-white-50" style={{ fontSize: "0.65rem" }}>Administrador</span>
                         </div>
                     </div>
-                </div>
+                </div> */}
             </div>
 
             {/* Estilos CSS responsivos para ocultar y deslizar el sidebar en móviles */}
