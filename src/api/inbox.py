@@ -6,6 +6,7 @@ from api.auth import tenant_required
 from api.models import (
     AIAgent,
     ChannelType,
+    Client,
     CompanyMembership,
     Conversation,
     ConversationParticipant,
@@ -29,6 +30,7 @@ def conversation_to_dict(conversation):
         "subject": conversation.subject,
         "channel": conversation.channel.value,
         "status": conversation.status.value,
+        "client_id": conversation.client_id,
         "assigned_membership_id": conversation.assigned_membership_id,
         "ai_agent_id": conversation.ai_agent_id,
         "control_mode": (
@@ -178,16 +180,111 @@ def create_conversation():
             message="Channel must be web, email, whatsapp or instagram."
         ), 400
 
+    client_id = data.get("client_id")
+
+    if client_id is not None:
+        if type(client_id) is not int or client_id < 1:
+            return jsonify(message="Invalid client ID."), 400
+
+        client = db.session.scalar(
+            db.select(Client).where(
+                Client.id == client_id,
+                Client.company_id == g.company_id,
+            )
+        )
+
+        if client is None:
+            return jsonify(message="Client not found."), 404
+
+    initial_message = data.get("initial_message")
+
+    if initial_message is not None:
+        if not isinstance(initial_message, str) or not initial_message.strip():
+            return jsonify(message="Initial message must not be empty."), 400
+
+        initial_message = initial_message.strip()
+
+        if len(initial_message) > 10000:
+            return jsonify(
+                message="Initial message must not exceed 10000 characters."
+            ), 400
+
     conversation = Conversation(
         company_id=g.company_id,
         subject=subject,
         channel=channel,
+        client_id=client_id,
     )
 
     db.session.add(conversation)
+    db.session.flush()
+
+    if initial_message is not None:
+        participant = ConversationParticipant(
+            conversation_id=conversation.id,
+            membership_id=g.membership.id,
+            participant_type="member",
+        )
+        db.session.add(participant)
+        db.session.flush()
+
+        timestamp = utc_now()
+        message = Message(
+            conversation_id=conversation.id,
+            sender_participant_id=participant.id,
+            direction=MessageDirection.OUTBOUND,
+            content=initial_message,
+            content_type="text",
+            sent_by_ai=False,
+            delivery_status="stored",
+            created_at=timestamp,
+        )
+        conversation.last_message_at = timestamp
+        db.session.add(message)
+
     db.session.commit()
 
     return jsonify(conversation=conversation_to_dict(conversation)), 201
+
+
+@inbox.route("/conversations/<int:conversation_id>/client", methods=["PATCH"])
+@tenant_required
+def assign_conversation_client(conversation_id):
+    conversation = db.session.scalar(
+        db.select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.company_id == g.company_id,
+        )
+    )
+
+    if conversation is None:
+        return jsonify(message="Conversation not found."), 404
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict) or "client_id" not in data:
+        return jsonify(message="Client ID is required."), 400
+
+    client_id = data["client_id"]
+
+    if client_id is not None:
+        if type(client_id) is not int or client_id < 1:
+            return jsonify(message="Invalid client ID."), 400
+
+        client = db.session.scalar(
+            db.select(Client).where(
+                Client.id == client_id,
+                Client.company_id == g.company_id,
+            )
+        )
+
+        if client is None:
+            return jsonify(message="Client not found."), 404
+
+    conversation.client_id = client_id
+    db.session.commit()
+
+    return jsonify(conversation=conversation_to_dict(conversation)), 200
 
 
 @inbox.route("/conversations/<int:conversation_id>/messages", methods=["POST"])

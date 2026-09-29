@@ -47,12 +47,23 @@ export const inboxService = {
             options
         ),
 
-    createConversation: (subject, channel, options) =>
+    createConversation: (
+        { subject, channel, clientId, initialMessage },
+        options
+    ) =>
         inboxRequest("/conversations", {
             ...options,
             method: "POST",
-            body: { subject, channel },
+            body: {
+                subject,
+                channel,
+                client_id: clientId || null,
+                initial_message: initialMessage || null,
+            },
         }),
+
+    listClients: (options) =>
+        inboxRequest("/clients?page=1&per_page=100&status=all", options),
 
     sendMessage: (conversationId, content, options) =>
         inboxRequest(`/conversations/${conversationId}/messages`, {
@@ -73,6 +84,13 @@ export const inboxService = {
             ...options,
             method: "PATCH",
             body: { membership_id: membershipId },
+        }),
+
+    assignClient: (conversationId, clientId, options) =>
+        inboxRequest(`/conversations/${conversationId}/client`, {
+            ...options,
+            method: "PATCH",
+            body: { client_id: clientId },
         }),
 
     updateControl: (conversationId, mode, agentId, options) =>

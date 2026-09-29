@@ -13,8 +13,15 @@ const displayError = (error) => ({
     "Take human control before sending a message.": "Asume el control antes de enviar un mensaje.",
     "Conversation not found.": "No se encontró la conversación.",
     "Your subscription is inactive or expired.": "Tu suscripción está inactiva o ha caducado.",
+    "Client not found.": "No se encontró el cliente.",
+    "Initial message must not be empty.": "El mensaje inicial no puede estar vacío.",
     "Failed to fetch": "No se pudo conectar con el servidor.",
 }[error.message] || "No se pudo completar la operación. Inténtalo de nuevo.");
+const clientLabel = (client) => (
+    [client.first_name, client.last_name].filter(Boolean).join(" ")
+    || client.email
+    || `Cliente #${client.id}`
+);
 
 export const Inbox = () => {
     const [draft, setDraft] = useState("");
@@ -22,6 +29,7 @@ export const Inbox = () => {
     const [actionError, setActionError] = useState("");
     const [refresh, setRefresh] = useState(0);
     const selection = useRef(null);
+    const pendingSelection = useRef(null);
     const token = localStorage.getItem("access_token");
     const [companyId, setCompanyId] = useState(null);
     const [conversations, setConversations] = useState([]);
@@ -34,6 +42,18 @@ export const Inbox = () => {
     const [conversationPage, setConversationPage] = useState(1);
     const [conversationTotal, setConversationTotal] = useState(0);
     const [conversationPerPage, setConversationPerPage] = useState(20);
+    const [clients, setClients] = useState([]);
+    const [clientsLoading, setClientsLoading] = useState(false);
+    const [createOpen, setCreateOpen] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState("");
+    const [assigningClient, setAssigningClient] = useState(false);
+    const [newConversation, setNewConversation] = useState({
+        subject: "",
+        channel: "web",
+        clientId: "",
+        initialMessage: "",
+    });
 
     useEffect(() => {
         const controller = new AbortController();
@@ -86,6 +106,34 @@ export const Inbox = () => {
         if (!token || !companyId) return;
 
         const controller = new AbortController();
+        const loadClients = async () => {
+            setClientsLoading(true);
+            try {
+                const data = await inboxService.listClients({
+                    token,
+                    companyId,
+                    signal: controller.signal,
+                });
+                if (!controller.signal.aborted) {
+                    setClients(data.items || []);
+                }
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    setActionError(displayError(error));
+                }
+            } finally {
+                if (!controller.signal.aborted) setClientsLoading(false);
+            }
+        };
+
+        loadClients();
+        return () => controller.abort();
+    }, [token, companyId]);
+
+    useEffect(() => {
+        if (!token || !companyId) return;
+
+        const controller = new AbortController();
         let timeoutId;
 
         const loadConversations = async () => {
@@ -100,6 +148,16 @@ export const Inbox = () => {
                     setConversationTotal(data.total);
                     setConversationPerPage(data.per_page);
                     setConversationsError("");
+                    if (
+                        pendingSelection.current
+                        && data.conversations.some(
+                            (item) => item.id === pendingSelection.current
+                        )
+                    ) {
+                        selection.current = pendingSelection.current;
+                        setSelectedConversationId(pendingSelection.current);
+                        pendingSelection.current = null;
+                    }
                 }
             } catch (error) {
                 if (!controller.signal.aborted) {
@@ -220,13 +278,93 @@ export const Inbox = () => {
             setSending(false);
         }
     };
+    const createConversation = async (event) => {
+        event.preventDefault();
+        if (!newConversation.subject.trim() || creating) return;
+
+        setCreating(true);
+        setCreateError("");
+        try {
+            const data = await inboxService.createConversation(
+                {
+                    subject: newConversation.subject.trim(),
+                    channel: newConversation.channel,
+                    clientId: newConversation.clientId
+                        ? Number(newConversation.clientId)
+                        : null,
+                    initialMessage: newConversation.initialMessage.trim() || null,
+                },
+                { token, companyId }
+            );
+            const created = data.conversation;
+            const page = await inboxService.listConversations(
+                { token, companyId },
+                1
+            );
+            setCreateOpen(false);
+            setNewConversation({
+                subject: "",
+                channel: "web",
+                clientId: "",
+                initialMessage: "",
+            });
+            if (conversationPage === 1) {
+                setConversations(page.conversations);
+                setConversationTotal(page.total);
+                setConversationPerPage(page.per_page);
+                selectConversation(created.id);
+            } else {
+                pendingSelection.current = created.id;
+                setConversationPage(1);
+            }
+        } catch (error) {
+            setCreateError(displayError(error));
+        } finally {
+            setCreating(false);
+        }
+    };
+    const assignClient = async (event) => {
+        if (!selected || assigningClient) return;
+
+        const id = selected.id;
+        const clientId = event.target.value ? Number(event.target.value) : null;
+        setAssigningClient(true);
+        setActionError("");
+        try {
+            const data = await inboxService.assignClient(
+                id,
+                clientId,
+                { token, companyId }
+            );
+            setConversations((items) => items.map((item) => (
+                item.id === id ? data.conversation : item
+            )));
+        } catch (error) {
+            setActionError(displayError(error));
+        } finally {
+            setAssigningClient(false);
+        }
+    };
 
     return (
         <main className="inbox-page" data-bs-theme="light">
             <header className="inbox-heading">
-                <p className="inbox-eyebrow">CLIENTFLOW · ESPACIO DE TRABAJO</p>
-                <h1>Conversaciones</h1>
-                <p>Una sola bandeja para todos tus canales.</p>
+                <div>
+                    <p className="inbox-eyebrow">CLIENTFLOW · ESPACIO DE TRABAJO</p>
+                    <h1>Conversaciones</h1>
+                    <p>Una sola bandeja para todos tus canales.</p>
+                </div>
+                <button
+                    type="button"
+                    className="inbox-primary-action"
+                    disabled={!companyId}
+                    onClick={() => {
+                        setCreateError("");
+                        setCreateOpen(true);
+                    }}
+                >
+                    <span aria-hidden="true">＋</span> Nueva conversación
+                </button>
             </header>
             {(error || conversationsError) && <p className="inbox-error" role="alert">{error || conversationsError}</p>}
             <div className="inbox-workspace">
@@ -277,9 +415,29 @@ export const Inbox = () => {
                     <span className="inbox-avatar inbox-avatar-large">{selected ? (selected.subject || "C").slice(0, 1).toUpperCase() : "—"}</span>
                     <h2>{selected?.subject || "Detalles de la conversación"}</h2>
                     <p>{selected ? displayLabel(selected.status) : "Selecciona una conversación para ver sus detalles."}</p>
-                    {selected && <dl><dt>Canal</dt><dd>{displayLabel(selected.channel)}</dd><dt>Control</dt><dd>{displayLabel(selected.control_mode)}</dd><dt>Responsable</dt><dd>{selected.assigned_membership_id ?? "Sin asignar"}</dd><dt>Último mensaje</dt><dd>{selected.last_message_at ? new Date(selected.last_message_at).toLocaleString("es-ES") : "Todavía no hay mensajes"}</dd></dl>}
+                    {selected && <dl><dt>Cliente</dt><dd><select aria-label="Cliente vinculado" className="inbox-client-select" value={selected.client_id ?? ""} disabled={clientsLoading || assigningClient} onChange={assignClient}><option value="">Sin cliente</option>{clients.map((client) => <option key={client.id} value={client.id}>{clientLabel(client)}</option>)}</select></dd><dt>Canal</dt><dd>{displayLabel(selected.channel)}</dd><dt>Control</dt><dd>{displayLabel(selected.control_mode)}</dd><dt>Responsable</dt><dd>{selected.assigned_membership_id ?? "Sin asignar"}</dd><dt>Último mensaje</dt><dd>{selected.last_message_at ? new Date(selected.last_message_at).toLocaleString("es-ES") : "Todavía no hay mensajes"}</dd></dl>}
                 </aside>
             </div>
+            {createOpen && <div className="inbox-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}>
+                <section className="inbox-modal" role="dialog" aria-modal="true" aria-labelledby="new-conversation-title">
+                    <header>
+                        <div><span className="inbox-modal-icon" aria-hidden="true">✉</span><div><p>NUEVO CONTACTO</p><h2 id="new-conversation-title">Nueva conversación</h2></div></div>
+                        <button type="button" className="inbox-modal-close" aria-label="Cerrar" disabled={creating} onClick={() => setCreateOpen(false)}>×</button>
+                    </header>
+                    <form onSubmit={createConversation}>
+                        <label htmlFor="conversation-subject">Asunto</label>
+                        <input id="conversation-subject" autoFocus required maxLength={255} placeholder="Ej. Presupuesto para armario" value={newConversation.subject} onChange={(event) => setNewConversation((value) => ({ ...value, subject: event.target.value }))} />
+                        <div className="inbox-form-row">
+                            <div><label htmlFor="conversation-channel">Canal</label><select id="conversation-channel" value={newConversation.channel} onChange={(event) => setNewConversation((value) => ({ ...value, channel: event.target.value }))}><option value="web">Web</option><option value="email">Correo electrónico</option><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option></select></div>
+                            <div><label htmlFor="conversation-client">Cliente</label><select id="conversation-client" value={newConversation.clientId} disabled={clientsLoading} onChange={(event) => setNewConversation((value) => ({ ...value, clientId: event.target.value }))}><option value="">Sin cliente</option>{clients.map((client) => <option key={client.id} value={client.id}>{clientLabel(client)}</option>)}</select></div>
+                        </div>
+                        <label htmlFor="conversation-message">Primer mensaje <span>(opcional)</span></label>
+                        <textarea id="conversation-message" rows="4" maxLength={10000} placeholder="Escribe el primer mensaje para el cliente…" value={newConversation.initialMessage} onChange={(event) => setNewConversation((value) => ({ ...value, initialMessage: event.target.value }))} />
+                        {createError && <p className="inbox-error" role="alert">{createError}</p>}
+                        <footer><button type="button" className="inbox-secondary-action" disabled={creating} onClick={() => setCreateOpen(false)}>Cancelar</button><button type="submit" className="inbox-primary-action" disabled={creating || !newConversation.subject.trim()}>{creating ? "Creando…" : "Crear conversación"}</button></footer>
+                    </form>
+                </section>
+            </div>}
         </main>
     );
 };
