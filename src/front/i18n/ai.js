@@ -2,7 +2,7 @@ export const aiMessages = {
     es: {
         reasons: {
             agent_service_unavailable: "No se pudo conectar con el servicio de IA. Comprueba la conexión del servidor y vuelve a intentarlo.",
-            knowledge_service_unavailable: "No se pudo consultar el conocimiento de la empresa. Vuelve a intentarlo cuando el servicio esté disponible.",
+            knowledge_service_unavailable: "El asistente está temporalmente fuera de servicio. Puedes responder manualmente o volver a intentarlo.",
             invalid_agent_response: "La IA devolvió una respuesta que no se pudo validar. No se ha enviado al cliente.",
             context_limit: "La conversación o los documentos superan el límite del servicio. El equipo debe revisar este caso.",
             insufficient_relevance: "No se encontró información suficientemente relacionada en los documentos autorizados.",

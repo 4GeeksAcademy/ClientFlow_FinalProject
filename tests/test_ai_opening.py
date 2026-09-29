@@ -12,6 +12,13 @@ class AIOpeningTest(unittest.TestCase):
             with self.subTest(question=question):
                 self.assertEqual(opening_reply(question, []).count('?'), 1)
 
+    def test_natural_spanish_small_talk_skips_external_services(self):
+        for question in ('Hola, ¿todo bien?', 'Hols todo bien?', 'Holaa, ¿cómo estás?',
+                         'Buenas tardes, ¿qué tal?'):
+            with self.subTest(question=question):
+                reply = opening_reply(question, [])
+                self.assertIn('ayudarte', reply)
+
     def test_requests_are_not_replaced_with_a_fixed_template(self):
         for question in ('Hola, quiero cambiar mi vestidor', 'Quiero instalar un armario',
                          'Quiero comprar una mesa', 'Buenas tardes, necesito arreglar una puerta',

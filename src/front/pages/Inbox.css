@@ -316,6 +316,37 @@
   color: #8590a4;
   padding: 16px;
 }
+.ai-reply-panel {
+  color: #252b40;
+  background: #ffffff;
+}
+.ai-draft-card {
+  color: #252b40;
+  background: #ffffff;
+  border: 1px solid #dfe2ec;
+}
+.ai-draft-status {
+  display: block;
+  margin-bottom: 6px;
+  color: #252b40;
+}
+.ai-draft-card p {
+  margin: 6px 0;
+}
+.ai-draft-card-handoff {
+  color: #513300;
+  background: #fff7e6;
+  border-color: #d99b2b;
+  box-shadow: inset 4px 0 0 #d99b2b;
+}
+.ai-draft-card-handoff .ai-draft-status {
+  color: #744600;
+}
+.ai-handoff-message {
+  color: #513300;
+  font-weight: 600;
+  line-height: 1.5;
+}
 .inbox-control {
   display: flex;
   flex-wrap: wrap;
