@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { leadService } from "../services/leadService";
+import "../styles/leads.css";
 
 const STATUS_LABELS = {
     new: "Nuevo",
@@ -683,9 +684,9 @@ export const Leads = () => {
             {showLeadForm && (
                 <>
                     <div className="modal-backdrop fade show"></div>
-                    <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true">
-                        <div className="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-                            <div className="modal-content border-0 shadow-lg bg-white text-dark" style={{ borderRadius: "18px" }}>
+                    <div className="modal fade show d-block lead-form-modal" tabIndex="-1" role="dialog" aria-modal="true">
+                        <div className="modal-dialog modal-dialog-centered modal-lg lead-form-dialog">
+                            <div className="modal-content border-0 shadow-lg bg-white text-dark lead-form-content" style={{ borderRadius: "18px" }}>
                                 <div className="modal-header border-0 px-4 pt-4 pb-2">
                                     <div>
                                         <h5 className="modal-title fw-bold">
@@ -701,8 +702,8 @@ export const Leads = () => {
                                         onClick={() => setShowLeadForm(false)}
                                     ></button>
                                 </div>
-                                <form onSubmit={saveLead}>
-                                    <div className="modal-body px-4 py-3">
+                                <form className="lead-form-shell" onSubmit={saveLead}>
+                                    <div className="modal-body px-4 py-3 lead-form-body">
                                         <div className="row g-3">
                                             <div className="col-md-6">
                                                 <label className="form-label small fw-semibold">Nombre *</label>
@@ -782,7 +783,7 @@ export const Leads = () => {
                                         </div>
                                         {formError && <div className="alert alert-danger mt-3 mb-0">{formError}</div>}
                                     </div>
-                                    <div className="modal-footer border-0 bg-light px-4 py-3">
+                                    <div className="modal-footer border-0 bg-light px-4 py-3 lead-form-footer">
                                         <button type="button" className="btn btn-outline-secondary px-4" disabled={saving} onClick={() => setShowLeadForm(false)}>Cancelar</button>
                                         <button type="submit" className="btn btn-primary px-4 fw-semibold" style={{ backgroundColor: "#635bff", border: "none" }} disabled={saving}>
                                             {saving ? "Guardando..." : editingLeadId ? "Guardar cambios" : "Guardar lead"}
