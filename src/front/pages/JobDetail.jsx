@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import { sharedAppointments } from "../../data/sharedAppointments";
+import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
 
 export const JobDetail = () => {
+    const { locale } = useLanguage();
     const { id } = useParams();
     const location = useLocation();
 
@@ -59,7 +62,7 @@ export const JobDetail = () => {
         };
 
         fetchJobDetail();
-    }, [id]);
+    }, [id, locale]);
 
     // Filtramos de forma segura las citas de la agenda global que coincidan con este trabajo
     const jobAppointments = sharedAppointments.filter(
@@ -135,9 +138,9 @@ export const JobDetail = () => {
 
     const getStageText = (status) => {
         switch (status) {
-            case "completed": return "Completado";
-            case "in_progress": return "En curso";
-            default: return "Pendiente";
+            case "completed": return translateLiteral("Completado", locale);
+            case "in_progress": return translateLiteral("En curso", locale);
+            default: return translateLiteral("Pendiente", locale);
         }
     };
 
