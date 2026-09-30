@@ -9,6 +9,10 @@ export const AppProvider = ({ children }) => {
     const [systemTheme, setSystemTheme] = useState(() =>
         window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
     );
+    const [density, setDensity] = useState(() => {
+        const stored = localStorage.getItem("interface_density");
+        return stored === "compact" ? "compact" : "comfortable";
+    });
 
     const resolvedTheme = theme === "system" ? systemTheme : theme;
 
@@ -26,6 +30,11 @@ export const AppProvider = ({ children }) => {
         localStorage.setItem("theme", theme);
     }, [resolvedTheme, theme]);
 
+    useEffect(() => {
+        document.documentElement.setAttribute("data-density", density);
+        localStorage.setItem("interface_density", density);
+    }, [density]);
+
     const toggleTheme = () => {
         setTheme(resolvedTheme === "dark" ? "light" : "dark");
     };
@@ -36,7 +45,7 @@ export const AppProvider = ({ children }) => {
     };
 
     return (
-        <AppContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme, showToast }}>
+        <AppContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme, density, setDensity, showToast }}>
             {children}
         </AppContext.Provider>
     );
