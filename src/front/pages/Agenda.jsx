@@ -3,13 +3,15 @@ import { useLocation } from "react-router-dom";
 import { dateKey, parseDate } from "../utils/calendar.mjs";
 import { getAppointmentContext, getAppointmentOptions, getAppointments,
     createAppointment, updateAppointment, cancelAppointment } from "../services/appointmentService";
+import { useLanguage } from "../context/LanguageContext";
 
 const localTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const localStamp = (value) => { const date = new Date(value); return `${dateKey(date)}T${localTime(date)}`; };
-const statusLabels = { scheduled: "Programada", confirmed: "Confirmada", completed: "Completada", cancelled: "Cancelada", no_show: "No asistió" };
 const statusColors = { scheduled: "#635bff", confirmed: "#198754", completed: "#495057", cancelled: "#6c757d", no_show: "#a64b00" };
 
 export const Agenda = () => {
+    const { locale, ui } = useLanguage();
+    const statusLabels = { scheduled: ui.scheduled, confirmed: ui.confirmed, completed: ui.completed, cancelled: ui.cancelled, no_show: ui.noShow };
     const token = localStorage.getItem("access_token");
     const [company, setCompany] = useState(null);
     const [choices, setChoices] = useState({ clients: [], members: [], jobs: [], services: [] });
@@ -37,7 +39,7 @@ export const Agenda = () => {
             try {
                 const account = await getAppointmentContext(token, controller.signal);
                 const current = account.companies?.[0];
-                if (!current) throw new Error("No hay una empresa disponible.");
+                if (!current) throw new Error(ui.noCompany);
                 const opts = { token, companyId: current.id, signal: controller.signal };
                 const [data, lists] = await Promise.all([getAppointments(opts), getAppointmentOptions(opts)]);
                 if (controller.signal.aborted) return;
@@ -46,12 +48,12 @@ export const Agenda = () => {
                     duration: Math.round((new Date(item.ends_at) - new Date(item.starts_at)) / 60000),
                     starts_at: localStamp(item.starts_at), ends_at: localStamp(item.ends_at) })));
             } catch (error) {
-                if (!controller.signal.aborted) setErrorMsg(error instanceof TypeError ? "No se pudo conectar con la API. Comprueba la configuración del servidor." : error.message);
+                if (!controller.signal.aborted) setErrorMsg(error instanceof TypeError ? ui.connectionError : error.message);
             } finally { if (!controller.signal.aborted) setLoading(false); }
         };
         load();
         return () => controller.abort();
-    }, [token, revision]);
+    }, [token, revision, ui.connectionError, ui.noCompany]);
 
     useEffect(() => {
         const id = new URLSearchParams(location.search).get("appointmentId");
@@ -76,7 +78,8 @@ export const Agenda = () => {
     };
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const monthName = new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(year, month, 1));
+    const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(2024, 0, index + 1)));
     const move = (amount) => {
         if (currentView === "month") setCurrentDate(new Date(year, month + amount, 1));
         else { const date = new Date(currentDate); date.setDate(date.getDate() + amount * 7); setCurrentDate(date); }
@@ -99,14 +102,14 @@ export const Agenda = () => {
             if (editingId) await updateAppointment(options, editingId, body);
             else await createAppointment(options, body);
             setShowModal(false); setRevision(value => value + 1);
-        } catch (error) { setFormError(error.message || "No se pudo guardar la cita."); }
+        } catch (error) { setFormError(error.message || ui.appointmentSaveError); }
         finally { setBusy(false); }
     };
     const handleDeleteAppointment = async (id) => {
-        if (busy || !window.confirm("¿Cancelar esta cita?")) return;
+        if (busy || !window.confirm(ui.confirmCancelAppointment)) return;
         setBusy(true);
         try { await cancelAppointment(options, id); setRevision(value => value + 1); }
-        catch (error) { setErrorMsg(error.message || "No se pudo cancelar la cita."); }
+        catch (error) { setErrorMsg(error.message || ui.appointmentCancelError); }
         finally { setBusy(false); }
     };
     const firstDayIndex = new Date(year, month, 1).getDay();
@@ -123,8 +126,8 @@ export const Agenda = () => {
             {/* Cabecera general */}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
-                    <h2 className="fw-bold mb-1" style={{ color: "#212529" }}>Agenda y Calendario</h2>
-                    <p className="text-secondary small mb-0">Gestión de citas, visitas y planificación operativa.</p>
+                    <h2 className="fw-bold mb-1" style={{ color: "#212529" }}>{ui.calendarTitle}</h2>
+                    <p className="text-secondary small mb-0">{ui.calendarSubtitle}</p>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                     <button
@@ -133,13 +136,13 @@ export const Agenda = () => {
                         disabled={loading || busy || !company}
                         onClick={openCreate}
                     >
-                        <i className="fa-solid fa-plus"></i> Nueva Cita
+                        <i className="fa-solid fa-plus"></i> {ui.newAppointment}
                     </button>
                 </div>
             </div>
 
-            {errorMsg && <div className="alert alert-danger">{errorMsg} <button className="btn btn-sm btn-outline-danger" onClick={() => setRevision(value => value + 1)}>Reintentar</button></div>}
-            {loading && <p className="text-muted">Cargando citas...</p>}
+            {errorMsg && <div className="alert alert-danger">{errorMsg} <button className="btn btn-sm btn-outline-danger" onClick={() => setRevision(value => value + 1)}>{ui.retry}</button></div>}
+            {loading && <p className="text-muted">{ui.appointmentsLoading}</p>}
 
             <div className="row g-4">
                 {/* Columna Izquierda: Calendario */}
@@ -150,12 +153,12 @@ export const Agenda = () => {
                             <div className="d-flex align-items-center gap-2">
                                 <div className="btn-group btn-group-sm">
                                     <button className="btn btn-outline-secondary border px-2 shadow-sm" onClick={handlePrev}><i className="fa-solid fa-chevron-left"></i></button>
-                                    <button className="btn btn-outline-secondary border px-2 fw-semibold shadow-sm" onClick={handleToday}>Hoy</button>
+                                    <button className="btn btn-outline-secondary border px-2 fw-semibold shadow-sm" onClick={handleToday}>{ui.today}</button>
                                     <button className="btn btn-outline-secondary border px-2 shadow-sm" onClick={handleNext}><i className="fa-solid fa-chevron-right"></i></button>
                                 </div>
                                 <h5 className="fw-bold m-0 ms-2 text-dark">
-                                    {currentView === 'month' && `${monthNames[month]} ${year}`}
-                                    {currentView === 'week' && `Vista Semanal`}
+                                    {currentView === 'month' && `${monthName} ${year}`}
+                                    {currentView === 'week' && ui.weeklyView}
                                 </h5>
                             </div>
 
@@ -165,14 +168,14 @@ export const Agenda = () => {
                                     onClick={() => setCurrentView('month')}
                                     style={currentView === 'month' ? { backgroundColor: "#635bff", border: "none" } : {}}
                                 >
-                                    Mes
+                                    {ui.month}
                                 </button>
                                 <button
                                     className={`btn ${currentView === 'week' ? 'btn-primary' : 'btn-outline-secondary border shadow-sm'}`}
                                     onClick={() => setCurrentView('week')}
                                     style={currentView === 'week' ? { backgroundColor: "#635bff", border: "none" } : {}}
                                 >
-                                    Semana
+                                    {ui.week}
                                 </button>
                             </div>
                         </div>
@@ -182,13 +185,7 @@ export const Agenda = () => {
                                 <div>
                                     {/* Días de la semana */}
                                     <div className="row text-center fw-bold mb-2 py-2 rounded-3 mx-0 bg-light text-dark" style={{ fontSize: "0.8rem" }}>
-                                        <div className="col">Lun</div>
-                                        <div className="col">Mar</div>
-                                        <div className="col">Mié</div>
-                                        <div className="col">Jue</div>
-                                        <div className="col">Vie</div>
-                                        <div className="col">Sáb</div>
-                                        <div className="col">Dom</div>
+                                        {weekdayNames.map((name) => <div className="col" key={name}>{name}</div>)}
                                     </div>
                                     <div className="d-flex flex-column gap-1">
                                         {(() => {
@@ -316,7 +313,7 @@ export const Agenda = () => {
                     <div className="card border-0 shadow-sm h-100 rounded-4 overflow-hidden bg-white">
                         <div className="card-header py-3 border-0 d-flex justify-content-between align-items-center bg-white">
                             <h5 className="fw-bold m-0 text-dark">
-                                <i className="fa-solid fa-calendar-day me-2" style={{ color: "#635bff" }}></i> Citas del Día
+                                <i className="fa-solid fa-calendar-day me-2" style={{ color: "#635bff" }}></i> {ui.dayAppointments}
                             </h5>
                             <span className="badge text-white px-2.5 py-1.5 rounded-pill shadow-xs" style={{ backgroundColor: "#635bff" }}>{selectedDateStr}</span>
                         </div>
@@ -324,7 +321,7 @@ export const Agenda = () => {
                             {selectedDayAppointments.length === 0 ? (
                                 <div className="text-center py-5">
                                     <i className="fa-solid fa-calendar-xmark fa-2x text-muted mb-3 opacity-50"></i>
-                                    <p className="text-secondary small mb-0">No hay citas programadas para este día.</p>
+                                    <p className="text-secondary small mb-0">{ui.noDayAppointments}</p>
                                 </div>
                             ) : (
                                 <div className="d-flex flex-column gap-3">
@@ -345,15 +342,15 @@ export const Agenda = () => {
                                                     <div>
                                                         <span className="badge text-white mb-1" style={{ fontSize: "0.7rem", backgroundColor: statusColors[app.status] || "#495057" }}>{statusLabels[app.status] || app.status}</span>
                                                         <h6 className="fw-bold mb-0 text-dark">
-                                                            {app.title} {isHighlighted && <span className="text-success small ms-1">(Seleccionada)</span>}
+                                                            {app.title} {isHighlighted && <span className="text-success small ms-1">({ui.selected})</span>}
                                                         </h6>
                                                     </div>
                                                     <div className="d-flex align-items-center gap-2">
                                                         <span className="fw-bold small" style={{ color: "#635bff" }}><i className="fa-solid fa-clock me-1"></i>{timeStr}</span>
-                                                        <button className="btn btn-sm btn-outline-primary" disabled={busy} onClick={() => openEdit(app)}>Editar</button>
+                                                        <button className="btn btn-sm btn-outline-primary" disabled={busy} onClick={() => openEdit(app)}>{ui.edit}</button>
                                                         <button
                                                             className="btn btn-outline-danger btn-sm border-0 p-1"
-                                                            title="Cancelar cita"
+                                                            title={ui.cancelAppointment}
                                                             disabled={busy || app.status === "cancelled"}
                                                             onClick={() => handleDeleteAppointment(app.id)}
                                                         >
@@ -365,7 +362,7 @@ export const Agenda = () => {
                                                 <div className="small text-secondary mb-0">
                                                     <p className="mb-1">
                                                         <i className="fa-solid fa-note-sticky me-2 text-dark opacity-75"></i>
-                                                        <strong>Notas:</strong> {app.notes || "Sin notas"}
+                                                        <strong>{ui.notes}:</strong> {app.notes || ui.noNotes}
                                                     </p>
                                                 </div>
                                             </div>
@@ -384,25 +381,25 @@ export const Agenda = () => {
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow-lg rounded-4 bg-white text-dark">
                             <div className="modal-header border-0 pb-0">
-                                <h5 className="fw-bold text-dark">{editingId ? "Editar cita" : "Programar Nueva Cita"}</h5>
+                                <h5 className="fw-bold text-dark">{editingId ? ui.editAppointment : ui.scheduleAppointment}</h5>
                                 <button type="button" className="btn-close shadow-none" onClick={() => setShowModal(false)}></button>
                             </div>
                             <form onSubmit={handleCreateAppointment}>
                                 <div className="modal-body">
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold text-dark">Título de la Cita</label>
+                                        <label className="form-label small fw-semibold text-dark">{ui.appointmentTitle}</label>
                                         <input
                                             type="text"
                                             className="form-control shadow-none rounded-3 border bg-light text-dark"
                                             required
                                             value={newApp.title}
                                             onChange={e => setNewApp({ ...newApp, title: e.target.value })}
-                                            placeholder="Ej. Toma de medidas salón"
+                                            placeholder={ui.appointmentTitleExample}
                                         />
                                     </div>
                                     <div className="row g-2 mb-3">
                                         <div className="col">
-                                            <label className="form-label small fw-semibold text-dark">Fecha</label>
+                                            <label className="form-label small fw-semibold text-dark">{ui.date}</label>
                                             <input
                                                 type="date"
                                                 className="form-control border shadow-none rounded-3 bg-white text-dark"
@@ -413,7 +410,7 @@ export const Agenda = () => {
                                             />
                                         </div>
                                         <div className="col">
-                                            <label className="form-label small fw-semibold text-dark">Hora</label>
+                                            <label className="form-label small fw-semibold text-dark">{ui.time}</label>
                                             <input
                                                 type="time"
                                                 className="form-control border shadow-none rounded-3 bg-white text-dark"
@@ -424,18 +421,18 @@ export const Agenda = () => {
                                             />
                                         </div>
                                     </div>
-                                    <label className="form-label d-block">Duración (minutos)<input className="form-control" type="number" min="1" max="10080" required value={newApp.duration} onChange={event => setNewApp({ ...newApp, duration: event.target.value })} /></label>
-                                    <label className="form-label d-block">Cliente<select className="form-select" required value={newApp.clientId} onChange={event => setNewApp({ ...newApp, clientId: event.target.value, jobId: "" })}><option value="">Seleccionar cliente</option>{choices.clients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                                    <label className="form-label d-block">Responsable<select className="form-select" required value={newApp.assignedId} onChange={event => setNewApp({ ...newApp, assignedId: event.target.value })}><option value="">Seleccionar responsable</option>{choices.members.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                                    <label className="form-label d-block">Trabajo (opcional)<select className="form-select" value={newApp.jobId} onChange={event => setNewApp({ ...newApp, jobId: event.target.value })}><option value="">Sin trabajo</option>{choices.jobs.filter(item => item.client_id === Number(newApp.clientId)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
-                                    <label className="form-label d-block">Servicio (opcional)<select className="form-select" value={newApp.serviceId} onChange={event => setNewApp({ ...newApp, serviceId: event.target.value })}><option value="">Sin servicio</option>{choices.services.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                                    <label className="form-label d-block">Estado<select className="form-select" value={newApp.status} onChange={event => setNewApp({ ...newApp, status: event.target.value })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-                                    <label className="form-label d-block">Notas<textarea className="form-control" maxLength={10000} value={newApp.notes} onChange={event => setNewApp({ ...newApp, notes: event.target.value })} /></label>
+                                    <label className="form-label d-block">{ui.durationMinutes}<input className="form-control" type="number" min="1" max="10080" required value={newApp.duration} onChange={event => setNewApp({ ...newApp, duration: event.target.value })} /></label>
+                                    <label className="form-label d-block">{ui.client}<select className="form-select" required value={newApp.clientId} onChange={event => setNewApp({ ...newApp, clientId: event.target.value, jobId: "" })}><option value="">{ui.selectClient}</option>{choices.clients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.responsible}<select className="form-select" required value={newApp.assignedId} onChange={event => setNewApp({ ...newApp, assignedId: event.target.value })}><option value="">{ui.selectResponsible}</option>{choices.members.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.optionalJob}<select className="form-select" value={newApp.jobId} onChange={event => setNewApp({ ...newApp, jobId: event.target.value })}><option value="">{ui.noJob}</option>{choices.jobs.filter(item => item.client_id === Number(newApp.clientId)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.optionalService}<select className="form-select" value={newApp.serviceId} onChange={event => setNewApp({ ...newApp, serviceId: event.target.value })}><option value="">{ui.noService}</option>{choices.services.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.status}<select className="form-select" value={newApp.status} onChange={event => setNewApp({ ...newApp, status: event.target.value })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.notes}<textarea className="form-control" maxLength={10000} value={newApp.notes} onChange={event => setNewApp({ ...newApp, notes: event.target.value })} /></label>
                                     {formError && <p className="text-danger" role="alert">{formError}</p>}
                                 </div>
                                 <div className="modal-footer border-0 pt-0">
-                                    <button type="button" className="btn btn-outline-secondary btn-sm rounded-3 px-3" onClick={() => setShowModal(false)}>Cancelar</button>
-                                    <button type="submit" disabled={busy} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "#635bff", border: "none" }}>Guardar Cita</button>
+                                    <button type="button" className="btn btn-outline-secondary btn-sm rounded-3 px-3" onClick={() => setShowModal(false)}>{ui.cancel}</button>
+                                    <button type="submit" disabled={busy} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "#635bff", border: "none" }}>{ui.saveAppointment}</button>
                                 </div>
                             </form>
                         </div>

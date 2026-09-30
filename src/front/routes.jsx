@@ -20,8 +20,15 @@ import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Settings } from "./pages/Settings";
 import { WebChatPage } from "./pages/WebChatPage";
+import { useLanguage } from "./context/LanguageContext";
+
+const LocalizedNotFound = () => {
+    const { ui } = useLanguage();
+    return <h1>{ui.notFound}</h1>;
+};
 
 const ProtectedRoute = ({ children }) => {
+    const { ui } = useLanguage();
     const token = localStorage.getItem("access_token");
     const [status, setStatus] = useState("loading");
     const [message, setMessage] = useState("");
@@ -49,14 +56,14 @@ const ProtectedRoute = ({ children }) => {
                 }
 
                 if (!meResponse.ok) {
-                    throw new Error("Unable to verify your account.");
+                    throw new Error(ui.accountLoadError);
                 }
 
                 const account = await meResponse.json();
                 const company = account.companies?.[0];
 
                 if (!company) {
-                    throw new Error("No company is available for this account.");
+                    throw new Error(ui.noCompany);
                 }
 
                 const response = await fetch(`${apiUrl}/api/auth/context`, {
@@ -75,13 +82,13 @@ const ProtectedRoute = ({ children }) => {
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || "Unable to verify your subscription.");
+                    throw new Error(data.message || ui.subscriptionVerifyError);
                 }
 
                 setStatus("allowed");
             } catch (error) {
                 if (controller.signal.aborted) return;
-                setMessage(error.message || "Unable to verify access.");
+                setMessage(error.message || ui.accessVerifyError);
                 setStatus("blocked");
             }
         };
@@ -95,14 +102,14 @@ const ProtectedRoute = ({ children }) => {
             window.clearInterval(interval);
             window.removeEventListener("focus", checkAccess);
         };
-    }, [token]);
+    }, [token, ui.accountLoadError, ui.accessVerifyError, ui.noCompany, ui.subscriptionVerifyError]);
 
     if (!token || status === "unauthorized") {
         return <Navigate to="/login" replace />;
     }
 
     if (status === "loading") {
-        return <p role="status">Checking your subscription...</p>;
+        return <p role="status">{ui.checkingSubscription}</p>;
     }
 
     if (status === "blocked") {
@@ -114,7 +121,7 @@ const ProtectedRoute = ({ children }) => {
                     className="btn btn-secondary"
                     onClick={() => window.location.reload()}
                 >
-                    Try again
+                    {ui.retry}
                 </button>
             </div>
         );
@@ -125,7 +132,7 @@ const ProtectedRoute = ({ children }) => {
 
 export const router = createBrowserRouter(
     createRoutesFromElements(
-        <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>}>
+        <Route path="/" element={<Layout />} errorElement={<LocalizedNotFound />}>
             <Route path="accept-invitation" element={<AcceptInvitation />} />
             <Route index element={<Navigate to="/dashboard" replace />} />
 

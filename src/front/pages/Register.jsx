@@ -3,9 +3,11 @@ import { Link, useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { useApp } from "../context/AppContext";
 import { authService } from "../services/authService";
+import { useLanguage } from "../context/LanguageContext";
 
 export const Register = () => {
     const { showToast } = useApp();
+    const { ui } = useLanguage();
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -28,11 +30,11 @@ export const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!Number.isSafeInteger(planId) || planId <= 0) {
-            setError("Please select a plan before registering.");
+            setError(ui.selectPlanFirst);
             return;
         }
         if (!formData.firstName || !formData.email || !formData.password || !formData.company) {
-            setError("Por favor completa todos los campos obligatorios.");
+            setError(ui.requiredFields);
             return;
         }
         setError("");
@@ -45,11 +47,11 @@ export const Register = () => {
                 registration_mode: registrationMode,
             });
             setLoading(false);
-            showToast("Account created successfully. Please sign in.", "success");
+            showToast(ui.accountCreated, "success");
             navigate("/login");
         } catch (err) {
             setLoading(false);
-            setError(err.message || "No se pudo conectar con el servidor.");
+            setError(err.message || ui.registerError);
         }
     };
 
@@ -64,8 +66,8 @@ export const Register = () => {
                     👤
                 </div>
 
-                <h2 className="fw-bold text-body fs-3 mb-1">Regístrate</h2>
-                <p className="text-muted small mb-4">Comienza a optimizar tu flujo de trabajo</p>
+                <h2 className="fw-bold text-body fs-3 mb-1">{ui.registerTitle}</h2>
+                <p className="text-muted small mb-4">{ui.registerSubtitle}</p>
 
                 {error && (
                     <div className="alert alert-danger py-2 small mb-3">
@@ -76,7 +78,7 @@ export const Register = () => {
                 <form onSubmit={handleSubmit} className="vstack gap-3">
                     <div className="row g-2">
                         <div className="col-6">
-                            <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Nombre</label>
+                            <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.firstName}</label>
                             <input
                                 type="text"
                                 name="firstName"
@@ -87,7 +89,7 @@ export const Register = () => {
                             />
                         </div>
                         <div className="col-6">
-                            <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Apellidos</label>
+                            <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.lastName}</label>
                             <input
                                 type="text"
                                 name="lastName"
@@ -100,31 +102,31 @@ export const Register = () => {
                     </div>
 
                     <div>
-                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Email profesional</label>
+                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.professionalEmail}</label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder="tu@empresa.com"
+                            placeholder={ui.emailPlaceholder}
                             className="form-control bg-body text-body shadow-none py-2"
                         />
                     </div>
 
                     <div>
-                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Empresa</label>
+                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.company}</label>
                         <input
                             type="text"
                             name="company"
                             value={formData.company}
                             onChange={handleChange}
-                            placeholder="Nombre de la empresa"
+                            placeholder={ui.companyName}
                             className="form-control bg-body text-body shadow-none py-2"
                         />
                     </div>
 
                     <div>
-                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Contraseña</label>
+                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.password}</label>
                         <input
                             type="password"
                             name="password"
@@ -141,12 +143,12 @@ export const Register = () => {
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-2"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {loading ? "Procesando..." : "Create account"}
+                        {loading ? ui.processing : ui.createAccount}
                     </button>
                 </form>
 
                 <p className="text-center text-muted small mt-4 mb-0">
-                    ¿Ya tienes cuenta? <Link to="/login" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>Iniciar sesión</Link>
+                    {ui.haveAccount} <Link to="/login" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>{ui.signIn}</Link>
                 </p>
             </div>
         </AuthLayout>

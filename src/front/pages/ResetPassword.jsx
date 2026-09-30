@@ -3,9 +3,11 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { authService } from "../services/authService";
 import { useApp } from "../context/AppContext";
+import { useLanguage } from "../context/LanguageContext";
 
 export const ResetPassword = () => {
     const { showToast } = useApp();
+    const { ui } = useLanguage();
     const [searchParams] = useSearchParams();
     const tokenFromUrl = searchParams.get("token");
 
@@ -18,7 +20,7 @@ export const ResetPassword = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!tokenFromUrl || password.length < 12 || password.length > 128 || password !== confirmation) {
-            setError("Introduce una contraseña de 12 a 128 caracteres y una confirmación idéntica con un enlace válido.");
+            setError(ui.resetInvalid);
             return;
         }
         setError("");
@@ -27,11 +29,11 @@ export const ResetPassword = () => {
         try {
             await authService.resetPassword({ token: tokenFromUrl, password, password_confirmation: confirmation });
             setLoading(false);
-            showToast("Contraseña actualizada con éxito.", "success");
+            showToast(ui.resetSuccess, "success");
             navigate("/login", { state: { passwordReset: true }, replace: true });
         } catch (err) {
             setLoading(false);
-            setError(err.message || "Error al actualizar la contraseña.");
+            setError(err.message || ui.resetError);
         }
     };
 
@@ -42,8 +44,8 @@ export const ResetPassword = () => {
                     🔒
                 </div>
 
-                <h2 className="fw-bold text-body fs-3 mb-1">Nueva Contraseña</h2>
-                <p className="text-muted small mb-4">Introduce y confirma tu nueva contraseña</p>
+                <h2 className="fw-bold text-body fs-3 mb-1">{ui.resetTitle}</h2>
+                <p className="text-muted small mb-4">{ui.resetSubtitle}</p>
 
                 {error && (
                     <div className="alert alert-danger py-2 small mb-3">
@@ -51,10 +53,10 @@ export const ResetPassword = () => {
                     </div>
                 )}
 
-                {!tokenFromUrl && <div className="alert alert-danger">Enlace inválido. <Link to="/forgot-password">Solicita otro enlace</Link>.</div>}
+                {!tokenFromUrl && <div className="alert alert-danger">{ui.invalidLink} <Link to="/forgot-password">{ui.requestAnotherLink}</Link>.</div>}
                 <form onSubmit={handleSubmit} className="vstack gap-3">
                     <div>
-                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Nueva Contraseña</label>
+                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.resetTitle}</label>
                         <input
                             type="password"
                             value={password}
@@ -68,7 +70,7 @@ export const ResetPassword = () => {
                         />
                     </div>
 
-                    <label className="form-label">Confirmar contraseña
+                    <label className="form-label">{ui.confirmPassword}
                         <input type="password" className="form-control" value={confirmation} onChange={e => setConfirmation(e.target.value)} required minLength={12} maxLength={128} autoComplete="new-password" />
                     </label>
                     <button
@@ -77,12 +79,12 @@ export const ResetPassword = () => {
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-2"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {loading ? "Actualizando..." : "Restablecer Contraseña"}
+                        {loading ? ui.updating : ui.resetPasswordAction}
                     </button>
                 </form>
 
                 <p className="text-center text-muted small mt-4 mb-0">
-                    <Link to="/login" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>← Volver al login</Link>
+                    <Link to="/login" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>← {ui.backToLogin}</Link>
                 </p>
             </div>
         </AuthLayout>

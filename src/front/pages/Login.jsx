@@ -3,9 +3,11 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { authService } from "../services/authService";
 import { useApp } from "../context/AppContext";
+import { useLanguage } from "../context/LanguageContext";
 
 export const Login = () => {
     const { showToast } = useApp();
+    const { ui } = useLanguage();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -18,7 +20,7 @@ export const Login = () => {
 const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-        setError("Introduce email y contraseña.");
+        setError(ui.loginRequired);
         return;
     }
     setLoading(true);
@@ -29,7 +31,7 @@ const handleSubmit = async (e) => {
         setTimeout(() => {
             if (email === "error@clientflow.com") {
                 setLoading(false);
-                setError("Credenciales inválidas (Simulado)");
+                setError(ui.loginInvalid);
                 return;
             }
             localStorage.setItem("access_token", "mock-access-token-xyz");
@@ -45,7 +47,7 @@ const handleSubmit = async (e) => {
             navigate("/dashboard");
         } catch (err) {
             setLoading(false);
-            setError(err.message || "Error al iniciar sesión");
+            setError(err.message || ui.loginError);
         }
     }
 };
@@ -57,10 +59,10 @@ const handleSubmit = async (e) => {
                     🔐
                 </div>
 
-                <h2 className="fw-bold text-body fs-3 mb-1">Iniciar Sesión</h2>
-                <p className="text-muted small mb-4">Ingresa a tu cuenta para continuar</p>
+                <h2 className="fw-bold text-body fs-3 mb-1">{ui.loginTitle}</h2>
+                <p className="text-muted small mb-4">{ui.loginSubtitle}</p>
 
-                {location.state?.passwordReset && <div className="alert alert-success" role="status">Contraseña actualizada. Ya puedes iniciar sesión.</div>}
+                {location.state?.passwordReset && <div className="alert alert-success" role="status">{ui.loginResetDone}</div>}
                 {error && (
                     <div className="alert alert-danger py-2 small mb-3">
                         {error}
@@ -69,21 +71,21 @@ const handleSubmit = async (e) => {
 
                 <form onSubmit={handleSubmit} className="vstack gap-3">
                     <div>
-                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Email</label>
+                        <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.email}</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="tu@empresa.com"
+                            placeholder={ui.emailPlaceholder}
                             className="form-control bg-body text-body shadow-none py-2"
                         />
                     </div>
 
                     <div>
                         <div className="d-flex justify-content-between align-items-center">
-                            <label className="form-label text-uppercase fw-bold text-secondary mb-0" style={{ fontSize: "0.7rem" }}>Contraseña</label>
+                            <label className="form-label text-uppercase fw-bold text-secondary mb-0" style={{ fontSize: "0.7rem" }}>{ui.password}</label>
                             <Link to="/forgot-password" style={{ fontSize: "0.75rem", color: "#9333ea" }} className="text-decoration-none fw-semibold">
-                                ¿Olvidaste tu contraseña?
+                                {ui.forgotPassword}
                             </Link>
                         </div>
                         <input
@@ -101,12 +103,12 @@ const handleSubmit = async (e) => {
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-2"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {loading ? "..." : "Entrar"}
+                        {loading ? ui.loading : ui.signIn}
                     </button>
                 </form>
 
                 <p className="text-center text-muted small mt-4 mb-0">
-                    ¿Aún no tienes cuenta? <Link to="/select-plan" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>Regístrate</Link>
+                    {ui.noAccount} <Link to="/select-plan" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>{ui.registerLink}</Link>
                 </p>
             </div>
         </AuthLayout>

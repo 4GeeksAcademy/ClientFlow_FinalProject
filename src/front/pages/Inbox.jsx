@@ -2,28 +2,31 @@ import { useEffect, useRef, useState } from "react";
 import { inboxService } from "../services/inboxService";
 import "./Inbox.css";
 import { AIReplyPanel } from "../components/AIReplyPanel";
+import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
 
 const labels = {
     web: "Web", email: "Correo electrónico", whatsapp: "WhatsApp", instagram: "Instagram",
     open: "Abierta", waiting: "En espera", resolved: "Resuelta", human: "Humano", ai: "IA",
     stored: "Guardado", received: "Recibido", sent: "Enviado", delivered: "Entregado", failed: "Fallido",
 };
-const displayLabel = (value) => labels[value] || value;
-const displayError = (error) => ({
-    "Take human control before sending a message.": "Asume el control antes de enviar un mensaje.",
-    "Conversation not found.": "No se encontró la conversación.",
-    "Your subscription is inactive or expired.": "Tu suscripción está inactiva o ha caducado.",
-    "Client not found.": "No se encontró el cliente.",
-    "Initial message must not be empty.": "El mensaje inicial no puede estar vacío.",
-    "Failed to fetch": "No se pudo conectar con el servidor.",
-}[error.message] || "No se pudo completar la operación. Inténtalo de nuevo.");
-const clientLabel = (client) => (
+const clientLabel = (client, locale) => (
     [client.first_name, client.last_name].filter(Boolean).join(" ")
     || client.email
-    || `Cliente #${client.id}`
+    || `${translateLiteral("Cliente", locale)} #${client.id}`
 );
 
 export const Inbox = () => {
+    const { locale, ui } = useLanguage();
+    const displayLabel = (value) => translateLiteral(labels[value] || value, locale);
+    const displayError = (error) => translateLiteral({
+        "Take human control before sending a message.": "Asume el control antes de enviar un mensaje.",
+        "Conversation not found.": "No se encontró la conversación.",
+        "Your subscription is inactive or expired.": "Tu suscripción está inactiva o ha caducado.",
+        "Client not found.": "No se encontró el cliente.",
+        "Initial message must not be empty.": "El mensaje inicial no puede estar vacío.",
+        "Failed to fetch": "No se pudo conectar con el servidor.",
+    }[error.message] || "No se pudo completar la operación. Inténtalo de nuevo.", locale);
     const [draft, setDraft] = useState("");
     const [sending, setSending] = useState(false);
     const [actionError, setActionError] = useState("");
@@ -382,7 +385,7 @@ export const Inbox = () => {
                     </div>
                     <nav className="inbox-pagination" aria-label="Páginas de conversaciones">
                         <button type="button" aria-label="Conversaciones anteriores" disabled={loadingConversations || conversationPage === 1} onClick={() => { selectConversation(null); setConversationPage((page) => page - 1); }}>‹</button>
-                        <span>Página {conversationPage}</span>
+                        <span>{ui.page} {conversationPage}</span>
                         <button type="button" aria-label="Conversaciones siguientes" disabled={loadingConversations || Boolean(conversationsError) || conversationPage * conversationPerPage >= conversationTotal} onClick={() => { selectConversation(null); setConversationPage((page) => page + 1); }}>›</button>
                     </nav>
                 </aside>
@@ -395,12 +398,12 @@ export const Inbox = () => {
                         {!selected ? <div className="inbox-empty-chat"><span className="inbox-empty-icon">✉</span><h2>Un espacio para cada conversación</h2><p>Selecciona una conversación a la izquierda para ver su historial.</p></div> : !currentHistory ? <p role="status" className="inbox-note">Cargando mensajes…</p> : currentHistory.error ? <p role="alert" className="inbox-error">{currentHistory.error}</p> : currentHistory.messages.length === 0 ? <p className="inbox-note">Todavía no hay mensajes.</p> : currentHistory.messages.map((message) => (
                             <article key={message.id} className={`inbox-message ${message.direction === "outbound" ? "is-outbound" : ""}`}>
                                 <p>{message.content}</p>
-                                <small>{message.created_at ? new Date(message.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : ""}{message.sent_by_ai ? " · IA" : ""}{message.direction === "outbound" ? ` · ${displayLabel(message.delivery_status || "stored")}` : ""}</small>
+                                <small>{message.created_at ? new Date(message.created_at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : ""}{message.sent_by_ai ? " · IA" : ""}{message.direction === "outbound" ? ` · ${displayLabel(message.delivery_status || "stored")}` : ""}</small>
                             </article>
                         ))}
                     </div>
                     {selected && currentHistory && !currentHistory.error && currentHistory.total > currentHistory.perPage && <nav className="inbox-pagination" aria-label="Páginas de mensajes">
-                        <button type="button" disabled={messagePage === 1} onClick={() => setMessagePage((page) => page - 1)}>Anterior</button><span>Página {messagePage}</span><button type="button" disabled={messagePage * currentHistory.perPage >= currentHistory.total} onClick={() => setMessagePage((page) => page + 1)}>Siguiente</button>
+                        <button type="button" disabled={messagePage === 1} onClick={() => setMessagePage((page) => page - 1)}>{ui.previous}</button><span>{ui.page} {messagePage}</span><button type="button" disabled={messagePage * currentHistory.perPage >= currentHistory.total} onClick={() => setMessagePage((page) => page + 1)}>{ui.next}</button>
                     </nav>}
                     {actionError && <p role="alert" className="inbox-error">{actionError}</p>}
                     {selected?.control_mode === "ai" && <div className="inbox-control"><span>La IA está atendiendo esta conversación.</span><button type="button" disabled={sending} onClick={takeControl}>Asumir el control</button></div>}
@@ -415,7 +418,7 @@ export const Inbox = () => {
                     <span className="inbox-avatar inbox-avatar-large">{selected ? (selected.subject || "C").slice(0, 1).toUpperCase() : "—"}</span>
                     <h2>{selected?.subject || "Detalles de la conversación"}</h2>
                     <p>{selected ? displayLabel(selected.status) : "Selecciona una conversación para ver sus detalles."}</p>
-                    {selected && <dl><dt>Cliente</dt><dd><select aria-label="Cliente vinculado" className="inbox-client-select" value={selected.client_id ?? ""} disabled={clientsLoading || assigningClient} onChange={assignClient}><option value="">Sin cliente</option>{clients.map((client) => <option key={client.id} value={client.id}>{clientLabel(client)}</option>)}</select></dd><dt>Canal</dt><dd>{displayLabel(selected.channel)}</dd><dt>Control</dt><dd>{displayLabel(selected.control_mode)}</dd><dt>Responsable</dt><dd>{selected.assigned_membership_id ?? "Sin asignar"}</dd><dt>Último mensaje</dt><dd>{selected.last_message_at ? new Date(selected.last_message_at).toLocaleString("es-ES") : "Todavía no hay mensajes"}</dd></dl>}
+                    {selected && <dl><dt>Cliente</dt><dd><select aria-label="Cliente vinculado" className="inbox-client-select" value={selected.client_id ?? ""} disabled={clientsLoading || assigningClient} onChange={assignClient}><option value="">Sin cliente</option>{clients.map((client) => <option key={client.id} value={client.id}>{clientLabel(client, locale)}</option>)}</select></dd><dt>Canal</dt><dd>{displayLabel(selected.channel)}</dd><dt>Control</dt><dd>{displayLabel(selected.control_mode)}</dd><dt>Responsable</dt><dd>{selected.assigned_membership_id ?? "Sin asignar"}</dd><dt>Último mensaje</dt><dd>{selected.last_message_at ? new Date(selected.last_message_at).toLocaleString(locale) : "Todavía no hay mensajes"}</dd></dl>}
                 </aside>
             </div>
             {createOpen && <div className="inbox-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}>
@@ -429,7 +432,7 @@ export const Inbox = () => {
                         <input id="conversation-subject" autoFocus required maxLength={255} placeholder="Ej. Presupuesto para armario" value={newConversation.subject} onChange={(event) => setNewConversation((value) => ({ ...value, subject: event.target.value }))} />
                         <div className="inbox-form-row">
                             <div><label htmlFor="conversation-channel">Canal</label><select id="conversation-channel" value={newConversation.channel} onChange={(event) => setNewConversation((value) => ({ ...value, channel: event.target.value }))}><option value="web">Web</option><option value="email">Correo electrónico</option><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option></select></div>
-                            <div><label htmlFor="conversation-client">Cliente</label><select id="conversation-client" value={newConversation.clientId} disabled={clientsLoading} onChange={(event) => setNewConversation((value) => ({ ...value, clientId: event.target.value }))}><option value="">Sin cliente</option>{clients.map((client) => <option key={client.id} value={client.id}>{clientLabel(client)}</option>)}</select></div>
+                            <div><label htmlFor="conversation-client">Cliente</label><select id="conversation-client" value={newConversation.clientId} disabled={clientsLoading} onChange={(event) => setNewConversation((value) => ({ ...value, clientId: event.target.value }))}><option value="">Sin cliente</option>{clients.map((client) => <option key={client.id} value={client.id}>{clientLabel(client, locale)}</option>)}</select></div>
                         </div>
                         <label htmlFor="conversation-message">Primer mensaje <span>(opcional)</span></label>
                         <textarea id="conversation-message" rows="4" maxLength={10000} placeholder="Escribe el primer mensaje para el cliente…" value={newConversation.initialMessage} onChange={(event) => setNewConversation((value) => ({ ...value, initialMessage: event.target.value }))} />

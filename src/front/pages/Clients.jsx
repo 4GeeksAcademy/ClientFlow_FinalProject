@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { clientService } from "../services/clientService";
+import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
 
 const EMPTY_ADDRESS = {
     label: "Principal",
@@ -13,6 +15,7 @@ const EMPTY_ADDRESS = {
 const nullable = (value) => value.trim() || null;
 
 export const Clients = () => {
+    const { locale, ui } = useLanguage();
     const [clients, setClients] = useState([]);
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(0);
@@ -51,14 +54,14 @@ export const Clients = () => {
                 });
 
                 if (!response.ok) {
-                    throw new Error("Unable to load your account.");
+                    throw new Error(ui.accountLoadError);
                 }
 
                 const account = await response.json();
                 const current = account.companies?.[0];
 
                 if (!current) {
-                    throw new Error("No se encontró una empresa activa.");
+                    throw new Error(ui.noCompany);
                 }
 
                 const requestOptions = {
@@ -99,7 +102,7 @@ export const Clients = () => {
 
         loadClients();
         return () => controller.abort();
-    }, [page, searchTerm, statusFilter, reload]);
+    }, [page, searchTerm, statusFilter, reload, ui.accountLoadError, ui.noCompany]);
 
     const closeForm = () => {
         setCreating(false);
@@ -241,9 +244,11 @@ export const Clients = () => {
     };
 
     const toggleClientStatus = async (client) => {
-        const action = client.is_active ? "desactivar" : "activar";
+        const action = client.is_active
+            ? translateLiteral("deactivate", locale)
+            : translateLiteral("activate", locale);
 
-        if (!window.confirm(`¿Quieres ${action} este cliente?`)) {
+        if (!window.confirm(translateLiteral("Do you want to {action} this client?", locale).replace("{action}", action))) {
             return;
         }
 
@@ -268,7 +273,7 @@ export const Clients = () => {
                 color: "#ffffff",
             }}
         >
-            {isActive ? "Activo" : "Inactivo"}
+            {isActive ? ui.active : ui.inactive}
         </span>
     );
 
@@ -364,10 +369,10 @@ export const Clients = () => {
                         disabled={page <= 1}
                         onClick={() => setPage((value) => value - 1)}
                     >
-                        Anterior
+                        {ui.previous}
                     </button>
                     <span className="small text-secondary">
-                        Página {page} de {Math.max(1, pages)}
+                        {ui.page} {page} {ui.of} {Math.max(1, pages)}
                     </span>
                     <button
                         type="button"
@@ -375,7 +380,7 @@ export const Clients = () => {
                         disabled={page >= pages}
                         onClick={() => setPage((value) => value + 1)}
                     >
-                        Siguiente
+                        {ui.next}
                     </button>
                 </nav>
             )}
@@ -413,7 +418,7 @@ export const Clients = () => {
                                                         {fullName}
                                                     </h5>
                                                     <span className="text-secondary small">
-                                                        Cliente #{client.id}
+                                                        {translateLiteral("Cliente", locale)} #{client.id}
                                                     </span>
                                                 </div>
                                             </div>
