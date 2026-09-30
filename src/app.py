@@ -23,6 +23,7 @@ from api.knowledge import knowledge
 from api.members import members
 from api.models import db
 from api.routes import api
+from api.settings import settings
 from api.utils import APIException, generate_sitemap
 
 # from models import Person
@@ -60,6 +61,7 @@ app.register_blueprint(inbox, url_prefix="/api")
 app.register_blueprint(ai, url_prefix="/api")
 app.register_blueprint(members, url_prefix="/api")
 app.register_blueprint(knowledge, url_prefix="/api")
+app.register_blueprint(settings, url_prefix="/api")
 init_auth(app)
 CORS(
     app,
