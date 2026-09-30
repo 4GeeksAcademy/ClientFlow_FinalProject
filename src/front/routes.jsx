@@ -18,6 +18,7 @@ import { Members } from "./pages/Members";
 import { PlanSelection } from "./pages/PlanSelection";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
+import { Settings } from "./pages/Settings";
 import { WebChatPage } from "./pages/WebChatPage";
 
 const ProtectedRoute = ({ children }) => {
@@ -210,6 +211,14 @@ export const router = createBrowserRouter(
                 element={
                     <ProtectedRoute>
                         <Members />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="settings"
+                element={
+                    <ProtectedRoute>
+                        <Settings />
                     </ProtectedRoute>
                 }
             />

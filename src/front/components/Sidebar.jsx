@@ -36,7 +36,11 @@ export const Sidebar = ({ isOpen, onClose }) => {
         };
 
         loadAccount();
-        return () => controller.abort();
+        window.addEventListener("clientflow:company-updated", loadAccount);
+        return () => {
+            controller.abort();
+            window.removeEventListener("clientflow:company-updated", loadAccount);
+        };
     }, []);
 
     const isActive = (path) => location.pathname === path;
@@ -190,6 +194,11 @@ export const Sidebar = ({ isOpen, onClose }) => {
                         <li>
                             <Link to="/team" onClick={handleLinkClick} className={getLinkClass("/team")}>
                                 <i className="fa-solid fa-user-shield" style={{ width: "16px" }}></i> {t("nav.team")}
+                            </Link>
+                        </li>
+                        <li>
+                            <Link to="/settings" onClick={handleLinkClick} className={getLinkClass("/settings")}>
+                                <i className="fa-solid fa-gear" style={{ width: "16px" }}></i> {t("nav.settings")}
                             </Link>
                         </li>
                         {/*<li>
