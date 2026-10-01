@@ -90,6 +90,12 @@ export const interfaceMessages = {
     mockPayment: message("Simulate immediate subscription", "Simular suscripción inmediata", "Simular assinatura imediata"),
     noRealCharge: message("Simulate payment — no real charge", "Simular pago — sin cargo real", "Simular pagamento — sem cobrança real"),
     continueRegistration: message("Continue to registration", "Continuar al registro", "Continuar para o cadastro"),
+    trialExpiredNotice: message("Your free trial has ended. Choose a plan to continue using your existing company and data.", "Tu prueba gratuita ha terminado. Elige un plan para seguir usando tu empresa y tus datos actuales.", "Seu período de teste terminou. Escolha um plano para continuar usando sua empresa e seus dados atuais."),
+    trialUnavailable: message("A second free trial is not available for this company.", "Esta empresa no puede solicitar otra prueba gratuita.", "Esta empresa não pode solicitar outro período de teste gratuito."),
+    activatePlan: message("Activate plan", "Activar plan", "Ativar plano"),
+    activatingPlan: message("Activating plan...", "Activando plan...", "Ativando plano..."),
+    planActivationError: message("Unable to activate the plan.", "No se pudo activar el plan.", "Não foi possível ativar o plano."),
+    planAdminRequired: message("Ask a company owner or administrator to activate a plan.", "Solicita al propietario o a un administrador de la empresa que active un plan.", "Peça ao proprietário ou a um administrador da empresa para ativar um plano."),
     continue: message("Continue", "Continuar", "Continuar"),
 
     invitationTitle: message("Join your team", "Únete a tu equipo", "Entre para sua equipe"),
