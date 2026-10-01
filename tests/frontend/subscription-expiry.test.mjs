@@ -43,9 +43,23 @@ test("expired protected routes redirect to plan selection", () => {
         new URL("../../src/front/pages/PlanSelection.jsx", import.meta.url),
         "utf8"
     );
+    const payment = readFileSync(
+        new URL("../../src/front/pages/Payment.jsx", import.meta.url),
+        "utf8"
+    );
+    const messages = readFileSync(
+        new URL("../../src/front/i18n/messages.mjs", import.meta.url),
+        "utf8"
+    );
 
     assert.match(routes, /data\.code === "subscription_required"/);
     assert.match(routes, /select-plan\?reason=expired/);
+    assert.match(routes, /path="payment"/);
     assert.match(plans, /!renewalMode && <fieldset>/);
-    assert.match(plans, /subscriptionService\.activate/);
+    assert.match(plans, /navigate\(`\/payment\?plan_id=/);
+    assert.doesNotMatch(plans, /subscriptionService\.activate/);
+    assert.match(payment, /subscriptionService\.activate/);
+    assert.match(payment, /navigate\("\/dashboard"/);
+    assert.match(payment, /ui\.simulatedPaymentNotice/);
+    assert.match(messages, /card data will not be sent or stored/);
 });

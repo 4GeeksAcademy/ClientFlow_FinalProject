@@ -15,6 +15,7 @@ import { Layout } from "./pages/Layout";
 import { Leads } from "./pages/Leads";
 import { Login } from "./pages/Login";
 import { Members } from "./pages/Members";
+import { Payment } from "./pages/Payment";
 import { PlanSelection } from "./pages/PlanSelection";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
@@ -148,6 +149,7 @@ export const router = createBrowserRouter(
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="select-plan" element={<PlanSelection />} />
+            <Route path="payment" element={<Payment />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
 
