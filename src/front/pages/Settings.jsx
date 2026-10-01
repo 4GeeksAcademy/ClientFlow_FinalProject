@@ -2,80 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { useLanguage } from "../context/LanguageContext";
+import { settingsMessages } from "../i18n/settings.mjs";
 import { settingsService } from "../services/settingsService";
 import "./Settings.css";
-
-const copy = {
-    en: {
-        title: "Settings", subtitle: "Manage your company, workspace and connected services.",
-        company: "Company", appearance: "Appearance", users: "Users and permissions",
-        integrations: "Integrations", ai: "AI and knowledge", security: "Security",
-        companyIntro: "The information shown to your team and customers.", name: "Company name",
-        email: "Company email", phone: "Phone", timezone: "Timezone", colour: "Brand colour",
-        saveCompany: "Save company", appearanceIntro: "Choose the default experience for this workspace.",
-        theme: "Theme", system: "Use system", light: "Light", dark: "Dark", language: "Language",
-        density: "Interface density", comfortable: "Comfortable", compact: "Compact",
-        savePreferences: "Save preferences", usersIntro: "Manage who can access this company and what they can do.",
-        activeMembers: "active members", openTeam: "Manage team", integrationsIntro: "Configure channels without exposing private credentials in the browser.",
-        enabled: "Enabled", saveIntegration: "Save integration", emailChannel: "Email",
-        webChat: "Web chat", whatsapp: "WhatsApp", connected: "Configured", disconnected: "Disconnected",
-        smtpHost: "SMTP host", smtpPort: "SMTP port", encryption: "Encryption", sender: "Sender address",
-        displayName: "Display name", welcome: "Welcome message", accent: "Accent colour", whatsappNumber: "International number",
-        aiIntro: "Keep agents connected only to approved company knowledge.", activeAgents: "Active agents",
-        documents: "Documents", ready: "ready", manageAgents: "Manage agents", manageKnowledge: "Manage knowledge",
-        serviceReady: "AI service configured", serviceMissing: "AI service needs server configuration",
-        securityIntro: "Review account activity and close sessions you no longer use.", activeSessions: "Active sessions",
-        lastLogin: "Last login", never: "Not available", resetPassword: "Change password", closeSessions: "Close other sessions",
-        readOnly: "Your role can view these settings. An administrator must save workspace changes.",
-        loading: "Loading settings...", retry: "Try again", saved: "Changes saved.",
-    },
-    es: {
-        title: "Configuración", subtitle: "Gestiona tu empresa, el espacio de trabajo y los servicios conectados.",
-        company: "Empresa", appearance: "Apariencia", users: "Usuarios y permisos",
-        integrations: "Integraciones", ai: "IA y conocimiento", security: "Seguridad",
-        companyIntro: "La información que verá tu equipo y tus clientes.", name: "Nombre de la empresa",
-        email: "Email de la empresa", phone: "Teléfono", timezone: "Zona horaria", colour: "Color de marca",
-        saveCompany: "Guardar empresa", appearanceIntro: "Elige la experiencia predeterminada del espacio de trabajo.",
-        theme: "Tema", system: "Usar el sistema", light: "Claro", dark: "Oscuro", language: "Idioma",
-        density: "Densidad de la interfaz", comfortable: "Cómoda", compact: "Compacta",
-        savePreferences: "Guardar preferencias", usersIntro: "Gestiona quién accede a la empresa y qué puede hacer.",
-        activeMembers: "miembros activos", openTeam: "Gestionar equipo", integrationsIntro: "Configura canales sin exponer credenciales privadas en el navegador.",
-        enabled: "Activada", saveIntegration: "Guardar integración", emailChannel: "Email",
-        webChat: "Chat web", whatsapp: "WhatsApp", connected: "Configurada", disconnected: "Desconectada",
-        smtpHost: "Servidor SMTP", smtpPort: "Puerto SMTP", encryption: "Cifrado", sender: "Dirección remitente",
-        displayName: "Nombre visible", welcome: "Mensaje de bienvenida", accent: "Color de acento", whatsappNumber: "Número internacional",
-        aiIntro: "Mantén los agentes conectados solamente al conocimiento autorizado de la empresa.", activeAgents: "Agentes activos",
-        documents: "Documentos", ready: "listos", manageAgents: "Gestionar agentes", manageKnowledge: "Gestionar conocimiento",
-        serviceReady: "Servicio de IA configurado", serviceMissing: "El servicio de IA necesita configuración en el servidor",
-        securityIntro: "Revisa la actividad de la cuenta y cierra sesiones que ya no utilizas.", activeSessions: "Sesiones activas",
-        lastLogin: "Último acceso", never: "No disponible", resetPassword: "Cambiar contraseña", closeSessions: "Cerrar otras sesiones",
-        readOnly: "Tu rol puede consultar estos ajustes. Un administrador debe guardar los cambios del espacio.",
-        loading: "Cargando configuración...", retry: "Reintentar", saved: "Cambios guardados.",
-    },
-    pt: {
-        title: "Configurações", subtitle: "Gerencie sua empresa, o espaço de trabalho e os serviços conectados.",
-        company: "Empresa", appearance: "Aparência", users: "Usuários e permissões",
-        integrations: "Integrações", ai: "IA e conhecimento", security: "Segurança",
-        companyIntro: "As informações exibidas para sua equipe e seus clientes.", name: "Nome da empresa",
-        email: "Email da empresa", phone: "Telefone", timezone: "Fuso horário", colour: "Cor da marca",
-        saveCompany: "Salvar empresa", appearanceIntro: "Escolha a experiência padrão deste espaço de trabalho.",
-        theme: "Tema", system: "Usar o sistema", light: "Claro", dark: "Escuro", language: "Idioma",
-        density: "Densidade da interface", comfortable: "Confortável", compact: "Compacta",
-        savePreferences: "Salvar preferências", usersIntro: "Gerencie quem acessa esta empresa e o que pode fazer.",
-        activeMembers: "membros ativos", openTeam: "Gerenciar equipe", integrationsIntro: "Configure canais sem expor credenciais privadas no navegador.",
-        enabled: "Ativada", saveIntegration: "Salvar integração", emailChannel: "Email",
-        webChat: "Chat web", whatsapp: "WhatsApp", connected: "Configurada", disconnected: "Desconectada",
-        smtpHost: "Servidor SMTP", smtpPort: "Porta SMTP", encryption: "Criptografia", sender: "Endereço remetente",
-        displayName: "Nome visível", welcome: "Mensagem de boas-vindas", accent: "Cor de destaque", whatsappNumber: "Número internacional",
-        aiIntro: "Mantenha os agentes conectados apenas ao conhecimento autorizado da empresa.", activeAgents: "Agentes ativos",
-        documents: "Documentos", ready: "prontos", manageAgents: "Gerenciar agentes", manageKnowledge: "Gerenciar conhecimento",
-        serviceReady: "Serviço de IA configurado", serviceMissing: "O serviço de IA precisa de configuração no servidor",
-        securityIntro: "Revise a atividade da conta e encerre sessões que não usa mais.", activeSessions: "Sessões ativas",
-        lastLogin: "Último acesso", never: "Não disponível", resetPassword: "Alterar senha", closeSessions: "Encerrar outras sessões",
-        readOnly: "Sua função pode consultar estas configurações. Um administrador deve salvar alterações do espaço.",
-        loading: "Carregando configurações...", retry: "Tentar novamente", saved: "Alterações salvas.",
-    },
-};
 
 const integrationDefaults = {
     email: { smtp_host: "", smtp_port: 587, security: "starttls", from_address: "" },
@@ -87,7 +16,7 @@ export const Settings = () => {
     const token = localStorage.getItem("access_token");
     const { theme, setTheme, density, setDensity } = useApp();
     const { locale, setLocale } = useLanguage();
-    const text = copy[locale] || copy.en;
+    const text = settingsMessages[locale] || settingsMessages.en;
     const [tab, setTab] = useState("company");
     const [data, setData] = useState(null);
     const [company, setCompany] = useState({});

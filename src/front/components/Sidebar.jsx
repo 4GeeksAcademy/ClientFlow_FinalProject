@@ -5,7 +5,7 @@ import { useLanguage } from "../context/LanguageContext";
 export const Sidebar = ({ isOpen, onClose }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { t } = useLanguage();
+    const { t, ui } = useLanguage();
     const [account, setAccount] = useState({ user: null, company: null });
 
     useEffect(() => {
@@ -126,7 +126,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
                     <button
                         className="btn btn-link text-white-50 d-md-none text-decoration-none p-1"
                         onClick={onClose}
-                        aria-label="Cerrar menú"
+                        aria-label={ui.closeMenu}
                     >
                         <i className="fa-solid fa-xmark fs-5"></i>
                     </button>

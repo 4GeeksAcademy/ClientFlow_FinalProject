@@ -3,8 +3,10 @@ import { Outlet, useLocation } from "react-router-dom";
 import ScrollToTop from "../components/ScrollToTop";
 import { Sidebar } from "../components/Sidebar";
 import { WorkspacePreferences } from "../components/WorkspacePreferences";
+import { useLanguage } from "../context/LanguageContext";
 
 export const Layout = () => {
+    const { ui } = useLanguage();
     const location = useLocation();
 
     // Estado para saber si el sidebar móvil está abierto o cerrado
@@ -45,7 +47,7 @@ export const Layout = () => {
                             <button
                                 className="btn btn-dark text-white border-0 p-1 me-2"
                                 onClick={() => setSidebarOpen(true)}
-                                aria-label="Abrir menú"
+                                aria-label={ui.openMenu}
                             >
                                 <i className="fa-solid fa-bars fa-lg"></i>
                             </button>

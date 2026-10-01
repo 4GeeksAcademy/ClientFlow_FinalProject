@@ -1,9 +1,10 @@
 import {useEffect, useState} from 'react';
-import {aiMessages} from '../i18n/ai';
 import {aiRequest} from '../services/aiService';
 import {inboxService} from '../services/inboxService';
+import {useLanguage} from '../context/LanguageContext';
 
 export function AIReplyPanel({conversationId, token, companyId, onChanged, latestInbound}) {
+    const {ui} = useLanguage();
     const [agents, setAgents] = useState([]);
     const [agentId, setAgentId] = useState('');
     const [question, setQuestion] = useState('');
@@ -28,28 +29,29 @@ export function AIReplyPanel({conversationId, token, companyId, onChanged, lates
         catch(e) {setError(e.message);}
         finally {setBusy(false);}
     }
-    return <section className="p-3 border-top" aria-label="Asistente IA">
-        <strong>Asistente IA · revisión humana obligatoria</strong>
+    const statuses={pending_review:ui.pendingReview,approved:ui.approvedDraft,rejected:ui.rejectedDraft,handoff:ui.humanAttention};
+    return <section className="p-3 border-top" aria-label={ui.aiAssistant}>
+        <strong>{ui.humanReview}</strong>
         {error && <p role="alert" className="text-danger">{error}</p>}
         <div className="d-flex gap-2 my-2">
-            <select aria-label="Agente" className="form-select" value={agentId} onChange={e=>setAgentId(e.target.value)} disabled={busy}>
-                <option value="">Seleccionar agente</option>{agents.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+            <select aria-label={ui.agent} className="form-select" value={agentId} onChange={e=>setAgentId(e.target.value)} disabled={busy}>
+                <option value="">{ui.selectAgent}</option>{agents.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
-            <button className="btn btn-outline-primary" disabled={busy || !agentId} onClick={()=>run(()=>inboxService.updateControl(conversationId,'ai',Number(agentId),options))}>Asignar</button>
+            <button className="btn btn-outline-primary" disabled={busy || !agentId} onClick={()=>run(()=>inboxService.updateControl(conversationId,'ai',Number(agentId),options))}>{ui.assign}</button>
         </div>
-        {!agents.length && <p>Configura un agente en Agentes IA y vincula documentos procesados.</p>}
+        {!agents.length && <p>{ui.configureAgentHint}</p>}
         {latestInbound && <button type="button" className="btn btn-link px-0" disabled={busy}
-            onClick={() => setQuestion(latestInbound.content)}>{aiMessages.es.latestMessage}</button>}
-        <textarea className="form-control" aria-label="Pregunta para el agente" placeholder="Pregunta del cliente que quieres responder" maxLength={4000} value={question} onChange={e=>setQuestion(e.target.value)} disabled={busy}/>
-        <button className="btn btn-primary my-2" disabled={busy || !question.trim()} onClick={()=>run(()=>aiRequest(`/conversations/${conversationId}/ai-drafts`,options,{question}))}>{busy?'Procesando…':'Generar borrador'}</button>
+            onClick={() => setQuestion(latestInbound.content)}>{ui.useLatestMessage}</button>}
+        <textarea className="form-control" aria-label={ui.customerQuestion} placeholder={ui.customerQuestion} maxLength={4000} value={question} onChange={e=>setQuestion(e.target.value)} disabled={busy}/>
+        <button className="btn btn-primary my-2" disabled={busy || !question.trim()} onClick={()=>run(()=>aiRequest(`/conversations/${conversationId}/ai-drafts`,options,{question}))}>{busy?ui.processing:ui.generateDraft}</button>
         {drafts.map(d=><article className="border rounded p-2 my-2" key={d.id}>
-            <strong>{{pending_review:'Pendiente de revisión',approved:'Aprobado · guardado en la conversación',rejected:'Rechazado',handoff:'Requiere atención humana'}[d.status]}</strong>
+            <strong>{statuses[d.status]}</strong>
             {d.reply && <p style={{whiteSpace:'pre-wrap'}}>{d.reply}</p>}
-            {d.status==='handoff' && <p>{aiMessages.es.reasons[d.reason] || aiMessages.es.fallback}</p>}
-            {d.sources.map(s=><details key={s.chunk_id}><summary>Documento {s.document_id} · fragmento {s.chunk_index+1}</summary><p>{s.content}</p></details>)}
+            {d.status==='handoff' && <p>{ui.aiHandoffFallback}</p>}
+            {d.sources.map(s=><details key={s.chunk_id}><summary>{ui.document} {s.document_id} · {ui.chunk.toLowerCase()} {s.chunk_index+1}</summary><p>{s.content}</p></details>)}
             {d.status==='pending_review' && <div className="d-flex gap-2 mt-2">
-                <button className="btn btn-success" disabled={busy} onClick={()=>run(()=>aiRequest(`/ai/drafts/${d.id}/decision`,options,{action:'approve'}))}>Aprobar respuesta</button>
-                <button className="btn btn-outline-danger" disabled={busy} onClick={()=>run(()=>aiRequest(`/ai/drafts/${d.id}/decision`,options,{action:'reject'}))}>Rechazar y atender</button>
+                <button className="btn btn-success" disabled={busy} onClick={()=>run(()=>aiRequest(`/ai/drafts/${d.id}/decision`,options,{action:'approve'}))}>{ui.approveResponse}</button>
+                <button className="btn btn-outline-danger" disabled={busy} onClick={()=>run(()=>aiRequest(`/ai/drafts/${d.id}/decision`,options,{action:'reject'}))}>{ui.rejectAndHandle}</button>
             </div>}
         </article>)}
     </section>;

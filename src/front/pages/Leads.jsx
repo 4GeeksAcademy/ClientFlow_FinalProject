@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { leadService } from "../services/leadService";
 import "../styles/leads.css";
+import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
 
 const STATUS_LABELS = {
     new: "Nuevo",
@@ -80,48 +82,48 @@ const buildNotes = (form) => [
         : "",
 ].filter(Boolean).join("\n");
 
-const mapLead = (lead) => {
+const mapLead = (lead, locale) => {
     const notes = parseNotes(lead.notes || "");
 
     return {
         ...lead,
         name: [lead.first_name, lead.last_name].filter(Boolean).join(" "),
-        origin: lead.source || "Sin origen",
+        origin: lead.source || translateLiteral("Sin origen", locale),
         service: notes.service || (
             lead.service_type_id
-                ? `Servicio #${lead.service_type_id}`
-                : "No especificado"
+                ? `${translateLiteral("Servicio", locale)} #${lead.service_type_id}`
+                : translateLiteral("No especificado", locale)
         ),
         serviceZone: notes.serviceZone,
-        priority: notes.priority || "Sin prioridad",
+        priority: notes.priority || translateLiteral("Sin prioridad", locale),
         description: notes.description,
         internalNotes: notes.internalNotes,
         assignedUser: lead.assigned_membership_id
-            ? `Miembro #${lead.assigned_membership_id}`
-            : "Sin asignar",
+            ? `${translateLiteral("Miembro", locale)} #${lead.assigned_membership_id}`
+            : translateLiteral("Sin asignar", locale),
         statusCode: lead.status,
-        status: STATUS_LABELS[lead.status] || lead.status,
+        status: translateLiteral(STATUS_LABELS[lead.status] || lead.status, locale),
     };
 };
 
-const formatDate = (value) => value
-    ? new Intl.DateTimeFormat("es-ES", {
+const formatDate = (value, locale) => value
+    ? new Intl.DateTimeFormat(locale, {
         dateStyle: "medium",
         timeStyle: "short",
     }).format(new Date(value))
-    : "Sin fecha";
+    : translateLiteral("Sin fecha", locale);
 
 const statusClass = (status) => {
     switch (status) {
-        case "Nuevo":
+        case "new":
             return "bg-info bg-opacity-10 text-info border border-info border-opacity-25";
-        case "Calificado":
+        case "qualified":
             return "bg-success bg-opacity-10 text-success border border-success border-opacity-25";
-        case "Contactado":
+        case "contacted":
             return "bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25";
-        case "Ganado":
+        case "won":
             return "bg-success text-white";
-        case "Perdido":
+        case "lost":
             return "bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25";
         default:
             return "bg-secondary bg-opacity-10 text-secondary";
@@ -129,6 +131,8 @@ const statusClass = (status) => {
 };
 
 export const Leads = () => {
+    const { locale, ui } = useLanguage();
+    const statusLabels = Object.fromEntries(Object.entries(STATUS_LABELS).map(([key, value]) => [key, translateLiteral(value, locale)]));
     const [leads, setLeads] = useState([]);
     const [options, setOptions] = useState(null);
     const [companyName, setCompanyName] = useState("");
@@ -211,7 +215,7 @@ export const Leads = () => {
 
                 if (controller.signal.aborted) return;
 
-                setLeads((data.items || []).map(mapLead));
+                setLeads((data.items || []).map((lead) => mapLead(lead, locale)));
                 setPages(data.pagination?.pages || 0);
                 setTotal(data.pagination?.total || 0);
             } catch (loadError) {
@@ -227,7 +231,7 @@ export const Leads = () => {
             window.clearTimeout(timer);
             controller.abort();
         };
-    }, [page, searchTerm, filterOrigin, filterStatus, reload]);
+    }, [page, searchTerm, filterOrigin, filterStatus, reload, locale]);
 
     const closeDetails = () => {
         detailRequest.current += 1;
@@ -261,7 +265,7 @@ export const Leads = () => {
 
             if (detailRequest.current !== requestId) return;
 
-            setSelectedLead(mapLead(freshLead));
+            setSelectedLead(mapLead(freshLead, locale));
             setActivities(leadActivities || []);
             setNextActions(leadActions || []);
         } catch (loadError) {
@@ -386,7 +390,7 @@ export const Leads = () => {
                 const updated = await leadService.update(options, selectedLead.id, {
                     status: "contacted",
                 });
-                setSelectedLead(mapLead(updated));
+                setSelectedLead(mapLead(updated, locale));
                 setReload((value) => value + 1);
             }
 
@@ -569,7 +573,7 @@ export const Leads = () => {
                                     }}
                                 >
                                     <option value="">Todos los estados</option>
-                                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                                    {Object.entries(statusLabels).map(([value, label]) => (
                                         <option value={value} key={value}>{label}</option>
                                     ))}
                                 </select>
@@ -628,7 +632,7 @@ export const Leads = () => {
                                         <td><span className="text-secondary small">{lead.origin}</span></td>
                                         <td><span className="text-secondary small">{lead.service}</span></td>
                                         <td>
-                                            <span className={`badge rounded-pill px-3 py-1 fw-normal ${statusClass(lead.status)}`}>
+                                            <span className={`badge rounded-pill px-3 py-1 fw-normal ${statusClass(lead.statusCode)}`}>
                                                 {lead.status}
                                             </span>
                                         </td>
@@ -657,7 +661,7 @@ export const Leads = () => {
                         </table>
                     </div>
                     <div className="card-footer bg-white py-3 px-4 text-muted small d-flex justify-content-between align-items-center">
-                        <span>{total} resultados</span>
+                        <span>{total} {ui.results}</span>
                         <div className="d-flex align-items-center gap-2">
                             <button
                                 type="button"
@@ -665,16 +669,16 @@ export const Leads = () => {
                                 disabled={page <= 1 || loading}
                                 onClick={() => setPage((value) => value - 1)}
                             >
-                                Anterior
+                                {ui.previous}
                             </button>
-                            <span>Página {page} de {Math.max(1, pages)}</span>
+                            <span>{ui.page} {page} {ui.of} {Math.max(1, pages)}</span>
                             <button
                                 type="button"
                                 className="btn btn-sm btn-outline-secondary"
                                 disabled={page >= pages || loading}
                                 onClick={() => setPage((value) => value + 1)}
                             >
-                                Siguiente
+                                {ui.next}
                             </button>
                         </div>
                     </div>
@@ -747,7 +751,7 @@ export const Leads = () => {
                                             <div className="col-md-4">
                                                 <label className="form-label small fw-semibold">Estado</label>
                                                 <select className="form-select" name="status" value={leadForm.status} onChange={updateLeadForm}>
-                                                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                                                    {Object.entries(statusLabels).map(([value, label]) => (
                                                         <option value={value} key={value}>{label}</option>
                                                     ))}
                                                 </select>
@@ -757,7 +761,7 @@ export const Leads = () => {
                                                 <select className="form-select" name="assignedMembershipId" value={leadForm.assignedMembershipId} onChange={updateLeadForm}>
                                                     <option value="">Sin asignar</option>
                                                     {leadForm.assignedMembershipId && Number(leadForm.assignedMembershipId) !== options?.membershipId && (
-                                                        <option value={leadForm.assignedMembershipId}>Miembro #{leadForm.assignedMembershipId}</option>
+                                                        <option value={leadForm.assignedMembershipId}>{translateLiteral("Miembro", locale)} #{leadForm.assignedMembershipId}</option>
                                                     )}
                                                     {options?.membershipId && (
                                                         <option value={options.membershipId}>Asignarme a mí</option>
@@ -888,7 +892,7 @@ export const Leads = () => {
                                                     <div className="d-flex justify-content-between gap-2">
                                                         <div>
                                                             <div className="fw-bold text-dark">{action.title}</div>
-                                                            <div className="text-muted">{formatDate(action.due_at)}</div>
+                                                            <div className="text-muted">{formatDate(action.due_at, locale)}</div>
                                                         </div>
                                                         <span className={`badge align-self-start ${action.status === "completed" ? "bg-success" : "bg-primary"}`}>
                                                             {action.status === "completed" ? "Completada" : "Pendiente"}
@@ -912,7 +916,7 @@ export const Leads = () => {
                                                 <div className="p-2 border-bottom small" key={activity.id}>
                                                     <div className="d-flex justify-content-between text-muted" style={{ fontSize: "0.75rem" }}>
                                                         <span>{activity.event_type.replaceAll("_", " ")}</span>
-                                                        <span>{formatDate(activity.created_at)}</span>
+                                                        <span>{formatDate(activity.created_at, locale)}</span>
                                                     </div>
                                                     <div className="text-dark mt-1">{activity.description}</div>
                                                 </div>

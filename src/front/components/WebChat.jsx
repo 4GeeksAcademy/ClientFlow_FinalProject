@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { webChatService } from "../services/webChatService";
+import { useLanguage } from "../context/LanguageContext";
 
 export function WebChat({ token }) {
     return <ChatSession key={token} token={token} />;
 }
 
 function ChatSession({ token }) {
+    const { ui } = useLanguage();
     const [messages, setMessages] = useState([]);
     const [content, setContent] = useState("");
     const [historyError, setHistoryError] = useState("");
@@ -134,28 +136,28 @@ function ChatSession({ token }) {
     }
 
     if (!token) {
-        return <p role="alert">A valid chat session is required.</p>;
+        return <p role="alert">{ui.chatSessionRequired}</p>;
     }
 
     return (
         <section className="card p-3">
-            <h2 className="h5">Customer support</h2>
+            <h2 className="h5">{ui.webChatTitle}</h2>
 
             {historyError && <p role="alert">{historyError}</p>}
 
             <div
                 role="log"
-                aria-label="Conversation messages"
+                aria-label={ui.conversationMessages}
                 aria-live="polite"
                 className="my-3"
                 style={{ maxHeight: "50vh", overflowY: "auto" }}
             >
-                {messages.length === 0 && <p>No messages yet.</p>}
+                {messages.length === 0 && <p>{ui.noMessages}</p>}
 
                 {messages.map((message) => (
                     <div key={message.id} className="border rounded p-2 mb-2">
                         <strong>
-                            {message.direction === "inbound" ? "You" : "Support"}
+                            {message.direction === "inbound" ? ui.you : ui.support}
                         </strong>
                         <p className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
                             {message.content}
@@ -166,7 +168,7 @@ function ChatSession({ token }) {
 
             <form onSubmit={handleSubmit}>
                 <label className="form-label" htmlFor="web-chat-message">
-                    Message
+                    {ui.messageLabel}
                 </label>
                 <textarea
                     id="web-chat-message"
@@ -187,7 +189,7 @@ function ChatSession({ token }) {
                     className="btn btn-primary mt-2"
                     disabled={sending || expired || !content.trim()}
                 >
-                    {sending ? "Sending..." : pendingMessage.current ? "Retry send" : "Send"}                </button>
+                    {sending ? ui.sending : pendingMessage.current ? ui.retrySend : ui.send}                </button>
             </form>
         </section>
     );

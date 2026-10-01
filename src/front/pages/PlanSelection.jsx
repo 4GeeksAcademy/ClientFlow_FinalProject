@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
+import { useLanguage } from "../context/LanguageContext";
 
 
 export const PlanSelection = () => {
+    const { ui } = useLanguage();
     const [plans, setPlans] = useState([]);
     const [selectedPlanId, setSelectedPlanId] = useState(null);
     const [registrationMode, setRegistrationMode] = useState("trial");
@@ -26,13 +28,13 @@ export const PlanSelection = () => {
                 );
 
                 if (!response.ok) {
-                    throw new Error("Unable to load plans.");
+                    throw new Error(ui.plansError);
                 }
 
                 const data = await response.json();
 
                 if (!Array.isArray(data)) {
-                    throw new Error("Invalid plans response.");
+                    throw new Error(ui.invalidPlans);
                 }
 
                 setPlans(data);
@@ -42,7 +44,7 @@ export const PlanSelection = () => {
 
                 setPlans([]);
                 setSelectedPlanId(null);
-                setPlansError("Unable to load plans. Please try again.");
+                setPlansError(ui.plansError);
             } finally {
                 if (!controller.signal.aborted) {
                     setPlansLoading(false);
@@ -53,7 +55,7 @@ export const PlanSelection = () => {
         fetchPlans();
 
         return () => controller.abort();
-    }, []);
+    }, [ui.invalidPlans, ui.plansError]);
 
     const handleSelectPlan = (e) => {
         e.preventDefault();
@@ -74,10 +76,10 @@ export const PlanSelection = () => {
                     ⭐
                 </div>
 
-                <h2 className="fw-bold text-body fs-3 mb-1">Elige tu plan</h2>
-                <p className="text-muted small mb-4">Selecciona la opción que mejor se adapte a tu negocio</p>
+                <h2 className="fw-bold text-body fs-3 mb-1">{ui.plansTitle}</h2>
+                <p className="text-muted small mb-4">{ui.plansSubtitle}</p>
                 {plansLoading && (
-                    <p role="status">Loading plans...</p>
+                    <p role="status">{ui.plansLoading}</p>
                 )}
 
                 {plansError && (
@@ -88,14 +90,14 @@ export const PlanSelection = () => {
                             className="btn btn-sm btn-outline-danger ms-3"
                             onClick={() => window.location.reload()}
                         >
-                            Try again
+                            {ui.retry}
                         </button>
                     </div>
                 )}
 
                 {!plansLoading && !plansError && plans.length === 0 && (
                     <div className="alert alert-info" role="status">
-                        No plans are currently available.
+                        {ui.noPlans}
                     </div>
                 )}
                 <form onSubmit={handleSelectPlan} className="vstack gap-3">
@@ -106,10 +108,10 @@ export const PlanSelection = () => {
 
                             const maxLeadsText =
                                 leadLimit === null
-                                    ? "Unlimited leads"
+                                    ? ui.unlimitedLeads
                                     : leadLimit === undefined
-                                        ? "Lead limit not specified"
-                                        : `Up to ${leadLimit} leads`;
+                                        ? ui.unspecifiedLeadLimit
+                                        : ui.upToLeads.replace("{count}", leadLimit);
                             return (
                                 <div
                                     key={plan.id}
@@ -128,12 +130,12 @@ export const PlanSelection = () => {
                                 >
                                     <div className="d-flex justify-content-between align-items-center">
                                         <span className="fw-bold text-body">{plan.name}</span>
-                                        <span className="fw-semibold" style={{ color: "#9333ea" }}>€{plan.price_eur}/month</span>                                   </div>
+                                        <span className="fw-semibold" style={{ color: "#9333ea" }}>€{plan.price_eur}{ui.perMonth}</span>                                   </div>
                                     <div className="d-flex justify-content-between align-items-center mt-1">
                                         <small className="text-muted">{plan.description}</small>
                                         <small className="text-secondary fw-medium">
                                             {plan.trial_days
-                                                ? `3-day trial · ${maxLeadsText}`
+                                                ? `${ui.trialDays.replace("{count}", plan.trial_days)} · ${maxLeadsText}`
                                                 : maxLeadsText}                                        </small>
                                     </div>
                                 </div>
@@ -141,7 +143,7 @@ export const PlanSelection = () => {
                         })}
                     </div>
                     <fieldset>
-                        <legend className="fs-6">Choose how to start</legend>
+                        <legend className="fs-6">{ui.chooseStart}</legend>
 
                         <label className="d-block">
                             <input
@@ -152,7 +154,7 @@ export const PlanSelection = () => {
                                 onChange={(e) => setRegistrationMode(e.target.value)}
                                 className="me-2"
                             />
-                            Start a 3-day free trial
+                            {ui.freeTrial}
                         </label>
 
                         <label className="d-block mt-2">
@@ -164,7 +166,7 @@ export const PlanSelection = () => {
                                 onChange={(e) => setRegistrationMode(e.target.value)}
                                 className="me-2"
                             />
-                            Simulate payment — no real charge
+                            {ui.noRealCharge}
                         </label>
                     </fieldset>
                     <button
@@ -177,7 +179,7 @@ export const PlanSelection = () => {
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-3"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        Continue to registration
+                        {ui.continueRegistration}
                     </button>
                 </form>
             </div>
