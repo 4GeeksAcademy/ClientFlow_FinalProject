@@ -506,8 +506,11 @@ export const Leads = () => {
 
                 <div className="card border-0 shadow-sm p-2 mb-3 bg-white rounded-3">
                     <div className="input-group align-items-center">
-                        <span className="input-group-text bg-transparent border-0 text-muted ps-3">
-                            <i className="fa-solid fa-magnifying-glass"></i>
+                        <span
+                            className="input-group-text bg-transparent border-0 text-muted d-flex align-items-center justify-content-center p-0"
+                            style={{ width: "2.75rem", minWidth: "2.75rem", fontSize: "1rem" }}
+                        >
+                            <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                         </span>
                         <input
                             type="search"

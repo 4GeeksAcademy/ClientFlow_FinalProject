@@ -50,6 +50,8 @@ class AppointmentTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.json)
         self.assertEqual(self.create().status_code, 201)
         self.assertEqual(self.client.delete(f'/api/appointments/{identifier}', headers=self.auth).status_code, 200)
+        visible_ids = [item['id'] for item in self.client.get('/api/appointments', headers=self.auth).json]
+        self.assertNotIn(identifier, visible_ids)
 
     def test_validation_and_tenant_options(self):
         for changes in [{'client_id': self.other_client}, {'ends_at': 'bad'}, {'ends_at': self.data['starts_at']}, {'status': 'unknown'}, {'assigned_membership_id': True}]:

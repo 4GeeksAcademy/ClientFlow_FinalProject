@@ -12,6 +12,7 @@ export const JobDetail = () => {
     const [job, setJob] = useState(location.state?.job || null);
     const [loading, setLoading] = useState(!location.state?.job);
     const [error, setError] = useState("");
+    const displayDate = (value) => value ? String(value).slice(0, 10) : translateLiteral("Por definir", locale);
 
     // Helper para obtener la URL base limpia y el token de autenticación
     const getBaseUrl = () => (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
@@ -176,7 +177,6 @@ export const JobDetail = () => {
                 <div className="card-body p-4">
                     <div className="row g-4 align-items-center">
                         <div className="col-12 col-lg-7">
-                            <span className="text-muted small fw-semibold">ID: {job.id}</span>
                             <h2 className="fw-bold text-dark mb-2">{job.title}</h2>
                             <p className="text-secondary mb-3">
                                 <i className="fa-solid fa-user text-primary me-2"></i>
@@ -196,11 +196,11 @@ export const JobDetail = () => {
                                 </div>
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-secondary small">Fecha de inicio:</span>
-                                    <span className="fw-semibold text-dark small">{job.startDate || job.start_date || "Por definir"}</span>
+                                    <span className="fw-semibold text-dark small">{displayDate(job.scheduled_start)}</span>
                                 </div>
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-secondary small">Fecha de entrega:</span>
-                                    <span className="fw-semibold text-dark small">{job.dueDate || job.due_date || "Por definir"}</span>
+                                    <span className="fw-semibold text-dark small">{displayDate(job.scheduled_end)}</span>
                                 </div>
                                 <div className="d-flex justify-content-between">
                                     <span className="text-secondary small">Equipo asignado:</span>

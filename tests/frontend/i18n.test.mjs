@@ -47,3 +47,18 @@ test("language preference is persisted and the document language is updated", ()
     assert.match(source, /document\.documentElement\.lang = locale/);
     assert.match(source, /MutationObserver/);
 });
+
+test("core operational screens have English and Portuguese translations", () => {
+    const phrases = {
+        "Gestión de Clientes": ["Client management", "Gestão de clientes"],
+        "Gestiona y convierte nuevas oportunidades.": ["Manage and convert new opportunities.", "Gerencie e converta novas oportunidades."],
+        "Gestión de Trabajos": ["Job management", "Gestão de trabalhos"],
+        "Datos de contacto y dirección principal.": ["Contact details and primary address.", "Dados de contato e endereço principal."],
+        "Pendiente": ["Pending", "Pendente"],
+    };
+
+    for (const [spanish, [english, portuguese]] of Object.entries(phrases)) {
+        assert.equal(translateLiteral(spanish, "en"), english);
+        assert.equal(translateLiteral(spanish, "pt"), portuguese);
+    }
+});

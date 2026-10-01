@@ -118,7 +118,10 @@ def register_appointments(api):
                 raise ValueError('Invalid date range.')
         except ValueError as error:
             return jsonify(error=str(error)), 400
-        query = select(Appointment).where(Appointment.company_id == g.company_id)
+        query = select(Appointment).where(
+            Appointment.company_id == g.company_id,
+            Appointment.status != AppointmentStatus.CANCELLED,
+        )
         if start:
             query = query.where(Appointment.ends_at > start)
         if end:
