@@ -1,6 +1,7 @@
 const API_URL = (
     import.meta.env.VITE_BACKEND_URL || ""
 ).replace(/\/$/, "");
+import { readApiJson } from "./response.mjs";
 
 async function request(
     path,
@@ -30,17 +31,7 @@ async function request(
             : {}),
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(
-            data.message ||
-            data.error ||
-            "Unable to complete the lead operation."
-        );
-    }
-
-    return data;
+    return readApiJson(response, "Unable to complete the lead operation.");
 }
 
 export const leadService = {

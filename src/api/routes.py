@@ -2320,6 +2320,53 @@ def update_job(job_id):
         return jsonify({"error": "Unable to update job"}), 503
 
 
+@api.route('/jobs/<int:job_id>/stages', methods=['POST'])
+@tenant_required
+def create_job_stage(job_id):
+    job = db.session.scalar(
+        select(Job).where(Job.id == job_id, Job.company_id == g.company_id)
+    )
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({"error": "Expected a JSON object"}), 400
+
+    title = body.get('title')
+    if not isinstance(title, str) or not title.strip() or len(title.strip()) > 160:
+        return jsonify({"error": "Invalid stage title"}), 400
+
+    description = body.get('description')
+    if description is not None and (not isinstance(description, str) or len(description) > 4000):
+        return jsonify({"error": "Invalid stage description"}), 400
+
+    due_at = None
+    if body.get('due_at') not in (None, ''):
+        try:
+            due_at = _job_schedule_value(body['due_at'])
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid stage due date"}), 400
+
+    next_position = (db.session.scalar(
+        select(func.max(JobStage.position)).where(JobStage.job_id == job_id)
+    ) or 0) + 1
+    stage = JobStage(
+        job_id=job_id,
+        title=title.strip(),
+        description=description.strip() if isinstance(description, str) and description.strip() else None,
+        position=next_position,
+        status=JobStageStatus.PENDING,
+        due_at=due_at,
+    )
+    db.session.add(stage)
+    db.session.commit()
+    updated_job = db.session.execute(
+        _job_select().where(Job.id == job_id, Job.company_id == g.company_id)
+    ).one()
+    return jsonify(_job_to_dict(updated_job, include_details=True)), 201
+
+
 @api.route('/jobs/<int:job_id>', methods=['DELETE'])
 @tenant_required
 def delete_job(job_id):

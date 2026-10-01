@@ -1,11 +1,11 @@
 const base = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+import { readApiJson } from "./response.mjs";
 
 async function request(path, { token, companyId, signal, method = "GET", body }) {
     const response = await fetch(`${base}/api/knowledge/documents${path}`, {
         method, signal, body,
         headers: { Authorization: `Bearer ${token}`, "X-Company-ID": String(companyId) },
     });
-    const data = await response.json();
     if (!response.ok) {
         const messages = {
             401: "Tu sesión ha caducado. Vuelve a iniciar sesión.",
@@ -16,9 +16,13 @@ async function request(path, { token, companyId, signal, method = "GET", body })
             422: "No se pudo procesar el documento. Comprueba el archivo y el servicio de IA.",
             503: "El servicio no está disponible. Inténtalo de nuevo.",
         };
-        throw new Error(messages[response.status] || "No se pudo completar la operación. Comprueba el formato y el tamaño del archivo.");
+        try {
+            return await readApiJson(response, messages[response.status]);
+        } catch {
+            throw new Error(messages[response.status] || "No se pudo completar la operación. Comprueba el formato y el tamaño del archivo.");
+        }
     }
-    return data;
+    return readApiJson(response, "El servidor devolvió una respuesta no válida.");
 }
 
 export const knowledgeService = {

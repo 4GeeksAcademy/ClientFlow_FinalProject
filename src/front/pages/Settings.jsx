@@ -14,7 +14,7 @@ const integrationDefaults = {
 
 export const Settings = () => {
     const token = localStorage.getItem("access_token");
-    const { theme, setTheme, density, setDensity } = useApp();
+    const { theme, setTheme, density, setDensity, setBrandColour } = useApp();
     const { locale, setLocale } = useLanguage();
     const text = settingsMessages[locale] || settingsMessages.en;
     const [tab, setTab] = useState("company");
@@ -41,6 +41,7 @@ export const Settings = () => {
             const result = await settingsService.load(token, signal);
             setData(result);
             setCompany(result.company);
+            setBrandColour(result.company.primary_colour || "#635BFF");
             setPreferences((current) => ({
                 ...current,
                 theme: result.company.theme || current.theme,
@@ -93,7 +94,10 @@ export const Settings = () => {
             timezone: company.timezone,
             primary_colour: company.primary_colour || null,
         }));
-        if (result) window.dispatchEvent(new CustomEvent("clientflow:company-updated"));
+        if (result) {
+            setBrandColour(company.primary_colour || "#635BFF");
+            window.dispatchEvent(new CustomEvent("clientflow:company-updated"));
+        }
     };
 
     const savePreferences = async (event) => {
@@ -116,6 +120,11 @@ export const Settings = () => {
                 ? { ...current[provider], enabled: value }
                 : { ...current[provider], settings: { ...current[provider].settings, [field]: value } },
         }));
+    };
+
+    const changeCompanyColour = (value) => {
+        setCompany((current) => ({ ...current, primary_colour: value }));
+        if (/^#[0-9A-Fa-f]{6}$/.test(value)) setBrandColour(value);
     };
 
     const saveIntegration = async (event, provider) => {
@@ -159,7 +168,7 @@ export const Settings = () => {
                             <Field label={text.email}><input type="email" value={company.email || ""} maxLength={255} disabled={disabled} onChange={(event) => setCompany({ ...company, email: event.target.value })} /></Field>
                             <Field label={text.phone}><input value={company.phone || ""} maxLength={40} disabled={disabled} onChange={(event) => setCompany({ ...company, phone: event.target.value })} /></Field>
                             <Field label={text.timezone}><input value={company.timezone || ""} maxLength={60} required disabled={disabled} onChange={(event) => setCompany({ ...company, timezone: event.target.value })} /></Field>
-                            <Field label={text.colour}><div className="colour-field"><input type="color" value={company.primary_colour || "#635BFF"} disabled={disabled} onChange={(event) => setCompany({ ...company, primary_colour: event.target.value })} /><input value={company.primary_colour || "#635BFF"} pattern="#[0-9A-Fa-f]{6}" disabled={disabled} onChange={(event) => setCompany({ ...company, primary_colour: event.target.value })} /></div></Field>
+                            <Field label={text.colour}><div className="colour-field"><input type="color" value={company.primary_colour || "#635BFF"} disabled={disabled} onChange={(event) => changeCompanyColour(event.target.value)} /><input value={company.primary_colour || "#635BFF"} pattern="#[0-9A-Fa-f]{6}" disabled={disabled} onChange={(event) => changeCompanyColour(event.target.value)} /></div></Field>
                         </div>
                         {canManage && <SaveButton busy={busy === "company"}>{text.saveCompany}</SaveButton>}
                     </form>}

@@ -1,5 +1,6 @@
 """Authentication and tenant context shared by API modules (ticket #22)."""
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -11,6 +12,7 @@ from email.message import EmailMessage
 from functools import wraps
 from pathlib import Path
 from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 import click
 from flask import Blueprint, current_app, g, jsonify, request
@@ -289,6 +291,7 @@ def me():
                 "name": membership.company.name,
                 "membership_id": membership.id,
                 "role": membership.role.value,
+                "primary_colour": membership.company.primary_colour,
             }
             for membership in memberships
         ],
@@ -314,6 +317,7 @@ def logout():
 def delivery_available():
     return (current_app.config.get('AUTH_RESET_SENDER') is not None
             or (current_app.debug and current_app.config.get('AUTH_RESET_OUTBOX'))
+            or (os.getenv('RESEND_API_KEY') and os.getenv('AUTH_EMAIL_FROM'))
             or (os.getenv('SMTP_HOST') and os.getenv('SMTP_FROM')))
 
 
@@ -330,6 +334,27 @@ def deliver_reset(email, token):
         fd = os.open(file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, 'w') as out:
             out.write(f'To: {email}\n\n{link}\n')
+        return
+    if os.getenv('RESEND_API_KEY') and os.getenv('AUTH_EMAIL_FROM'):
+        message = json.dumps({
+            'from': os.environ['AUTH_EMAIL_FROM'],
+            'to': [email],
+            'subject': 'Restablecer contraseña — ClientFlow',
+            'text': f'Abre este enlace para cambiar tu contraseña (válido 30 minutos):\n{link}',
+        }).encode('utf-8')
+        api_request = Request(
+            'https://api.resend.com/emails',
+            data=message,
+            headers={
+                'Authorization': f"Bearer {os.environ['RESEND_API_KEY']}",
+                'Content-Type': 'application/json',
+                'User-Agent': 'ClientFlow/1.0',
+            },
+            method='POST',
+        )
+        with urlopen(api_request, timeout=10) as response:
+            if response.status not in {200, 201, 202}:
+                raise RuntimeError('Password reset provider rejected the message.')
         return
     message = EmailMessage()
     message['From'] = os.environ['SMTP_FROM']
