@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { addDays, defaultJobSchedule } from "../utils/jobSchedule.mjs";
+import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
 
 const emptyJob = () => ({
     title: "",
@@ -11,6 +13,7 @@ const emptyJob = () => ({
 });
 
 export const Jobs = () => {
+    const { locale } = useLanguage();
     const [jobs, setJobs] = useState([]);
     const [clients, setClients] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -45,12 +48,12 @@ export const Jobs = () => {
                     signal: controller.signal
                 });
 
-                if (!meResponse.ok) throw new Error("No se pudo cargar la cuenta.");
+                if (!meResponse.ok) throw new Error(translateLiteral("No se pudo cargar la cuenta.", locale));
                 const account = await meResponse.json();
                 const current = account.companies?.[0];
 
                 if (!current) {
-                    throw new Error("No se encontró una empresa activa.");
+                    throw new Error(translateLiteral("No se encontró una empresa activa.", locale));
                 }
 
                 const companyId = current.id;
@@ -95,11 +98,11 @@ export const Jobs = () => {
 
         loadJobsAndClients();
         return () => controller.abort();
-    }, [reload]);
+    }, [reload, locale]);
 
     // Función para eliminar un trabajo
     const handleDeleteJob = async (jobId) => {
-        if (!window.confirm("¿Estás seguro de que deseas eliminar este trabajo?")) return;
+        if (!window.confirm(translateLiteral("¿Estás seguro de que deseas eliminar este trabajo?", locale))) return;
 
         try {
             const token = localStorage.getItem("access_token") || localStorage.getItem("jwt_token") || localStorage.getItem("token");
@@ -123,11 +126,11 @@ export const Jobs = () => {
                 setReload(value => value + 1);
             } else {
                 const errData = await response.json();
-                alert(`No se pudo eliminar el trabajo: ${errData.error || "Error desconocido"}`);
+                alert(`${translateLiteral("No se pudo eliminar el trabajo:", locale)} ${errData.error || translateLiteral("Error desconocido", locale)}`);
             }
         } catch (error) {
             console.error("Error de red al eliminar el trabajo:", error);
-            alert("Error de red al intentar eliminar el trabajo.");
+            alert(translateLiteral("Error de red al intentar eliminar el trabajo.", locale));
         }
     };
 
@@ -145,7 +148,7 @@ export const Jobs = () => {
     const handleCreateJob = async (e) => {
         e.preventDefault();
         if (newJob.dueDate < newJob.startDate) {
-            setFormError("La fecha de entrega no puede ser anterior a la fecha de inicio.");
+            setFormError(translateLiteral("La fecha de entrega no puede ser anterior a la fecha de inicio.", locale));
             return;
         }
         setFormError("");
@@ -184,7 +187,7 @@ export const Jobs = () => {
             } else {
                 const errData = await response.json();
                 console.error("Error al crear el trabajo:", errData);
-                alert(`No se pudo crear el trabajo: ${errData.error || JSON.stringify(errData)}`);
+                alert(`${translateLiteral("No se pudo crear el trabajo:", locale)} ${errData.error || JSON.stringify(errData)}`);
             }
         } catch (error) {
             console.error("Error de red al crear el trabajo:", error);

@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { authService } from "../services/authService";
 import { useApp } from "../context/AppContext";
+import { useLanguage } from "../context/LanguageContext";
 
 export const ForgotPassword = () => {
     const { showToast } = useApp();
+    const { ui } = useLanguage();
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -14,7 +16,7 @@ export const ForgotPassword = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!email) {
-            setError("Por favor ingresa tu correo electrónico.");
+            setError(ui.emailRequired);
             return;
         }
         setError("");
@@ -24,10 +26,10 @@ export const ForgotPassword = () => {
             await authService.forgotPassword(email);
             setLoading(false);
             setSubmitted(true);
-            showToast("Correo de recuperación enviado.", "success");
+            showToast(ui.recoverySent, "success");
         } catch (err) {
             setLoading(false);
-            setError(err.message || "Error al procesar la solicitud.");
+            setError(err.message || ui.recoveryError);
         }
     };
 
@@ -38,8 +40,8 @@ export const ForgotPassword = () => {
                     🔄
                 </div>
 
-                <h2 className="fw-bold text-body fs-3 mb-1">Recuperar Contraseña</h2>
-                <p className="text-muted small mb-4">Te enviaremos las instrucciones a tu correo</p>
+                <h2 className="fw-bold text-body fs-3 mb-1">{ui.forgotTitle}</h2>
+                <p className="text-muted small mb-4">{ui.forgotSubtitle}</p>
 
                 {error && (
                     <div className="alert alert-danger py-2 small mb-3">
@@ -49,17 +51,17 @@ export const ForgotPassword = () => {
 
                 {submitted ? (
                     <div className="alert alert-success py-3 small text-center">
-                        Hemos enviado un enlace de recuperación a <strong>{email}</strong>. Revisa tu bandeja de entrada.
+                        {ui.recoverySent} <strong>{email}</strong>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="vstack gap-3">
                         <div>
-                            <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>Email</label>
+                            <label className="form-label text-uppercase fw-bold text-secondary" style={{ fontSize: "0.7rem" }}>{ui.email}</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="tu@empresa.com"
+                                placeholder={ui.emailPlaceholder}
                                 className="form-control bg-body text-body shadow-none py-2"
                             />
                         </div>
@@ -70,13 +72,13 @@ export const ForgotPassword = () => {
                             className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-2"
                             style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                         >
-                            {loading ? "..." : "Enviar Instrucciones"}
+                            {loading ? ui.loading : ui.sendInstructions}
                         </button>
                     </form>
                 )}
 
                 <p className="text-center text-muted small mt-4 mb-0">
-                    <Link to="/login" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>← Volver al login</Link>
+                    <Link to="/login" className="fw-semibold text-decoration-none" style={{ color: "#9333ea" }}>← {ui.backToLogin}</Link>
                 </p>
             </div>
         </AuthLayout>

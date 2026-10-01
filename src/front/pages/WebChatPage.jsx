@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
 import { WebChat } from "../components/WebChat";
 import { webChatService } from "../services/webChatService";
+import { useLanguage } from "../context/LanguageContext";
 
 export function WebChatPage() {
+    const { ui } = useLanguage();
     const [displayName, setDisplayName] = useState("");
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ export function WebChatPage() {
         try {
             const token = localStorage.getItem("access_token");
             if (!token) {
-                throw new Error("Sign in before creating a chat session.");
+                throw new Error(ui.createChatSession);
             }
 
             const apiUrl = (
@@ -33,14 +35,14 @@ export function WebChatPage() {
             });
 
             if (!response.ok) {
-                throw new Error("Unable to load your account.");
+                throw new Error(ui.accountLoadError);
             }
 
             const account = await response.json();
             const company = account.companies?.[0];
 
             if (!company) {
-                throw new Error("No company is available for this account.");
+                throw new Error(ui.noCompany);
             }
 
             const result = await webChatService.createSession(
@@ -59,17 +61,17 @@ export function WebChatPage() {
 
     return (
         <main className="container py-3">
-            <h1 className="h3">Web chat</h1>
+            <h1 className="h3">{ui.webChat}</h1>
 
             {session ? (
                 <>
-                    <p>Conversation #{session.conversation_id}</p>
+                    <p>{ui.conversationNumber.replace("{id}", session.conversation_id)}</p>
                     <WebChat token={session.token} />
                 </>
             ) : (
                 <form onSubmit={handleCreate} className="card p-3">
                     <label htmlFor="visitor-name" className="form-label">
-                        Visitor name
+                        {ui.visitorName}
                     </label>
                     <input
                         id="visitor-name"
@@ -88,7 +90,7 @@ export function WebChatPage() {
                         className="btn btn-primary mt-3"
                         disabled={loading || !displayName.trim()}
                     >
-                        {loading ? "Creating..." : "Start chat"}
+                        {loading ? ui.creating : ui.startChat}
                     </button>
                 </form>
             )}

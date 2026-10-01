@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { clientService } from "../services/clientService";
+import { useLanguage } from "../context/LanguageContext";
 
 
 export const ClientDetail = () => {
+    const { locale, ui } = useLanguage();
     const { id } = useParams();
 
     const [client, setClient] = useState(null);
@@ -29,12 +31,12 @@ export const ClientDetail = () => {
                     },
                 });
 
-                if (!response.ok) throw new Error("Unable to load your account.");
+                if (!response.ok) throw new Error(ui.accountLoadError);
                 const account = await response.json();
                 const current = account.companies?.[0];
 
                 if (!current) {
-                    throw new Error("No se encontró una empresa activa.");
+                    throw new Error(ui.noCompany);
                 }
 
                 const options = {
@@ -76,7 +78,7 @@ export const ClientDetail = () => {
         };
 
         loadClient();
-    }, [id]);
+    }, [id, ui.accountLoadError, ui.noCompany]);
 
     if (loading) {
         return <div className="p-4">Cargando cliente...</div>;
@@ -162,7 +164,7 @@ export const ClientDetail = () => {
                             </h5>
                             <span className="badge bg-primary text-white px-2 py-1">
                                 Due: {nextAction?.due_at
-                                    ? new Date(nextAction.due_at).toLocaleDateString()
+                                    ? new Date(nextAction.due_at).toLocaleDateString(locale)
                                     : "Sin fecha"}
                             </span>
                         </div>
@@ -221,7 +223,7 @@ export const ClientDetail = () => {
                                             <span className="text-secondary small">
                                                 Entrega prevista:{" "}
                                                 {job.scheduled_end
-                                                    ? new Date(job.scheduled_end).toLocaleDateString()
+                                                    ? new Date(job.scheduled_end).toLocaleDateString(locale)
                                                     : "Sin fecha"}{" "}
                                                 &bull; Presupuesto:{" "}
                                                 <strong>
@@ -279,7 +281,7 @@ export const ClientDetail = () => {
                                             >
                                                 <i className="fa-solid fa-clock me-1"></i>{" "}
                                                 {app.starts_at
-                                                    ? new Date(app.starts_at).toLocaleString()
+                                                    ? new Date(app.starts_at).toLocaleString(locale)
                                                     : "Sin fecha"}{" "}
                                                 &bull; Responsable:{" "}
                                                 {app.assigned_membership_id || "Sin asignar"}
@@ -324,7 +326,7 @@ export const ClientDetail = () => {
                                                 style={{ fontSize: "0.7rem" }}
                                             >
                                                 {act.created_at
-                                                    ? new Date(act.created_at).toLocaleString()
+                                                    ? new Date(act.created_at).toLocaleString(locale)
                                                     : "Sin fecha"}
                                             </span>
 
