@@ -82,6 +82,10 @@ const ProtectedRoute = ({ children }) => {
                 const data = await response.json();
 
                 if (!response.ok) {
+                    if (data.code === "subscription_required") {
+                        setStatus("subscription_required");
+                        return;
+                    }
                     throw new Error(data.message || ui.subscriptionVerifyError);
                 }
 
@@ -110,6 +114,10 @@ const ProtectedRoute = ({ children }) => {
 
     if (status === "loading") {
         return <p role="status">{ui.checkingSubscription}</p>;
+    }
+
+    if (status === "subscription_required") {
+        return <Navigate to="/select-plan?reason=expired" replace />;
     }
 
     if (status === "blocked") {

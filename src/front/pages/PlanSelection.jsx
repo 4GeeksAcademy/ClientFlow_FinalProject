@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { useLanguage } from "../context/LanguageContext";
+import { subscriptionService } from "../services/subscriptionService.mjs";
 
 
 export const PlanSelection = () => {
@@ -12,7 +13,60 @@ export const PlanSelection = () => {
 
     const [plansLoading, setPlansLoading] = useState(true);
     const [plansError, setPlansError] = useState("");
+    const [accountError, setAccountError] = useState("");
+    const [activationError, setActivationError] = useState("");
+    const [companyId, setCompanyId] = useState(null);
+    const [companyRole, setCompanyRole] = useState(null);
+    const [accountLoading, setAccountLoading] = useState(true);
+    const [activating, setActivating] = useState(false);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const token = localStorage.getItem("access_token");
+    const renewalRequested = searchParams.get("reason") === "expired";
+    const renewalMode = Boolean(token);
+    const canActivate = ["owner", "admin"].includes(companyRole);
+
+    useEffect(() => {
+        if (!token) {
+            setAccountLoading(false);
+            if (renewalRequested) navigate("/login", { replace: true });
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        const apiUrl = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+
+        fetch(`${apiUrl}/api/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+        })
+            .then(async (response) => {
+                if (response.status === 401) {
+                    localStorage.removeItem("access_token");
+                    navigate("/login", { replace: true });
+                    return null;
+                }
+                if (!response.ok) throw new Error(ui.accountLoadError);
+                return response.json();
+            })
+            .then((account) => {
+                if (!account || controller.signal.aborted) return;
+                const company = account.companies?.[0];
+                if (!company) throw new Error(ui.noCompany);
+                setCompanyId(company.id);
+                setCompanyRole(company.role);
+            })
+            .catch((error) => {
+                if (!controller.signal.aborted) {
+                    setAccountError(error.message || ui.accountLoadError);
+                }
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setAccountLoading(false);
+            });
+
+        return () => controller.abort();
+    }, [navigate, renewalRequested, token, ui.accountLoadError, ui.noCompany]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -57,10 +111,29 @@ export const PlanSelection = () => {
         return () => controller.abort();
     }, [ui.invalidPlans, ui.plansError]);
 
-    const handleSelectPlan = (e) => {
+    const handleSelectPlan = async (e) => {
         e.preventDefault();
 
-        if (plansLoading || plansError || selectedPlanId === null) {
+        if (plansLoading || accountLoading || plansError || accountError || selectedPlanId === null) {
+            return;
+        }
+
+        if (renewalMode) {
+            if (!canActivate) return;
+            setActivating(true);
+            setActivationError("");
+            try {
+                await subscriptionService.activate({
+                    token,
+                    companyId,
+                    planId: selectedPlanId,
+                });
+                navigate("/dashboard", { replace: true });
+            } catch (error) {
+                setActivationError(error.message || ui.planActivationError);
+            } finally {
+                setActivating(false);
+            }
             return;
         }
 
@@ -78,6 +151,17 @@ export const PlanSelection = () => {
 
                 <h2 className="fw-bold text-body fs-3 mb-1">{ui.plansTitle}</h2>
                 <p className="text-muted small mb-4">{ui.plansSubtitle}</p>
+                {renewalMode && renewalRequested && (
+                    <div className="alert alert-warning" role="status">
+                        <p className="mb-1">{ui.trialExpiredNotice}</p>
+                        <strong>{ui.trialUnavailable}</strong>
+                    </div>
+                )}
+                {renewalMode && !accountLoading && !accountError && !canActivate && (
+                    <div className="alert alert-info" role="status">
+                        {ui.planAdminRequired}
+                    </div>
+                )}
                 {plansLoading && (
                     <p role="status">{ui.plansLoading}</p>
                 )}
@@ -92,6 +176,25 @@ export const PlanSelection = () => {
                         >
                             {ui.retry}
                         </button>
+                    </div>
+                )}
+
+                {accountError && (
+                    <div className="alert alert-danger" role="alert">
+                        {accountError}
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger ms-3"
+                            onClick={() => window.location.reload()}
+                        >
+                            {ui.retry}
+                        </button>
+                    </div>
+                )}
+
+                {activationError && (
+                    <div className="alert alert-danger" role="alert">
+                        {activationError}
                     </div>
                 )}
 
@@ -134,7 +237,7 @@ export const PlanSelection = () => {
                                     <div className="d-flex justify-content-between align-items-center mt-1">
                                         <small className="text-muted">{plan.description}</small>
                                         <small className="text-secondary fw-medium">
-                                            {plan.trial_days
+                                            {!renewalMode && plan.trial_days
                                                 ? `${ui.trialDays.replace("{count}", plan.trial_days)} · ${maxLeadsText}`
                                                 : maxLeadsText}                                        </small>
                                     </div>
@@ -142,7 +245,7 @@ export const PlanSelection = () => {
                             );
                         })}
                     </div>
-                    <fieldset>
+                    {!renewalMode && <fieldset>
                         <legend className="fs-6">{ui.chooseStart}</legend>
 
                         <label className="d-block">
@@ -168,18 +271,26 @@ export const PlanSelection = () => {
                             />
                             {ui.noRealCharge}
                         </label>
-                    </fieldset>
+                    </fieldset>}
                     <button
                         type="submit"
                         disabled={
                             plansLoading ||
+                            accountLoading ||
+                            activating ||
                             Boolean(plansError) ||
+                            Boolean(accountError) ||
+                            (renewalMode && !canActivate) ||
                             selectedPlanId === null
                         }
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-3"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {ui.continueRegistration}
+                        {activating
+                            ? ui.activatingPlan
+                            : renewalMode
+                                ? ui.activatePlan
+                                : ui.continueRegistration}
                     </button>
                 </form>
             </div>
