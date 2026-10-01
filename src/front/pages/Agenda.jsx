@@ -108,7 +108,10 @@ export const Agenda = () => {
     const handleDeleteAppointment = async (id) => {
         if (busy || !window.confirm(ui.confirmCancelAppointment)) return;
         setBusy(true);
-        try { await cancelAppointment(options, id); setRevision(value => value + 1); }
+        try {
+            await cancelAppointment(options, id);
+            setAppointments(current => current.filter(item => item.id !== id));
+        }
         catch (error) { setErrorMsg(error.message || ui.appointmentCancelError); }
         finally { setBusy(false); }
     };

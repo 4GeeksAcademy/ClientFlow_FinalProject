@@ -84,7 +84,7 @@ export const Register = () => {
                                 name="firstName"
                                 value={formData.firstName}
                                 onChange={handleChange}
-                                placeholder="Carlos"
+                                placeholder={ui.firstName}
                                 className="form-control bg-body text-body shadow-none py-2"
                             />
                         </div>
@@ -95,7 +95,7 @@ export const Register = () => {
                                 name="lastName"
                                 value={formData.lastName}
                                 onChange={handleChange}
-                                placeholder="Alberto"
+                                placeholder={ui.lastName}
                                 className="form-control bg-body text-body shadow-none py-2"
                             />
                         </div>
