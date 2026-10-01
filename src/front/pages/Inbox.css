@@ -466,3 +466,64 @@
     grid-template-columns: 1fr;
   }
 }
+
+:root[data-bs-theme="dark"] .inbox-page {
+  color: var(--cf-text);
+  background: var(--cf-workspace-bg);
+}
+:root[data-bs-theme="dark"] .inbox-heading h1,
+:root[data-bs-theme="dark"] .inbox-conversation,
+:root[data-bs-theme="dark"] .inbox-details h2,
+:root[data-bs-theme="dark"] .inbox-empty-chat h2,
+:root[data-bs-theme="dark"] .inbox-modal,
+:root[data-bs-theme="dark"] .inbox-modal label {
+  color: var(--cf-text);
+}
+:root[data-bs-theme="dark"] .inbox-heading p,
+:root[data-bs-theme="dark"] .inbox-conversation-text small,
+:root[data-bs-theme="dark"] .inbox-chat-heading small,
+:root[data-bs-theme="dark"] .inbox-details > p,
+:root[data-bs-theme="dark"] .inbox-details dt,
+:root[data-bs-theme="dark"] .inbox-empty-list p,
+:root[data-bs-theme="dark"] .inbox-empty-chat p,
+:root[data-bs-theme="dark"] .inbox-note,
+:root[data-bs-theme="dark"] .inbox-modal label span {
+  color: var(--cf-text-muted);
+}
+:root[data-bs-theme="dark"] .inbox-workspace,
+:root[data-bs-theme="dark"] .inbox-chat-heading,
+:root[data-bs-theme="dark"] .inbox-message,
+:root[data-bs-theme="dark"] .inbox-composer,
+:root[data-bs-theme="dark"] .inbox-client-select,
+:root[data-bs-theme="dark"] .inbox-pagination button,
+:root[data-bs-theme="dark"] .inbox-control button,
+:root[data-bs-theme="dark"] .inbox-modal {
+  color: var(--cf-text);
+  background: var(--cf-surface);
+  border-color: var(--cf-border);
+}
+:root[data-bs-theme="dark"] .inbox-chat,
+:root[data-bs-theme="dark"] .inbox-secondary-action,
+:root[data-bs-theme="dark"] .inbox-composer textarea,
+:root[data-bs-theme="dark"] .inbox-modal input,
+:root[data-bs-theme="dark"] .inbox-modal select,
+:root[data-bs-theme="dark"] .inbox-modal textarea {
+  color: var(--cf-text);
+  background: var(--cf-surface-muted);
+  border-color: var(--cf-border);
+}
+:root[data-bs-theme="dark"] .inbox-conversations,
+:root[data-bs-theme="dark"] .inbox-chat-heading,
+:root[data-bs-theme="dark"] .inbox-composer,
+:root[data-bs-theme="dark"] .inbox-details,
+:root[data-bs-theme="dark"] .inbox-modal > header {
+  border-color: var(--cf-border);
+}
+:root[data-bs-theme="dark"] .inbox-conversation:hover,
+:root[data-bs-theme="dark"] .inbox-conversation.is-selected {
+  background: rgba(120, 89, 223, 0.2);
+}
+:root[data-bs-theme="dark"] .inbox-error {
+  color: #fecdd3;
+  background: rgba(159, 18, 57, 0.28);
+}
