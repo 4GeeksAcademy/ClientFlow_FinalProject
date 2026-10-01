@@ -13,7 +13,7 @@ export const Layout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Rutas públicas donde NO queremos que aparezca el Sidebar ni el Layout envolvente
-    const hideSidebarPaths = ["/accept-invitation", "/login", "/register", "/forgot-password", "/reset-password", "/select-plan"];
+    const hideSidebarPaths = ["/accept-invitation", "/login", "/register", "/forgot-password", "/reset-password", "/select-plan", "/payment"];
     const shouldHideSidebar = hideSidebarPaths.includes(location.pathname);
 
     // SI ES UNA RUTA PÚBLICA: Devolvemos únicamente la vista sin contenedores extra de Layout
