@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { useLanguage } from "../context/LanguageContext";
-import { subscriptionService } from "../services/subscriptionService.mjs";
 
 
 export const PlanSelection = () => {
@@ -14,11 +13,9 @@ export const PlanSelection = () => {
     const [plansLoading, setPlansLoading] = useState(true);
     const [plansError, setPlansError] = useState("");
     const [accountError, setAccountError] = useState("");
-    const [activationError, setActivationError] = useState("");
     const [companyId, setCompanyId] = useState(null);
     const [companyRole, setCompanyRole] = useState(null);
     const [accountLoading, setAccountLoading] = useState(true);
-    const [activating, setActivating] = useState(false);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const token = localStorage.getItem("access_token");
@@ -120,20 +117,9 @@ export const PlanSelection = () => {
 
         if (renewalMode) {
             if (!canActivate) return;
-            setActivating(true);
-            setActivationError("");
-            try {
-                await subscriptionService.activate({
-                    token,
-                    companyId,
-                    planId: selectedPlanId,
-                });
-                navigate("/dashboard", { replace: true });
-            } catch (error) {
-                setActivationError(error.message || ui.planActivationError);
-            } finally {
-                setActivating(false);
-            }
+            navigate(`/payment?plan_id=${selectedPlanId}&reason=expired`, {
+                state: { companyId },
+            });
             return;
         }
 
@@ -189,12 +175,6 @@ export const PlanSelection = () => {
                         >
                             {ui.retry}
                         </button>
-                    </div>
-                )}
-
-                {activationError && (
-                    <div className="alert alert-danger" role="alert">
-                        {activationError}
                     </div>
                 )}
 
@@ -277,7 +257,6 @@ export const PlanSelection = () => {
                         disabled={
                             plansLoading ||
                             accountLoading ||
-                            activating ||
                             Boolean(plansError) ||
                             Boolean(accountError) ||
                             (renewalMode && !canActivate) ||
@@ -286,11 +265,9 @@ export const PlanSelection = () => {
                         className="w-100 py-2 btn text-white fw-semibold shadow-sm mt-3"
                         style={{ backgroundColor: "#9333ea", borderColor: "#9333ea" }}
                     >
-                        {activating
-                            ? ui.activatingPlan
-                            : renewalMode
-                                ? ui.activatePlan
-                                : ui.continueRegistration}
+                        {renewalMode
+                            ? ui.continueToPayment
+                            : ui.continueRegistration}
                     </button>
                 </form>
             </div>
