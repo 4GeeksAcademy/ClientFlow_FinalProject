@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { knowledgeService } from "../services/knowledgeService";
 import "../styles/knowledge.css";
 import { useLanguage } from "../context/LanguageContext";
+import { readApiJson } from "../services/response.mjs";
 
 export const Knowledge = () => {
     const { locale, ui } = useLanguage();
@@ -32,8 +33,7 @@ export const Knowledge = () => {
                 const response = await fetch(`${base}/api/me`, {
                     headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
                 });
-                if (!response.ok) throw new Error(ui.accountLoadError);
-                const account = await response.json();
+                const account = await readApiJson(response, ui.accountLoadError);
                 const current = account.companies?.[0];
                 if (!current) throw new Error(ui.noCompany);
                 const result = await knowledgeService.list({ token, companyId: current.id, signal: controller.signal }, page);

@@ -94,6 +94,14 @@ export const clientService = {
         return request(`/clients/${clientId}/next-actions`, options);
     },
 
+    createNextAction(options, clientId, body) {
+        return request(`/clients/${clientId}/next-actions`, {
+            ...options,
+            method: "POST",
+            body,
+        });
+    },
+
     getJobs(options, clientId) {
         return request(`/clients/${clientId}/jobs`, options);
     },

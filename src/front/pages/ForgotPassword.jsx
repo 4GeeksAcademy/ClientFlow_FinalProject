@@ -4,10 +4,11 @@ import { AuthLayout } from "../components/AuthLayout";
 import { authService } from "../services/authService";
 import { useApp } from "../context/AppContext";
 import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
 
 export const ForgotPassword = () => {
     const { showToast } = useApp();
-    const { ui } = useLanguage();
+    const { locale, ui } = useLanguage();
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ export const ForgotPassword = () => {
             showToast(ui.recoverySent, "success");
         } catch (err) {
             setLoading(false);
-            setError(err.message || ui.recoveryError);
+            setError(translateLiteral(err.message, locale) || ui.recoveryError);
         }
     };
 

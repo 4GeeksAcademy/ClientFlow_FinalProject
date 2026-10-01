@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { clientService } from "../services/clientService";
 import { useLanguage } from "../context/LanguageContext";
 import { translateLiteral } from "../i18n/literalTranslations.mjs";
+import { readApiJson } from "../services/response.mjs";
 
 const EMPTY_ADDRESS = {
     label: "Principal",
@@ -53,11 +54,7 @@ export const Clients = () => {
                     signal: controller.signal,
                 });
 
-                if (!response.ok) {
-                    throw new Error(ui.accountLoadError);
-                }
-
-                const account = await response.json();
+                const account = await readApiJson(response, ui.accountLoadError);
                 const current = account.companies?.[0];
 
                 if (!current) {
@@ -283,7 +280,7 @@ export const Clients = () => {
                 <div>
                     <span
                         className="text-uppercase fw-bold"
-                        style={{ color: "#635bff", fontSize: "0.7rem", letterSpacing: "0.12em" }}
+                        style={{ color: "var(--cf-brand)", fontSize: "0.7rem", letterSpacing: "0.12em" }}
                     >
                         ClientFlow · Clientes
                     </span>
@@ -300,7 +297,7 @@ export const Clients = () => {
                     onClick={openNewClient}
                     disabled={!options}
                     className="btn btn-primary d-flex align-items-center gap-2 shadow-sm px-3 py-2"
-                    style={{ backgroundColor: "#635bff", border: "none" }}
+                    style={{ backgroundColor: "var(--cf-brand)", border: "none" }}
                 >
                     <i className="fa-solid fa-user-plus"></i>
                     Nuevo cliente
@@ -402,7 +399,7 @@ export const Clients = () => {
                                                     style={{
                                                         width: "50px",
                                                         height: "50px",
-                                                        background: "linear-gradient(135deg, #635bff, #8b5cf6)",
+                                                        background: "linear-gradient(135deg, var(--cf-brand), #8b5cf6)",
                                                     }}
                                                 >
                                                     {fullName
@@ -482,10 +479,10 @@ export const Clients = () => {
                         aria-modal="true"
                         aria-labelledby="client-form-title"
                     >
-                        <div className="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                        <div className="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable my-2 my-sm-4" style={{ minHeight: 0 }}>
                             <div
                                 className="modal-content border-0 shadow-lg bg-white text-dark overflow-hidden"
-                                style={{ borderRadius: "18px" }}
+                                style={{ borderRadius: "18px", maxHeight: "calc(100vh - 1rem)" }}
                             >
                                 <div className="modal-header border-0 px-4 pt-4 pb-2 bg-white">
                                     <div className="d-flex align-items-center gap-3">
@@ -494,7 +491,7 @@ export const Clients = () => {
                                             style={{
                                                 width: "44px",
                                                 height: "44px",
-                                                background: "linear-gradient(135deg, #635bff, #8b5cf6)",
+                                                background: "linear-gradient(135deg, var(--cf-brand), #8b5cf6)",
                                             }}
                                         >
                                             <i className={`fa-solid ${editingClient ? "fa-user-pen" : "fa-user-plus"}`}></i>
@@ -517,11 +514,12 @@ export const Clients = () => {
                                     ></button>
                                 </div>
 
-                                <form
+                                <form className="d-flex flex-column overflow-hidden"
                                     key={editingClient?.id || "new"}
                                     onSubmit={saveClient}
+                                    style={{ minHeight: 0 }}
                                 >
-                                    <div className="modal-body px-4 py-3 bg-white">
+                                    <div className="modal-body px-4 py-3 bg-white overflow-y-auto">
                                         <section className="mb-4">
                                             <div className="d-flex align-items-center gap-2 mb-3">
                                                 <i className="fa-regular fa-user text-primary"></i>
@@ -573,7 +571,7 @@ export const Clients = () => {
                                             <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
                                                 <div>
                                                     <div className="d-flex align-items-center gap-2">
-                                                        <i className="fa-solid fa-location-dot" style={{ color: "#635bff" }}></i>
+                                                        <i className="fa-solid fa-location-dot" style={{ color: "var(--cf-brand)" }}></i>
                                                         <h6 className="fw-bold mb-0">Dirección principal</h6>
                                                     </div>
                                                     <p className="text-secondary small mb-0 mt-1">
@@ -661,7 +659,7 @@ export const Clients = () => {
                                         )}
                                     </div>
 
-                                    <div className="modal-footer border-0 px-4 py-3 bg-light">
+                                    <div className="modal-footer border-0 px-4 py-3 bg-light flex-shrink-0">
                                         <button
                                             type="button"
                                             className="btn btn-outline-secondary px-4"
@@ -673,7 +671,7 @@ export const Clients = () => {
                                         <button
                                             type="submit"
                                             className="btn btn-primary px-4 fw-semibold"
-                                            style={{ backgroundColor: "#635bff", border: "none" }}
+                                            style={{ backgroundColor: "var(--cf-brand)", border: "none" }}
                                             disabled={saving || loadingAddress}
                                         >
                                             {saving

@@ -1,4 +1,5 @@
 const API_URL = (import.meta.env?.VITE_BACKEND_URL || "").replace(/\/$/, "");
+import { readApiJson } from "./response.mjs";
 
 export const subscriptionService = {
     activate: async ({ token, companyId, planId, signal }) => {
@@ -15,12 +16,6 @@ export const subscriptionService = {
             }),
             signal,
         });
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || "Unable to activate the plan.");
-        }
-
-        return data;
+        return readApiJson(response, "Unable to activate the plan.");
     },
 };

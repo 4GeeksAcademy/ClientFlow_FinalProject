@@ -169,11 +169,6 @@ def build_invitation(data):
 @members.route("/members/invitations", methods=["POST"])
 @team_admin_required
 def create_invitation():
-    if not current_app.debug:
-        return jsonify(
-            message="Invitation delivery is not configured."
-        ), 503
-
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
@@ -185,42 +180,50 @@ def create_invitation():
         db.session.rollback()
         return jsonify(message=str(error)), 400
 
-    outbox = Path(current_app.config.get("MEMBER_INVITE_OUTBOX") or
-                  Path(current_app.root_path).parent / ".local" / "invite-outbox")
-    file_path = outbox / f"{invitation.token_hash}.json"
+    invitation_url = (
+        os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").rstrip("/")
+        + "/accept-invitation#" + urlencode({"token": raw_token})
+    )
+    file_path = None
 
     try:
-        outbox.mkdir(parents=True, exist_ok=True, mode=0o700)
-
-        with os.fdopen(os.open(file_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8") as file:
-            json.dump(
-                {
-                    "to": invitation.email,
-                    "subject": "Invitación a ClientFlow",
-                    "token": raw_token,
-                    "url": (os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").rstrip("/")
-                            + "/accept-invitation#" + urlencode({"token": raw_token})),
-                    "expires_at": invitation.expires_at.isoformat(),
-                },
-                file,
-                ensure_ascii=False,
-                indent=2,
-            )
+        if current_app.debug:
+            outbox = Path(current_app.config.get("MEMBER_INVITE_OUTBOX") or
+                          Path(current_app.root_path).parent / ".local" / "invite-outbox")
+            outbox.mkdir(parents=True, exist_ok=True, mode=0o700)
+            file_path = outbox / f"{invitation.token_hash}.json"
+            with os.fdopen(os.open(file_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8") as file:
+                json.dump(
+                    {
+                        "to": invitation.email,
+                        "subject": "Invitación a ClientFlow",
+                        "token": raw_token,
+                        "url": invitation_url,
+                        "expires_at": invitation.expires_at.isoformat(),
+                    },
+                    file,
+                    ensure_ascii=False,
+                    indent=2,
+                )
 
         db.session.commit()
     except (OSError, SQLAlchemyError):
         db.session.rollback()
 
         try:
-            file_path.unlink(missing_ok=True)
+            if file_path is not None:
+                file_path.unlink(missing_ok=True)
         except OSError:
             pass
 
         return jsonify(message="Unable to create the invitation."), 503
 
     return jsonify(
-        message="Invitation saved to the local outbox.",
+        message=("Invitation saved to the local outbox."
+                 if current_app.debug else "Invitation created. Share the secure link with the invited member."),
         invitation_id=invitation.id,
+        invitation_url=invitation_url,
+        delivery="local_outbox" if current_app.debug else "manual",
         expires_at=invitation.expires_at.isoformat(),
     ), 201
 

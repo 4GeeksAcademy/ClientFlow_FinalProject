@@ -22,6 +22,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 import { Settings } from "./pages/Settings";
 import { WebChatPage } from "./pages/WebChatPage";
 import { useLanguage } from "./context/LanguageContext";
+import { readApiJson } from "./services/response.mjs";
 
 const LocalizedNotFound = () => {
     const { ui } = useLanguage();
@@ -56,11 +57,7 @@ const ProtectedRoute = ({ children }) => {
                     return;
                 }
 
-                if (!meResponse.ok) {
-                    throw new Error(ui.accountLoadError);
-                }
-
-                const account = await meResponse.json();
+                const account = await readApiJson(meResponse, ui.accountLoadError);
                 const company = account.companies?.[0];
 
                 if (!company) {
@@ -80,14 +77,16 @@ const ProtectedRoute = ({ children }) => {
                     return;
                 }
 
-                const data = await response.json();
-
-                if (!response.ok) {
+                let data;
+                try {
+                    data = await readApiJson(response, ui.subscriptionVerifyError);
+                } catch (failure) {
+                    data = { code: failure.code };
                     if (data.code === "subscription_required") {
                         setStatus("subscription_required");
                         return;
                     }
-                    throw new Error(data.message || ui.subscriptionVerifyError);
+                    throw failure;
                 }
 
                 setStatus("allowed");

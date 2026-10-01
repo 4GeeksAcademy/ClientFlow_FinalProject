@@ -43,8 +43,8 @@
 }
 .agents-page .form-control:focus { background: var(--cf-surface-muted); color: var(--cf-text); border-color: #7859df; box-shadow: 0 0 0 3px #7859df22; }
 .agents-page textarea { min-height: 180px; resize: vertical; }
-.agents-page fieldset { background: var(--cf-surface-muted); border: 1px solid var(--cf-border); border-radius: 12px; padding: 18px; margin-top: 8px; }
-.agents-page legend { float: none; width: auto; font-size: 15px; font-weight: 650; margin-bottom: 10px; color: var(--cf-text); }
+.agents-page fieldset { background: var(--cf-surface-muted); border: 1px solid var(--cf-border); border-radius: 12px; padding: 18px; margin: 0 0 20px; }
+.agents-page legend { float: none; width: auto; padding: 0 6px; font-size: 14px; font-weight: 550; margin: 0 0 10px -6px; color: var(--cf-text); }
 .agents-page fieldset label { display: flex !important; gap: 10px; align-items: flex-start; padding: 8px 0; overflow-wrap: anywhere; }
 .agents-page input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: #7357d9; }
 .agents-page fieldset p { color: var(--cf-text-muted); font-size: 14px; margin: 0; }

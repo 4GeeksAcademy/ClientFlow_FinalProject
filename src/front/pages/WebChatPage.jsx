@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { WebChat } from "../components/WebChat";
 import { webChatService } from "../services/webChatService";
 import { useLanguage } from "../context/LanguageContext";
+import { readApiJson } from "../services/response.mjs";
 
 export function WebChatPage() {
     const { ui } = useLanguage();
@@ -34,11 +35,7 @@ export function WebChatPage() {
                 cache: "no-store",
             });
 
-            if (!response.ok) {
-                throw new Error(ui.accountLoadError);
-            }
-
-            const account = await response.json();
+            const account = await readApiJson(response, ui.accountLoadError);
             const company = account.companies?.[0];
 
             if (!company) {

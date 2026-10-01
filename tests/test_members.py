@@ -135,4 +135,8 @@ class MembersTest(unittest.TestCase):
         for payload in ({'is_active':'false'}, {'role': []}, {}, {'company_id':3}, {'role':'owner'}):
             self.assertIn(self.client.patch(f'/api/members/{member.id}', headers=self.owner, json=payload).status_code, (400,403))
         self.app.config['DEBUG'] = False
-        self.assertEqual(self.client.post('/api/members/invitations', headers=self.owner, json={'email':'new@example.com'}).status_code,503)
+        response = self.client.post('/api/members/invitations', headers=self.owner, json={'email':'new@example.com'})
+        self.assertEqual(response.status_code, 201, response.json)
+        self.assertEqual(response.json['delivery'], 'manual')
+        self.assertIn('/accept-invitation#token=', response.json['invitation_url'])
+        self.assertNotIn('token', response.json)

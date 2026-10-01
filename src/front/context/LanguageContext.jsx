@@ -6,6 +6,11 @@ import { literalMessage, translateLiteral, validateLiteralTranslations } from ".
 const LanguageContext = createContext();
 const supportedLocales = ["es", "en", "pt"];
 const literalOrigins = new WeakMap();
+const genericError = {
+    en: "Unable to complete the operation. Try again.",
+    es: "No se pudo completar la operación. Inténtalo de nuevo.",
+    pt: "Não foi possível concluir a operação. Tente novamente.",
+};
 
 export const LanguageProvider = ({ children }) => {
     // Recupera el idioma guardado o por defecto usa español ('es')
@@ -36,6 +41,12 @@ export const LanguageProvider = ({ children }) => {
                 if (!translations || !Object.values(translations).includes(match[2])) {
                     translations = literalMessage(match[2]);
                     if (translations) literalOrigins.set(root, translations);
+                }
+                if (!translations && match[2].length > 3 && root.parentElement?.closest(
+                    '[role="alert"], .alert-danger, .inbox-error, .knowledge-error, .knowledge-failure, .settings-error, .settings-notice.error'
+                )) {
+                    translations = genericError;
+                    literalOrigins.set(root, translations);
                 }
                 const translated = translations?.[locale] || match[2];
                 if (translated !== match[2]) root.nodeValue = `${match[1]}${translated}${match[3]}`;

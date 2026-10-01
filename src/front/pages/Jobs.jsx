@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { addDays, defaultJobSchedule, jobDate, jobMatchesStatus } from "../utils/jobSchedule.mjs";
 import { useLanguage } from "../context/LanguageContext";
 import { translateLiteral } from "../i18n/literalTranslations.mjs";
+import { readApiJson } from "../services/response.mjs";
 
 const emptyJob = () => ({
     title: "",
@@ -48,8 +49,10 @@ export const Jobs = () => {
                     signal: controller.signal
                 });
 
-                if (!meResponse.ok) throw new Error(translateLiteral("No se pudo cargar la cuenta.", locale));
-                const account = await meResponse.json();
+                const account = await readApiJson(
+                    meResponse,
+                    translateLiteral("No se pudo cargar la cuenta.", locale)
+                );
                 const current = account.companies?.[0];
 
                 if (!current) {
@@ -67,11 +70,12 @@ export const Jobs = () => {
                     signal: controller.signal
                 });
 
-                if (jobsRes.ok) {
-                    const jobsData = await jobsRes.json();
-                    if (Array.isArray(jobsData)) {
-                        setJobs(jobsData);
-                    }
+                const jobsData = await readApiJson(
+                    jobsRes,
+                    translateLiteral("No se pudieron cargar los trabajos.", locale)
+                );
+                if (Array.isArray(jobsData)) {
+                    setJobs(jobsData);
                 }
 
                 // Cargamos los clientes de la compañía para el selector del modal
@@ -83,11 +87,12 @@ export const Jobs = () => {
                     signal: controller.signal
                 });
 
-                if (clientsRes.ok) {
-                    const clientsData = await clientsRes.json();
-                    const clientList = clientsData.items || clientsData.clients || (Array.isArray(clientsData) ? clientsData : []);
-                    setClients(clientList);
-                }
+                const clientsData = await readApiJson(
+                    clientsRes,
+                    translateLiteral("No se pudieron cargar los clientes.", locale)
+                );
+                const clientList = clientsData.items || clientsData.clients || (Array.isArray(clientsData) ? clientsData : []);
+                setClients(clientList);
 
             } catch (err) {
                 if (!controller.signal.aborted) {
@@ -111,7 +116,10 @@ export const Jobs = () => {
             const meResponse = await fetch(`${base}/api/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const account = await meResponse.json();
+            const account = await readApiJson(
+                meResponse,
+                translateLiteral("Unable to load the account.", locale)
+            );
             const companyId = account.companies?.[0]?.id || 1;
 
             const response = await fetch(`${base}/api/jobs/${jobId}`, {
@@ -122,12 +130,8 @@ export const Jobs = () => {
                 }
             });
 
-            if (response.ok) {
-                setReload(value => value + 1);
-            } else {
-                const errData = await response.json();
-                alert(`${translateLiteral("No se pudo eliminar el trabajo:", locale)} ${errData.error || translateLiteral("Error desconocido", locale)}`);
-            }
+            await readApiJson(response, translateLiteral("Unable to delete the job.", locale));
+            setReload(value => value + 1);
         } catch (error) {
             console.error("Error de red al eliminar el trabajo:", error);
             alert(translateLiteral("Error de red al intentar eliminar el trabajo.", locale));
@@ -159,7 +163,10 @@ export const Jobs = () => {
             const meResponse = await fetch(`${base}/api/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const account = await meResponse.json();
+            const account = await readApiJson(
+                meResponse,
+                translateLiteral("Unable to load the account.", locale)
+            );
             const companyId = account.companies?.[0]?.id || 1;
 
             const response = await fetch(`${base}/api/jobs`, {
@@ -180,15 +187,10 @@ export const Jobs = () => {
                 })
             });
 
-            if (response.ok) {
-                setShowModal(false);
-                setReload(value => value + 1);
-                setNewJob(emptyJob());
-            } else {
-                const errData = await response.json();
-                console.error("Error al crear el trabajo:", errData);
-                alert(`${translateLiteral("No se pudo crear el trabajo:", locale)} ${errData.error || JSON.stringify(errData)}`);
-            }
+            await readApiJson(response, translateLiteral("Unable to create the job.", locale));
+            setShowModal(false);
+            setReload(value => value + 1);
+            setNewJob(emptyJob());
         } catch (error) {
             console.error("Error de red al crear el trabajo:", error);
         }
@@ -237,7 +239,7 @@ export const Jobs = () => {
                 <div className="d-flex gap-2">
                     <button
                         className="btn btn-primary d-flex align-items-center gap-2 shadow-sm"
-                        style={{ backgroundColor: "#635bff", border: "none" }}
+                        style={{ backgroundColor: "var(--cf-brand)", border: "none" }}
                         onClick={openCreate}
                     >
                         <i className="fa-solid fa-plus"></i> Nuevo Trabajo
@@ -317,7 +319,7 @@ export const Jobs = () => {
                                                     <div
                                                         className="progress-bar rounded-pill"
                                                         role="progressbar"
-                                                        style={{ width: `${job.progress || 0}%`, backgroundColor: "#635bff" }}
+                                                        style={{ width: `${job.progress || 0}%`, backgroundColor: "var(--cf-brand)" }}
                                                     ></div>
                                                 </div>
                                             </div>
@@ -454,7 +456,7 @@ export const Jobs = () => {
                                 </div>
                                 <div className="modal-footer border-0 pt-0">
                                     <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setShowModal(false)}>Cancelar</button>
-                                    <button type="submit" className="btn btn-primary btn-sm px-4" style={{ backgroundColor: "#635bff", border: "none" }}>Guardar Trabajo</button>
+                                    <button type="submit" className="btn btn-primary btn-sm px-4" style={{ backgroundColor: "var(--cf-brand)", border: "none" }}>Guardar Trabajo</button>
                                 </div>
                             </form>
                         </div>
