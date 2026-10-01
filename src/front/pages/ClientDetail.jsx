@@ -126,7 +126,6 @@ export const ClientDetail = () => {
                                     .toUpperCase() || "?"}
                             </span>
                             <div>
-                                <span className="text-muted small fw-semibold">ID: {client.id}</span>
                                 <h2 className="fw-bold text-dark mb-1">{fullName}</h2>
                                 <h5 className="text-secondary fs-6 mb-2">
                                     Cliente

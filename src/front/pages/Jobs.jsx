@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { addDays, defaultJobSchedule } from "../utils/jobSchedule.mjs";
+import { addDays, defaultJobSchedule, jobDate, jobMatchesStatus } from "../utils/jobSchedule.mjs";
 import { useLanguage } from "../context/LanguageContext";
 import { translateLiteral } from "../i18n/literalTranslations.mjs";
 
@@ -140,7 +140,7 @@ export const Jobs = () => {
 
         const matchesSearch = jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
             clientName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === "all" || job.status === statusFilter;
+        const matchesStatus = jobMatchesStatus(job.status, statusFilter);
         return matchesSearch && matchesStatus;
     });
 
@@ -175,8 +175,8 @@ export const Jobs = () => {
                     client_id: newJob.client_id ? Number(newJob.client_id) : null,
                     quoted_amount: Number(newJob.budget),
                     description: `Obra en ${newJob.address}`,
-                    scheduled_start: `${newJob.startDate}T00:00:00`,
-                    scheduled_end: `${newJob.dueDate}T23:59:59`
+                    scheduled_start: newJob.startDate,
+                    scheduled_end: newJob.dueDate
                 })
             });
 
@@ -295,7 +295,6 @@ export const Jobs = () => {
                                         <div>
                                             <div className="d-flex justify-content-between align-items-start mb-2">
                                                 <div>
-                                                    <span className="text-muted" style={{ fontSize: "0.75rem" }}>ID: {job.id}</span>
                                                     <h5 className="fw-bold text-dark mb-1">{job.title}</h5>
                                                 </div>
                                                 {getStatusBadge(job.status)}
@@ -331,7 +330,7 @@ export const Jobs = () => {
                                                 </div>
                                                 <div>
                                                     <i className="fa-solid fa-calendar me-1"></i>
-                                                    <span className="text-dark">Entrega: {job.scheduled_end ? job.scheduled_end.slice(0, 10) : "Por definir"}</span>
+                                                    <span className="text-dark">Entrega: {jobDate(job.scheduled_end) || "Por definir"}</span>
                                                 </div>
                                             </div>
                                         </div>

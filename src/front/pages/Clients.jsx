@@ -418,7 +418,7 @@ export const Clients = () => {
                                                         {fullName}
                                                     </h5>
                                                     <span className="text-secondary small">
-                                                        {translateLiteral("Cliente", locale)} #{client.id}
+                                                        {translateLiteral("Cliente", locale)}
                                                     </span>
                                                 </div>
                                             </div>
