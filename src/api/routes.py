@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from flask import Blueprint, g, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import String, cast, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -1945,6 +1946,91 @@ def get_plans():
         }
         for plan in plans
     ]), 200
+
+
+@api.route("/subscriptions/activate", methods=["POST"])
+@jwt_required()
+def activate_subscription():
+    """Activate a paid plan for an existing company after trial or plan expiry."""
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify(message="Request body must be a JSON object."), 400
+
+    if data.get("registration_mode") == "trial":
+        return jsonify(
+            message="The free trial has already been used for this company.",
+            code="trial_already_used",
+        ), 400
+
+    plan_id = data.get("plan_id")
+
+    if type(plan_id) is not int or plan_id <= 0:
+        return jsonify(message="Select a valid plan."), 400
+
+    raw_company_id = request.headers.get("X-Company-ID", "")
+
+    if (
+        not raw_company_id.isascii()
+        or not raw_company_id.isdecimal()
+        or len(raw_company_id) > 10
+    ):
+        return jsonify(message="Select a valid company."), 400
+
+    membership = db.session.scalar(
+        select(CompanyMembership).join(Company).where(
+            CompanyMembership.company_id == int(raw_company_id),
+            CompanyMembership.user_id == int(get_jwt_identity()),
+            CompanyMembership.is_active.is_(True),
+            Company.is_active.is_(True),
+        )
+    )
+
+    if membership is None:
+        return jsonify(message="You do not have access to this company."), 403
+
+    if membership.role not in (MembershipRole.OWNER, MembershipRole.ADMIN):
+        return jsonify(
+            message="Only an owner or administrator can activate a plan."
+        ), 403
+
+    plan = db.session.scalar(
+        select(Plan).where(
+            Plan.id == plan_id,
+            Plan.is_active.is_(True),
+        )
+    )
+
+    if plan is None:
+        return jsonify(message="Selected plan is unavailable."), 400
+
+    subscription = db.session.scalar(
+        select(Subscription)
+        .where(Subscription.company_id == membership.company_id)
+        .order_by(Subscription.created_at.desc(), Subscription.id.desc())
+        .limit(1)
+    )
+
+    if subscription is None:
+        subscription = Subscription(company_id=membership.company_id)
+        db.session.add(subscription)
+
+    now = utc_now()
+    subscription.plan = plan
+    subscription.status = SubscriptionStatus.ACTIVE
+    subscription.current_period_started_at = now
+    subscription.current_period_ends_at = now + timedelta(days=30)
+    subscription.cancelled_at = None
+    subscription.external_subscription_id = f"mock_{uuid4().hex}"
+    db.session.commit()
+
+    return jsonify(
+        message="Plan activated successfully.",
+        company_id=membership.company_id,
+        plan_id=plan.id,
+        status=subscription.status.value,
+        current_period_ends_at=subscription.current_period_ends_at.isoformat(),
+    ), 200
 
 
 @api.route("/register", methods=["POST"])

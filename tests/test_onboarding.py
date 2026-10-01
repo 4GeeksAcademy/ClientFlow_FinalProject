@@ -54,6 +54,75 @@ class OnboardingTest(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json['code'], 'subscription_required')
 
+    def test_expired_trial_can_activate_a_plan_without_another_trial(self):
+        self.assertEqual(self.register().status_code, 201)
+        member = db.session.scalar(select(CompanyMembership))
+        subscription = db.session.scalar(select(Subscription))
+        subscription_id = subscription.id
+        original_trial_started_at = subscription.trial_started_at
+        original_trial_ends_at = utc_now() - timedelta(seconds=1)
+        subscription.trial_ends_at = original_trial_ends_at
+        professional = Plan(
+            code='professional', name='Professional', price_eur=79.99
+        )
+        db.session.add(professional)
+        db.session.commit()
+        token = self.client.post('/api/login', json=self.data).json['token']
+        headers = {
+            'Authorization': 'Bearer ' + token,
+            'X-Company-ID': str(member.company_id),
+        }
+
+        response = self.client.post(
+            '/api/subscriptions/activate',
+            headers=headers,
+            json={'plan_id': professional.id, 'registration_mode': 'mock_payment'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['status'], 'active')
+        self.assertEqual(response.json['plan_id'], professional.id)
+        self.assertEqual(
+            db.session.scalar(select(func.count()).select_from(Subscription)), 1
+        )
+        db.session.expire_all()
+        activated = db.session.get(Subscription, subscription_id)
+        self.assertEqual(activated.status, SubscriptionStatus.ACTIVE)
+        self.assertEqual(activated.plan_id, professional.id)
+        self.assertEqual(activated.trial_started_at, original_trial_started_at)
+        self.assertEqual(
+            activated.trial_ends_at.replace(tzinfo=None),
+            original_trial_ends_at.replace(tzinfo=None),
+        )
+        self.assertTrue(activated.external_subscription_id.startswith('mock_'))
+        self.assertTrue(subscription_allows_access(activated))
+        self.assertEqual(
+            self.client.get('/api/auth/context', headers=headers).status_code,
+            200,
+        )
+
+    def test_existing_company_cannot_request_a_second_trial(self):
+        self.assertEqual(self.register().status_code, 201)
+        member = db.session.scalar(select(CompanyMembership))
+        subscription = db.session.scalar(select(Subscription))
+        original_trial_ends_at = subscription.trial_ends_at
+        token = self.client.post('/api/login', json=self.data).json['token']
+
+        response = self.client.post(
+            '/api/subscriptions/activate',
+            headers={
+                'Authorization': 'Bearer ' + token,
+                'X-Company-ID': str(member.company_id),
+            },
+            json={'plan_id': self.plan.id, 'registration_mode': 'trial'},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['code'], 'trial_already_used')
+        db.session.refresh(subscription)
+        self.assertEqual(subscription.status, SubscriptionStatus.TRIALING)
+        self.assertEqual(subscription.trial_ends_at, original_trial_ends_at)
+
     def test_mock_payment_and_expiry(self):
         self.assertEqual(self.register(registration_mode='mock_payment').status_code, 201)
         sub = db.session.scalar(select(Subscription))
