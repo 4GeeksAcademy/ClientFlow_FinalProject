@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { clientService } from "../services/clientService";
 import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
+import { readApiJson } from "../services/response.mjs";
+
+const defaultActionForm = () => {
+    const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return { title: "", description: "", dueAt: localDate.toISOString().slice(0, 16) };
+};
 
 
 export const ClientDetail = () => {
@@ -16,6 +24,12 @@ export const ClientDetail = () => {
     const [recentActivity, setRecentActivity] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [requestOptions, setRequestOptions] = useState(null);
+    const [currentResponsibleName, setCurrentResponsibleName] = useState("");
+    const [showActionForm, setShowActionForm] = useState(false);
+    const [actionForm, setActionForm] = useState(defaultActionForm);
+    const [savingAction, setSavingAction] = useState(false);
+    const [actionError, setActionError] = useState("");
 
     useEffect(() => {
         const loadClient = async () => {
@@ -31,8 +45,7 @@ export const ClientDetail = () => {
                     },
                 });
 
-                if (!response.ok) throw new Error(ui.accountLoadError);
-                const account = await response.json();
+                const account = await readApiJson(response, ui.accountLoadError);
                 const current = account.companies?.[0];
 
                 if (!current) {
@@ -42,7 +55,12 @@ export const ClientDetail = () => {
                 const options = {
                     token,
                     companyId: current.id,
+                    membershipId: current.membership_id,
                 };
+                setRequestOptions(options);
+                setCurrentResponsibleName(
+                    `${account.user?.first_name || ""} ${account.user?.last_name || ""}`.trim()
+                );
 
                 const [
                     clientData,
@@ -79,6 +97,31 @@ export const ClientDetail = () => {
 
         loadClient();
     }, [id, ui.accountLoadError, ui.noCompany]);
+
+    const createNextAction = async (event) => {
+        event.preventDefault();
+        if (!requestOptions?.membershipId) {
+            setActionError(translateLiteral("Unable to identify the current responsible person.", locale));
+            return;
+        }
+        try {
+            setSavingAction(true);
+            setActionError("");
+            const created = await clientService.createNextAction(requestOptions, id, {
+                title: actionForm.title.trim(),
+                description: actionForm.description.trim() || null,
+                due_at: new Date(actionForm.dueAt).toISOString(),
+                assigned_membership_id: requestOptions.membershipId,
+            });
+            setNextActions((current) => [...current, created].sort((a, b) => new Date(a.due_at) - new Date(b.due_at)));
+            setActionForm(defaultActionForm());
+            setShowActionForm(false);
+        } catch (failure) {
+            setActionError(failure.message || translateLiteral("Unable to create the next action.", locale));
+        } finally {
+            setSavingAction(false);
+        }
+    };
 
     if (loading) {
         return <div className="p-4">Cargando cliente...</div>;
@@ -157,17 +200,45 @@ export const ClientDetail = () => {
 
                     {/* Próxima Acción (Next Action) */}
                     <div className="card border-0 shadow-sm mb-4 bg-white border-start border-4 border-primary">
-                        <div className="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                        <div className="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center gap-3">
                             <h5 className="fw-bold text-dark m-0">
                                 <i className="fa-solid fa-bolt me-2 text-warning"></i> Próxima Acción Programada
                             </h5>
+                            <div className="d-flex align-items-center gap-2">
                             <span className="badge bg-primary text-white px-2 py-1">
                                 Due: {nextAction?.due_at
                                     ? new Date(nextAction.due_at).toLocaleDateString(locale)
                                     : "Sin fecha"}
                             </span>
+                            <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setShowActionForm((value) => !value)}>
+                                <i className="fa-solid fa-plus me-1"></i>{translateLiteral("Add", locale)}
+                            </button>
+                            </div>
                         </div>
                         <div className="card-body pt-0">
+                            {showActionForm && (
+                                <form className="border rounded-3 p-3 mb-3 bg-light" onSubmit={createNextAction}>
+                                    <div className="row g-2">
+                                        <div className="col-12 col-md-6">
+                                            <label className="form-label small fw-semibold">{translateLiteral("Title *", locale)}</label>
+                                            <input className="form-control form-control-sm" required maxLength="180" value={actionForm.title} onChange={(event) => setActionForm((current) => ({ ...current, title: event.target.value }))} />
+                                        </div>
+                                        <div className="col-12 col-md-6">
+                                            <label className="form-label small fw-semibold">{translateLiteral("Date and time *", locale)}</label>
+                                            <input type="datetime-local" className="form-control form-control-sm" required value={actionForm.dueAt} onChange={(event) => setActionForm((current) => ({ ...current, dueAt: event.target.value }))} />
+                                        </div>
+                                        <div className="col-12">
+                                            <label className="form-label small fw-semibold">{translateLiteral("Description", locale)}</label>
+                                            <textarea className="form-control form-control-sm" rows="2" value={actionForm.description} onChange={(event) => setActionForm((current) => ({ ...current, description: event.target.value }))}></textarea>
+                                        </div>
+                                    </div>
+                                    {actionError && <div className="alert alert-danger py-2 small mt-2 mb-0">{actionError}</div>}
+                                    <div className="d-flex justify-content-end gap-2 mt-3">
+                                        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={savingAction} onClick={() => setShowActionForm(false)}>{translateLiteral("Cancel", locale)}</button>
+                                        <button type="submit" className="btn btn-sm btn-primary" disabled={savingAction}>{savingAction ? translateLiteral("Saving...", locale) : translateLiteral("Save", locale)}</button>
+                                    </div>
+                                </form>
+                            )}
                             <div className="bg-light p-3 rounded-3 mb-3">
                                 <h6 className="fw-bold text-dark mb-1">
                                     {nextAction?.title || "No hay próxima acción programada"}
@@ -179,7 +250,9 @@ export const ClientDetail = () => {
                                     <span>
                                         <i className="fa-solid fa-user-tie me-1 text-primary"></i>
                                         <strong>Propietario:</strong>{" "}
-                                        {nextAction?.assigned_membership_id || "Sin asignar"}
+                                        {nextAction?.assigned_membership_id === requestOptions?.membershipId
+                                            ? currentResponsibleName || translateLiteral("Responsible", locale)
+                                            : translateLiteral("Unassigned", locale)}
                                     </span>
 
                                     <span>
@@ -192,7 +265,12 @@ export const ClientDetail = () => {
                             <div className="border-top border-light pt-3 mt-3">
                                 <span className="text-secondary small">
                                     <strong>Estado:</strong>{" "}
-                                    {nextAction?.status || "Sin acción programada"}
+                                    {nextAction?.status
+                                        ? translateLiteral(
+                                            nextAction.status.charAt(0).toUpperCase() + nextAction.status.slice(1),
+                                            locale
+                                        )
+                                        : translateLiteral("No scheduled action", locale)}
                                 </span>
                             </div>
                         </div>

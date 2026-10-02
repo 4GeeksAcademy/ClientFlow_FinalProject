@@ -126,6 +126,8 @@ Configura estos valores:
 | `VITE_BACKEND_URL`  | Dirección base de la API, sin `/api` ni `/api/login`.                                                 |
 | `FRONTEND_ORIGIN`   | Origen exacto del frontend autorizado por el backend.                                                 |
 | `AUTH_RESET_URL`    | Dirección de la página de recuperación de contraseña.                                                 |
+| `RESEND_API_KEY`    | Clave privada de Resend para enviar la recuperación de contraseña en producción.                      |
+| `AUTH_EMAIL_FROM`   | Remitente verificado, por ejemplo `ClientFlow <no-reply@example.com>`.                                 |
 | `ENABLE_DEV_ADMIN`  | Mantén `0` salvo que habilites expresamente el administrador local de desarrollo.                     |
 
 Genera un secreto JWT localmente:

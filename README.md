@@ -124,6 +124,8 @@ Configure these values:
 | `VITE_BACKEND_URL`  | API server base address, without `/api` or `/api/login`.                                      |
 | `FRONTEND_ORIGIN`   | Exact frontend origin allowed by the backend.                                                 |
 | `AUTH_RESET_URL`    | Frontend password-reset page address.                                                         |
+| `RESEND_API_KEY`    | Private Resend key used to deliver password-reset email in production.                        |
+| `AUTH_EMAIL_FROM`   | Verified sender, for example `ClientFlow <no-reply@example.com>`.                              |
 | `ENABLE_DEV_ADMIN`  | Keep `0` unless explicitly enabling the local development admin.                              |
 
 Generate a JWT signing secret locally:

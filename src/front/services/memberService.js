@@ -19,11 +19,14 @@ async function request(path, { token, companyId, signal, method = "GET", body })
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await response.json() : null;
 
     if (!response.ok) {
-        throw new Error(data.message || "No se pudo completar la operación.");
+        throw new Error(data?.message || "No se pudo completar la operación.");
     }
+
+    if (!data) throw new Error("El servidor devolvió una respuesta no válida.");
 
     return data;
 }

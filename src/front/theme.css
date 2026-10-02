@@ -1,4 +1,6 @@
 :root {
+    --cf-brand: #635bff;
+    --cf-brand-rgb: 99, 91, 255;
     --cf-workspace-bg: #f8f9fa;
     --cf-surface: #ffffff;
     --cf-surface-muted: #f1f3f5;
@@ -7,6 +9,17 @@
     --cf-text-muted: #6c757d;
     --cf-control-shadow: 0 6px 22px rgba(15, 23, 42, 0.08);
 }
+
+.btn-primary {
+    --bs-btn-bg: var(--cf-brand);
+    --bs-btn-border-color: var(--cf-brand);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--cf-brand) 86%, #000);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--cf-brand) 82%, #000);
+}
+
+.text-primary { color: var(--cf-brand) !important; }
+.bg-primary { background-color: var(--cf-brand) !important; }
+.border-primary { border-color: var(--cf-brand) !important; }
 
 :root[data-bs-theme="dark"] {
     --cf-workspace-bg: #0b1120;
@@ -81,7 +94,7 @@ body,
 
 .theme-control:hover,
 .language-control:hover {
-    border-color: #635bff;
+    border-color: var(--cf-brand);
 }
 
 .workspace-preferences-compact .language-control,
@@ -153,6 +166,20 @@ body,
     color: var(--cf-text) !important;
     background-color: var(--cf-surface-muted) !important;
     border-color: var(--cf-border) !important;
+}
+
+:root[data-bs-theme="dark"] .main-content-area .btn-light,
+:root[data-bs-theme="dark"] .main-content-area .alert-light,
+:root[data-bs-theme="dark"] .main-content-area .dropdown-menu,
+:root[data-bs-theme="dark"] .main-content-area .dashboard-breakdown-item {
+    color: var(--cf-text) !important;
+    background-color: var(--cf-surface-muted) !important;
+    border-color: var(--cf-border) !important;
+}
+
+:root[data-bs-theme="dark"] .main-content-area .btn-light:hover,
+:root[data-bs-theme="dark"] .main-content-area .dashboard-breakdown-item:hover {
+    background-color: color-mix(in srgb, var(--cf-surface-muted) 82%, var(--cf-brand)) !important;
 }
 
 :root[data-bs-theme="dark"] .main-content-area .form-control::placeholder,

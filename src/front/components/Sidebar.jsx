@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
+import { useApp } from "../context/AppContext";
+import { readApiJson } from "../services/response.mjs";
 
 export const Sidebar = ({ isOpen, onClose }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { t, ui } = useLanguage();
+    const { setBrandColour } = useApp();
     const [account, setAccount] = useState({ user: null, company: null });
 
     useEffect(() => {
@@ -23,11 +26,13 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 });
                 if (!response.ok) return;
 
-                const data = await response.json();
+                const data = await readApiJson(response);
                 setAccount({
                     user: data.user || null,
                     company: data.companies?.[0] || null,
                 });
+                const company = data.companies?.[0];
+                if (company?.primary_colour) setBrandColour(company.primary_colour);
             } catch (error) {
                 if (error.name !== "AbortError") {
                     console.error("Unable to load sidebar account context.");
@@ -114,7 +119,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 {/* Logo y Marca con botón de cierre para móvil integrado */}
                 <div className="d-flex align-items-center justify-content-between mb-3 mb-md-0 px-2">
                     <Link to="/dashboard" onClick={handleLinkClick} className="d-flex align-items-center gap-2 text-white text-decoration-none">
-                        <div className="rounded-2 d-flex align-items-center justify-content-center text-white fw-bold shadow-sm" style={{ width: "36px", height: "36px", backgroundColor: "#635bff" }}>
+                        <div className="rounded-2 d-flex align-items-center justify-content-center text-white fw-bold shadow-sm" style={{ width: "36px", height: "36px", backgroundColor: "var(--cf-brand)" }}>
                             <span style={{ fontSize: "1rem" }}>C</span>
                         </div>
                         <div>

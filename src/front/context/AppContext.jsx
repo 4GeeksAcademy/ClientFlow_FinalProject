@@ -2,6 +2,16 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AppContext = createContext();
 
+const DEFAULT_BRAND = "#635BFF";
+const normalizeBrand = (value) => /^#[0-9a-f]{6}$/i.test(value || "")
+    ? value.toUpperCase()
+    : DEFAULT_BRAND;
+
+const brandRgb = (value) => {
+    const colour = normalizeBrand(value).slice(1);
+    return [0, 2, 4].map((offset) => parseInt(colour.slice(offset, offset + 2), 16)).join(", ");
+};
+
 export const AppProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
         return localStorage.getItem("theme") || "system";
@@ -13,6 +23,9 @@ export const AppProvider = ({ children }) => {
         const stored = localStorage.getItem("interface_density");
         return stored === "compact" ? "compact" : "comfortable";
     });
+    const [brandColour, setBrandColourState] = useState(() =>
+        normalizeBrand(localStorage.getItem("brand_colour"))
+    );
 
     const resolvedTheme = theme === "system" ? systemTheme : theme;
 
@@ -35,6 +48,17 @@ export const AppProvider = ({ children }) => {
         localStorage.setItem("interface_density", density);
     }, [density]);
 
+    useEffect(() => {
+        const root = document.documentElement;
+        root.style.setProperty("--cf-brand", brandColour);
+        root.style.setProperty("--cf-brand-rgb", brandRgb(brandColour));
+        root.style.setProperty("--bs-primary", brandColour);
+        root.style.setProperty("--bs-primary-rgb", brandRgb(brandColour));
+        localStorage.setItem("brand_colour", brandColour);
+    }, [brandColour]);
+
+    const setBrandColour = (value) => setBrandColourState(normalizeBrand(value));
+
     const toggleTheme = () => {
         setTheme(resolvedTheme === "dark" ? "light" : "dark");
     };
@@ -45,7 +69,7 @@ export const AppProvider = ({ children }) => {
     };
 
     return (
-        <AppContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme, density, setDensity, showToast }}>
+        <AppContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme, density, setDensity, brandColour, setBrandColour, showToast }}>
             {children}
         </AppContext.Provider>
     );

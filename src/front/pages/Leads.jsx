@@ -3,6 +3,7 @@ import { leadService } from "../services/leadService";
 import "../styles/leads.css";
 import { useLanguage } from "../context/LanguageContext";
 import { translateLiteral } from "../i18n/literalTranslations.mjs";
+import { readApiJson } from "../services/response.mjs";
 
 const STATUS_LABELS = {
     new: "Nuevo",
@@ -183,11 +184,10 @@ export const Leads = () => {
                     signal: controller.signal,
                 });
 
-                if (!accountResponse.ok) {
-                    throw new Error("No se pudo verificar tu cuenta.");
-                }
-
-                const account = await accountResponse.json();
+                const account = await readApiJson(
+                    accountResponse,
+                    translateLiteral("Unable to verify your account.", locale)
+                );
                 const currentCompany = account.companies?.[0];
 
                 if (!currentCompany) {
@@ -474,16 +474,15 @@ export const Leads = () => {
 
     return (
         <div
-            data-bs-theme="light"
             className="container-fluid px-4 py-4"
-            style={{ backgroundColor: "#f8f9fa", minHeight: "100vh", color: "#212529" }}
+            style={{ backgroundColor: "var(--cf-workspace-bg)", minHeight: "100vh", color: "var(--cf-text)" }}
         >
             <div className="container px-0">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <span
                             className="text-uppercase fw-bold"
-                            style={{ color: "#635bff", fontSize: "0.65rem", letterSpacing: "0.08em" }}
+                            style={{ color: "var(--cf-brand)", fontSize: "0.65rem", letterSpacing: "0.08em" }}
                         >
                             CLIENTFLOW {companyName ? `· ${companyName.toUpperCase()}` : ""}
                         </span>
@@ -495,7 +494,7 @@ export const Leads = () => {
                     <button
                         type="button"
                         className="btn btn-primary px-3 py-2 fw-semibold shadow-sm d-flex align-items-center gap-2"
-                        style={{ backgroundColor: "#635bff", border: "none" }}
+                        style={{ backgroundColor: "var(--cf-brand)", border: "none" }}
                         onClick={openNewLead}
                         disabled={!options || loading}
                     >
@@ -792,7 +791,7 @@ export const Leads = () => {
                                     </div>
                                     <div className="modal-footer border-0 bg-light px-4 py-3 lead-form-footer">
                                         <button type="button" className="btn btn-outline-secondary px-4" disabled={saving} onClick={() => setShowLeadForm(false)}>Cancelar</button>
-                                        <button type="submit" className="btn btn-primary px-4 fw-semibold" style={{ backgroundColor: "#635bff", border: "none" }} disabled={saving}>
+                                        <button type="submit" className="btn btn-primary px-4 fw-semibold" style={{ backgroundColor: "var(--cf-brand)", border: "none" }} disabled={saving}>
                                             {saving ? "Guardando..." : editingLeadId ? "Guardar cambios" : "Guardar lead"}
                                         </button>
                                     </div>
@@ -820,7 +819,7 @@ export const Leads = () => {
                         </div>
                         <div className="offcanvas-body p-4 overflow-y-auto">
                             <div className="d-flex gap-2 mb-4">
-                                <button type="button" className="btn btn-sm btn-primary flex-fill fw-semibold py-2" style={{ backgroundColor: "#635bff", border: "none" }} onClick={contactLead}>
+                                <button type="button" className="btn btn-sm btn-primary flex-fill fw-semibold py-2" style={{ backgroundColor: "var(--cf-brand)", border: "none" }} onClick={contactLead}>
                                     <i className="fa-solid fa-phone me-1"></i> Contactar
                                 </button>
                                 <button type="button" className="btn btn-sm btn-outline-secondary flex-fill fw-semibold py-2" onClick={() => { openEditLead(selectedLead); closeDetails(); }}>

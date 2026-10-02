@@ -3,6 +3,7 @@
 import os
 
 from api.ai_context import build_conversation_context
+from api.ai_fallback import conversational_fallback
 from api.ai_prompt import build_agent_message
 from api.ai_response import validate_agent_reply
 from api.ai_service import AgentServiceError, request_agent_reply
@@ -14,7 +15,7 @@ def generate_reply_draft(company_id, conversation_id, question):
     try:
         context = build_conversation_context(company_id, conversation_id, question)
     except EmbeddingServiceError:
-        return handoff_result("knowledge_service_unavailable")
+        return conversational_fallback(question)
 
     if context.get("opening_reply"):
         return {
@@ -49,7 +50,7 @@ def generate_reply_draft(company_id, conversation_id, question):
     try:
         raw_reply = request_agent_reply(prepared["message"], company_id=company_id)
     except AgentServiceError:
-        return handoff_result("agent_service_unavailable")
+        return conversational_fallback(question)
 
     try:
         answer = validate_agent_reply(

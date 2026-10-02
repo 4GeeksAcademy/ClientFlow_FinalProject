@@ -52,3 +52,35 @@ test("job scheduling uses API field names without timezone shifts", () => {
     assert.match(jobDetail, /displayDate\(job\.scheduled_start\)/);
     assert.match(jobDetail, /displayDate\(job\.scheduled_end\)/);
 });
+
+test("client creation keeps actions visible and client details can create next actions", () => {
+    const clients = source("src/front/pages/Clients.jsx");
+    const detail = source("src/front/pages/ClientDetail.jsx");
+    const service = source("src/front/services/clientService.js");
+    assert.match(clients, /maxHeight: "calc\(100vh - 1rem\)"/);
+    assert.match(clients, /modal-footer[^\n]*flex-shrink-0/);
+    assert.match(detail, /createNextAction/);
+    assert.match(service, /\/clients\/\$\{clientId\}\/next-actions/);
+});
+
+test("job details expose overall status and stage creation", () => {
+    const detail = source("src/front/pages/JobDetail.jsx");
+    assert.match(detail, /id="job-status"/);
+    assert.match(detail, /\/api\/jobs\/\$\{id\}\/stages/);
+    assert.match(detail, /createStage/);
+});
+
+test("company brand and dark dashboard controls use shared theme tokens", () => {
+    const app = source("src/front/context/AppContext.jsx");
+    const theme = source("src/front/theme.css");
+    const dashboard = source("src/front/components/Dashboard/InteractiveCharts.jsx");
+    assert.match(app, /--cf-brand/);
+    assert.match(theme, /dashboard-breakdown-item/);
+    assert.match(dashboard, /dashboard-breakdown-item/);
+});
+
+test("production invitations return a shareable secure link", () => {
+    const members = source("src/front/pages/Members.jsx");
+    assert.match(members, /invitation_url/);
+    assert.match(members, /navigator\.clipboard\.writeText/);
+});
