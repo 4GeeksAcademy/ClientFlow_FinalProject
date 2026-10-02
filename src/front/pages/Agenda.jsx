@@ -7,7 +7,7 @@ import { useLanguage } from "../context/LanguageContext";
 
 const localTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const localStamp = (value) => { const date = new Date(value); return `${dateKey(date)}T${localTime(date)}`; };
-const statusColors = { scheduled: "#635bff", confirmed: "#198754", completed: "#495057", cancelled: "#6c757d", no_show: "#a64b00" };
+const statusColors = { scheduled: "var(--cf-brand)", confirmed: "#198754", completed: "#495057", cancelled: "#6c757d", no_show: "#a64b00" };
 
 export const Agenda = () => {
     const { locale, ui } = useLanguage();
@@ -135,7 +135,7 @@ export const Agenda = () => {
                 <div className="d-flex align-items-center gap-2">
                     <button
                         className="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm"
-                        style={{ backgroundColor: "#635bff", border: "none" }}
+                        style={{ backgroundColor: "var(--cf-brand)", border: "none" }}
                         disabled={loading || busy || !company}
                         onClick={openCreate}
                     >
@@ -169,14 +169,14 @@ export const Agenda = () => {
                                 <button
                                     className={`btn ${currentView === 'month' ? 'btn-primary' : 'btn-outline-secondary border shadow-sm'}`}
                                     onClick={() => setCurrentView('month')}
-                                    style={currentView === 'month' ? { backgroundColor: "#635bff", border: "none" } : {}}
+                                    style={currentView === 'month' ? { backgroundColor: "var(--cf-brand)", border: "none" } : {}}
                                 >
                                     {ui.month}
                                 </button>
                                 <button
                                     className={`btn ${currentView === 'week' ? 'btn-primary' : 'btn-outline-secondary border shadow-sm'}`}
                                     onClick={() => setCurrentView('week')}
-                                    style={currentView === 'week' ? { backgroundColor: "#635bff", border: "none" } : {}}
+                                    style={currentView === 'week' ? { backgroundColor: "var(--cf-brand)", border: "none" } : {}}
                                 >
                                     {ui.week}
                                 </button>
@@ -217,8 +217,8 @@ export const Agenda = () => {
                                                             className="h-100 d-flex flex-column justify-content-between p-2 rounded-2 position-relative bg-white"
                                                             style={{
                                                                 cursor: "pointer",
-                                                                border: isSelected ? "2px solid #635bff" : "1px solid #dee2e6",
-                                                                boxShadow: isSelected ? "0 0 0 1px #635bff" : "none",
+                                                                border: isSelected ? "2px solid var(--cf-brand)" : "1px solid #dee2e6",
+                                                                boxShadow: isSelected ? "0 0 0 1px var(--cf-brand)" : "none",
                                                                 transition: "all 0.15s ease-in-out"
                                                             }}
                                                         >
@@ -226,13 +226,13 @@ export const Agenda = () => {
                                                                 <span className="fw-bold small px-1 text-dark" style={{ fontSize: "0.75rem" }}>
                                                                     {dayNum}
                                                                 </span>
-                                                                {dayApps.length > 0 && <span className="badge rounded-pill text-white" style={{ fontSize: "0.55rem", backgroundColor: "#635bff" }}>{dayApps.length}</span>}
+                                                                {dayApps.length > 0 && <span className="badge rounded-pill text-white" style={{ fontSize: "0.55rem", backgroundColor: "var(--cf-brand)" }}>{dayApps.length}</span>}
                                                             </div>
                                                             <div className="overflow-hidden d-flex flex-column gap-1 mt-1" style={{ maxHeight: "50px" }}>
                                                                 {dayApps.map(app => {
                                                                     const timeStr = app.starts_at ? app.starts_at.split('T')[1].substring(0, 5) : "";
                                                                     return (
-                                                                        <div key={app.id} className="text-truncate rounded-1 px-1 py-0.5 text-white fw-semibold" style={{ fontSize: "0.6rem", backgroundColor: '#635bff' }}>
+                                                                        <div key={app.id} className="text-truncate rounded-1 px-1 py-0.5 text-white fw-semibold" style={{ fontSize: "0.6rem", backgroundColor: 'var(--cf-brand)' }}>
                                                                             {timeStr} {app.title}
                                                                         </div>
                                                                     );
@@ -278,8 +278,8 @@ export const Agenda = () => {
                                                 key={dateStr}
                                                 style={{
                                                     minHeight: "320px",
-                                                    border: isSelected ? "2px solid #635bff" : "1px solid #dee2e6",
-                                                    boxShadow: isSelected ? "0 0 0 1px #635bff" : "none",
+                                                    border: isSelected ? "2px solid var(--cf-brand)" : "1px solid #dee2e6",
+                                                    boxShadow: isSelected ? "0 0 0 1px var(--cf-brand)" : "none",
                                                     transition: "all 0.15s ease-in-out"
                                                 }}
                                             >
@@ -295,7 +295,7 @@ export const Agenda = () => {
                                                         {dayApps.map(app => {
                                                             const timeStr = app.starts_at ? app.starts_at.split('T')[1].substring(0, 5) : "";
                                                             return (
-                                                                <div key={app.id} className="p-1.5 text-white rounded-1 shadow-xs" style={{ fontSize: "0.7rem", backgroundColor: "#635bff" }}>
+                                                                <div key={app.id} className="p-1.5 text-white rounded-1 shadow-xs" style={{ fontSize: "0.7rem", backgroundColor: "var(--cf-brand)" }}>
                                                                     <strong>{timeStr}</strong> {app.title}
                                                                 </div>
                                                             );
@@ -316,9 +316,9 @@ export const Agenda = () => {
                     <div className="card border-0 shadow-sm h-100 rounded-4 overflow-hidden bg-white">
                         <div className="card-header py-3 border-0 d-flex justify-content-between align-items-center bg-white">
                             <h5 className="fw-bold m-0 text-dark">
-                                <i className="fa-solid fa-calendar-day me-2" style={{ color: "#635bff" }}></i> {ui.dayAppointments}
+                                <i className="fa-solid fa-calendar-day me-2" style={{ color: "var(--cf-brand)" }}></i> {ui.dayAppointments}
                             </h5>
-                            <span className="badge text-white px-2.5 py-1.5 rounded-pill shadow-xs" style={{ backgroundColor: "#635bff" }}>{selectedDateStr}</span>
+                            <span className="badge text-white px-2.5 py-1.5 rounded-pill shadow-xs" style={{ backgroundColor: "var(--cf-brand)" }}>{selectedDateStr}</span>
                         </div>
                         <div className="card-body pt-0 px-3 pb-3 bg-white">
                             {selectedDayAppointments.length === 0 ? (
@@ -338,7 +338,7 @@ export const Agenda = () => {
                                                 className={`p-3 rounded-3 border-0 shadow-xs bg-light position-relative`}
                                                 key={app.id}
                                                 style={{
-                                                    borderLeft: `4px solid ${isHighlighted ? "#198754" : (choices.services.find(service => service.id === app.service_type_id)?.colour || "#635bff")}`
+                                                    borderLeft: `4px solid ${isHighlighted ? "#198754" : (choices.services.find(service => service.id === app.service_type_id)?.colour || "var(--cf-brand)")}`
                                                 }}
                                             >
                                                 <div className="d-flex justify-content-between align-items-start mb-2">
@@ -349,7 +349,7 @@ export const Agenda = () => {
                                                         </h6>
                                                     </div>
                                                     <div className="d-flex align-items-center gap-2">
-                                                        <span className="fw-bold small" style={{ color: "#635bff" }}><i className="fa-solid fa-clock me-1"></i>{timeStr}</span>
+                                                        <span className="fw-bold small" style={{ color: "var(--cf-brand)" }}><i className="fa-solid fa-clock me-1"></i>{timeStr}</span>
                                                         <button className="btn btn-sm btn-outline-primary" disabled={busy} onClick={() => openEdit(app)}>{ui.edit}</button>
                                                         <button
                                                             className="btn btn-outline-danger btn-sm border-0 p-1"
@@ -435,7 +435,7 @@ export const Agenda = () => {
                                 </div>
                                 <div className="modal-footer border-0 pt-0">
                                     <button type="button" className="btn btn-outline-secondary btn-sm rounded-3 px-3" onClick={() => setShowModal(false)}>{ui.cancel}</button>
-                                    <button type="submit" disabled={busy} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "#635bff", border: "none" }}>{ui.saveAppointment}</button>
+                                    <button type="submit" disabled={busy} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "var(--cf-brand)", border: "none" }}>{ui.saveAppointment}</button>
                                 </div>
                             </form>
                         </div>

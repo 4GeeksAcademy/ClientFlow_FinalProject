@@ -1,5 +1,6 @@
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
 const API_URL = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+import { readApiJson } from "./response.mjs";
 
 export const authService = {
   login: async (email, password) => {
@@ -9,10 +10,7 @@ export const authService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.message || "Error al iniciar sesión");
-      return data;
+      return readApiJson(response, "Error al iniciar sesión");
     } else {
       return new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -36,9 +34,7 @@ export const authService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Error al registrar");
-      return data;
+      return readApiJson(response, "Error al registrar");
     } else {
       return new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -62,10 +58,7 @@ export const authService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.message || "Error al enviar correo");
-      return data;
+      return readApiJson(response, "Error al enviar correo");
     } else {
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -82,10 +75,7 @@ export const authService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password, password_confirmation }),
       });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.message || "Error al actualizar contraseña");
-      return data;
+      return readApiJson(response, "Error al actualizar contraseña");
     } else {
       return new Promise((resolve, reject) => {
         setTimeout(() => {

@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { memberService } from "../services/memberService";
 import "../styles/members.css";
 import { useLanguage } from "../context/LanguageContext";
+import { translateLiteral } from "../i18n/literalTranslations.mjs";
+import { readApiJson } from "../services/response.mjs";
 
 export const Members = () => {
-    const { ui } = useLanguage();
+    const { locale, ui } = useLanguage();
     const roles = { owner: ui.owner, admin: ui.administrator, manager: ui.manager, agent: ui.agent, technician: ui.technician };
     const [members, setMembers] = useState([]);
     const [company, setCompany] = useState(null);
@@ -16,6 +18,7 @@ export const Members = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
+    const [invitationLink, setInvitationLink] = useState("");
     const [editing, setEditing] = useState(null);
     const [busy, setBusy] = useState(false);
     const [formError, setFormError] = useState("");
@@ -32,8 +35,7 @@ export const Members = () => {
                 const response = await fetch(`${base}/api/me`, {
                     headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
                 });
-                if (!response.ok) throw new Error(ui.accountLoadError);
-                const account = await response.json();
+                const account = await readApiJson(response, ui.accountLoadError);
                 const current = account.companies?.[0];
                 if (!current || !["owner", "admin"].includes(current.role)) {
                     throw new Error(ui.teamPermissionError);
@@ -56,6 +58,7 @@ export const Members = () => {
     const openForm = (member = null) => {
         setEditing(member);
         setFormError("");
+        if (!member) setInvitationLink("");
         dialog.current.showModal();
     };
 
@@ -73,13 +76,16 @@ export const Members = () => {
                 });
                 setNotice(ui.memberUpdated);
             } else {
-                await memberService.invite(options, form.get("email").trim(), form.get("role"));
-                setNotice(ui.invitationCreated);
+                const invitation = await memberService.invite(options, form.get("email").trim(), form.get("role"));
+                setInvitationLink(invitation.invitation_url || "");
+                setNotice(invitation.delivery === "manual"
+                    ? translateLiteral("Invitation created. Copy and share the secure link.", locale)
+                    : ui.invitationCreated);
             }
             dialog.current.close();
             setRevision((value) => value + 1);
         } catch (failure) {
-            setFormError(failure.message);
+            setFormError(translateLiteral(failure.message, locale));
         } finally { setBusy(false); }
     };
 
@@ -94,6 +100,13 @@ export const Members = () => {
                 <button className="team-primary" disabled={loading || !!error} onClick={() => openForm()}>+ {ui.createNew}</button>
             </header>
             {notice && <p className="team-notice" role="status">{notice}</p>}
+            {invitationLink && <div className="team-notice" role="status">
+                <strong className="d-block mb-2">{translateLiteral("Secure invitation link", locale)}</strong>
+                <div className="d-flex flex-column flex-md-row gap-2">
+                    <input className="form-control" readOnly value={invitationLink} aria-label={translateLiteral("Secure invitation link", locale)} />
+                    <button type="button" className="team-primary" onClick={() => navigator.clipboard.writeText(invitationLink)}>{translateLiteral("Copy link", locale)}</button>
+                </div>
+            </div>}
             <div className="team-filters">
                 <input aria-label={ui.searchUsers} placeholder={ui.searchUsers} value={search} maxLength={100}
                     onChange={(event) => { setSearch(event.target.value); setPage(1); }} />

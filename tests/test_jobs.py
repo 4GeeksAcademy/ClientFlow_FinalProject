@@ -123,6 +123,20 @@ class JobApiTest(unittest.TestCase):
         self.assertEqual(updated.json["stages"][0]["status"], "completed")
         self.assertEqual(updated.json["progress"], 100)
 
+        added_stage = self.client.post(
+            f"/api/jobs/{self.job_id}/stages",
+            headers=self.auth,
+            json={
+                "title": "Manufacture",
+                "description": "Build the wardrobe",
+                "due_at": "2026-10-10",
+            },
+        )
+        self.assertEqual(added_stage.status_code, 201, added_stage.json)
+        self.assertEqual(len(added_stage.json["stages"]), 2)
+        self.assertEqual(added_stage.json["stages"][1]["name"], "Manufacture")
+        self.assertEqual(added_stage.json["stages"][1]["position"], 2)
+
         deleted = self.client.delete(
             f"/api/jobs/{created.json['id']}",
             headers=self.auth,
@@ -155,6 +169,14 @@ class JobApiTest(unittest.TestCase):
                 json={"status": "unknown"},
             ).status_code,
             400,
+        )
+        self.assertEqual(
+            self.client.post(
+                f"/api/jobs/{self.other_job_id}/stages",
+                headers=self.auth,
+                json={"title": "Cross-company stage"},
+            ).status_code,
+            404,
         )
         self.assertEqual(
             db.session.scalar(

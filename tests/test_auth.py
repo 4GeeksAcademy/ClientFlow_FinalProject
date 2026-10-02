@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from unittest.mock import MagicMock, patch
 from datetime import timedelta, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -167,6 +168,20 @@ class AuthenticationTest(unittest.TestCase):
         self.assertEqual(response.status_code, 202)
         self.assertIsNotNone(db.session.scalar(select(PasswordResetToken)).used_at)
         self.assertNotIn('private', response.get_data(as_text=True))
+
+    def test_resend_delivery_is_available_in_production(self):
+        self.app.config['AUTH_RESET_SENDER'] = None
+        self.app.debug = False
+        provider_response = MagicMock()
+        provider_response.status = 200
+        provider_response.__enter__.return_value = provider_response
+        with patch.dict(os.environ, {
+            'RESEND_API_KEY': 're_test',
+            'AUTH_EMAIL_FROM': 'ClientFlow <no-reply@example.com>',
+        }, clear=False), patch('api.auth.urlopen', return_value=provider_response) as send:
+            response = self.client.post('/api/forgot-password', json={'email': self.user.email})
+        self.assertEqual(response.status_code, 202, response.json)
+        send.assert_called_once()
 
     def test_rate_limit_is_persistent(self):
         self.app.config['AUTH_RATE_LIMIT_ENABLED'] = True

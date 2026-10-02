@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { useLanguage } from "../context/LanguageContext";
+import { readApiJson } from "../services/response.mjs";
 
 
 export const PlanSelection = () => {
@@ -43,8 +44,7 @@ export const PlanSelection = () => {
                     navigate("/login", { replace: true });
                     return null;
                 }
-                if (!response.ok) throw new Error(ui.accountLoadError);
-                return response.json();
+                return readApiJson(response, ui.accountLoadError);
             })
             .then((account) => {
                 if (!account || controller.signal.aborted) return;
@@ -78,11 +78,7 @@ export const PlanSelection = () => {
                     { signal: controller.signal }
                 );
 
-                if (!response.ok) {
-                    throw new Error(ui.plansError);
-                }
-
-                const data = await response.json();
+                const data = await readApiJson(response, ui.plansError);
 
                 if (!Array.isArray(data)) {
                     throw new Error(ui.invalidPlans);

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import "../styles/members.css";
 import { useLanguage } from "../context/LanguageContext";
 import { WorkspacePreferences } from "../components/WorkspacePreferences";
+import { readApiJson } from "../services/response.mjs";
 
 export const AcceptInvitation = () => {
     const { ui } = useLanguage();
@@ -22,9 +23,7 @@ export const AcceptInvitation = () => {
                 method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
                 body: JSON.stringify(body),
             });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || ui.invitationAcceptError);
-            return data;
+            return readApiJson(response, ui.invitationAcceptError);
         };
         try {
             if (existing) {

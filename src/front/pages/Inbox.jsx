@@ -4,6 +4,7 @@ import "./Inbox.css";
 import { AIReplyPanel } from "../components/AIReplyPanel";
 import { useLanguage } from "../context/LanguageContext";
 import { translateLiteral } from "../i18n/literalTranslations.mjs";
+import { readApiJson } from "../services/response.mjs";
 
 const labels = {
     web: "Web", email: "Correo electrónico", whatsapp: "WhatsApp", instagram: "Instagram",
@@ -78,11 +79,10 @@ export const Inbox = () => {
                     signal: controller.signal,
                 });
 
-                if (!response.ok) {
-                    throw new Error("No se pudo cargar tu cuenta.");
-                }
-
-                const account = await response.json();
+                const account = await readApiJson(
+                    response,
+                    translateLiteral("Unable to load the account.", locale)
+                );
                 const company = account.companies?.[0];
 
                 if (!company) {

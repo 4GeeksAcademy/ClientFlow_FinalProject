@@ -3,6 +3,7 @@ import { useParams, useLocation, Link } from "react-router-dom";
 import { sharedAppointments } from "../../data/sharedAppointments";
 import { useLanguage } from "../context/LanguageContext";
 import { translateLiteral } from "../i18n/literalTranslations.mjs";
+import { readApiJson } from "../services/response.mjs";
 
 export const JobDetail = () => {
     const { locale } = useLanguage();
@@ -12,6 +13,10 @@ export const JobDetail = () => {
     const [job, setJob] = useState(location.state?.job || null);
     const [loading, setLoading] = useState(!location.state?.job);
     const [error, setError] = useState("");
+    const [savingStatus, setSavingStatus] = useState(false);
+    const [showStageForm, setShowStageForm] = useState(false);
+    const [stageForm, setStageForm] = useState({ title: "", description: "", dueAt: "" });
+    const [savingStage, setSavingStage] = useState(false);
     const displayDate = (value) => value ? String(value).slice(0, 10) : translateLiteral("Por definir", locale);
 
     // Helper para obtener la URL base limpia y el token de autenticación
@@ -29,10 +34,10 @@ export const JobDetail = () => {
                 const accountResponse = await fetch(`${base}/api/me`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!accountResponse.ok) {
-                    throw new Error("No se pudo cargar la empresa activa.");
-                }
-                const account = await accountResponse.json();
+                const account = await readApiJson(
+                    accountResponse,
+                    translateLiteral("Unable to verify your account.", locale)
+                );
                 const companyId = account.companies?.[0]?.id;
                 if (!companyId) {
                     throw new Error("No se encontró una empresa activa.");
@@ -46,13 +51,7 @@ export const JobDetail = () => {
                     }
                 });
 
-                const contentType = response.headers.get("content-type") || "";
-                const data = contentType.includes("application/json")
-                    ? await response.json()
-                    : null;
-                if (!response.ok || !data) {
-                    throw new Error(data?.error || "No se pudo cargar el trabajo.");
-                }
+                const data = await readApiJson(response, "No se pudo cargar el trabajo.");
                 setJob(data);
             } catch (err) {
                 setError(err.message || "No se pudo cargar el trabajo.");
@@ -113,16 +112,71 @@ export const JobDetail = () => {
                 })
             });
 
-            if (!response.ok) {
-                setJob(job);
-                setError("No se pudo actualizar la etapa.");
-            } else {
-                const data = await response.json();
-                setJob(data);
-            }
+            const data = await readApiJson(response, "No se pudo actualizar la etapa.");
+            setJob(data);
         } catch (error) {
             setJob(job);
             setError(error.message || "No se pudo actualizar la etapa.");
+        }
+    };
+
+    const updateJobStatus = async (newStatus) => {
+        const previous = job;
+        setJob((current) => ({ ...current, status: newStatus }));
+        setSavingStatus(true);
+        setError("");
+        try {
+            const response = await fetch(`${getBaseUrl()}/api/jobs/${id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${getToken()}`,
+                    "X-Company-ID": String(job.company_id),
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            const data = await readApiJson(
+                response,
+                translateLiteral("Unable to update the job status.", locale)
+            );
+            setJob(data);
+        } catch (failure) {
+            setJob(previous);
+            setError(failure.message || "No se pudo actualizar el estado del trabajo.");
+        } finally {
+            setSavingStatus(false);
+        }
+    };
+
+    const createStage = async (event) => {
+        event.preventDefault();
+        setSavingStage(true);
+        setError("");
+        try {
+            const response = await fetch(`${getBaseUrl()}/api/jobs/${id}/stages`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${getToken()}`,
+                    "X-Company-ID": String(job.company_id),
+                },
+                body: JSON.stringify({
+                    title: stageForm.title.trim(),
+                    description: stageForm.description.trim() || null,
+                    due_at: stageForm.dueAt || null,
+                }),
+            });
+            const data = await readApiJson(
+                response,
+                translateLiteral("Unable to create the stage.", locale)
+            );
+            setJob(data);
+            setStageForm({ title: "", description: "", dueAt: "" });
+            setShowStageForm(false);
+        } catch (failure) {
+            setError(failure.message || "No se pudo crear la etapa.");
+        } finally {
+            setSavingStage(false);
         }
     };
 
@@ -165,10 +219,16 @@ export const JobDetail = () => {
                 <Link to="/jobs" className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
                     <i className="fa-solid fa-arrow-left"></i> Volver al listado
                 </Link>
-                <div>
-                    <span className={`badge px-3 py-2 fs-6 ${job.status === "completed" ? "bg-success text-white" : "bg-primary text-white"}`}>
-                        {job.status === "completed" ? "Trabajo Completado y Entregado" : "Trabajo en Curso"}
-                    </span>
+                <div className="d-flex align-items-center gap-2">
+                    <label className="small fw-semibold text-secondary" htmlFor="job-status">{translateLiteral("Status", locale)}</label>
+                    <select id="job-status" className="form-select form-select-sm" value={job.status} disabled={savingStatus} onChange={(event) => updateJobStatus(event.target.value)}>
+                        <option value="draft">{translateLiteral("Draft", locale)}</option>
+                        <option value="scheduled">{translateLiteral("Scheduled", locale)}</option>
+                        <option value="in_progress">{translateLiteral("In progress", locale)}</option>
+                        <option value="review">{translateLiteral("Review", locale)}</option>
+                        <option value="completed">{translateLiteral("Completed", locale)}</option>
+                        <option value="cancelled">{translateLiteral("Cancelled", locale)}</option>
+                    </select>
                 </div>
             </div>
 
@@ -220,7 +280,7 @@ export const JobDetail = () => {
                             <div
                                 className="progress-bar rounded-pill"
                                 role="progressbar"
-                                style={{ width: `${job.progress || 0}%`, backgroundColor: "#635bff" }}
+                                style={{ width: `${job.progress || 0}%`, backgroundColor: "var(--cf-brand)" }}
                             ></div>
                         </div>
                     </div>
@@ -232,34 +292,45 @@ export const JobDetail = () => {
                 {/* Columna Principal Izquierda: Etapas del Proyecto */}
                 <div className="col-12 col-xl-8">
                     <div className="card border-0 shadow-sm bg-white">
-                        <div className="card-header bg-white py-3 border-0">
+                        <div className="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center gap-3">
                             <h5 className="fw-bold text-dark m-0">
                                 <i className="fa-solid fa-bars-progress me-2 text-primary"></i> Etapas del Proyecto
                             </h5>
+                            <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setShowStageForm((value) => !value)}>
+                                <i className="fa-solid fa-plus me-1"></i>{translateLiteral("Add stage", locale)}
+                            </button>
                         </div>
                         <div className="card-body pt-0">
+                            {showStageForm && <form className="bg-light border rounded-3 p-3 mb-3" onSubmit={createStage}>
+                                <div className="row g-2">
+                                    <div className="col-12 col-md-6"><label className="form-label small fw-semibold">{translateLiteral("Stage name", locale)} *</label><input className="form-control form-control-sm" required maxLength="160" value={stageForm.title} onChange={(event) => setStageForm((current) => ({ ...current, title: event.target.value }))} /></div>
+                                    <div className="col-12 col-md-6"><label className="form-label small fw-semibold">{translateLiteral("Due date", locale)}</label><input type="date" className="form-control form-control-sm" value={stageForm.dueAt} onChange={(event) => setStageForm((current) => ({ ...current, dueAt: event.target.value }))} /></div>
+                                    <div className="col-12"><label className="form-label small fw-semibold">{translateLiteral("Description", locale)}</label><textarea className="form-control form-control-sm" rows="2" maxLength="4000" value={stageForm.description} onChange={(event) => setStageForm((current) => ({ ...current, description: event.target.value }))}></textarea></div>
+                                </div>
+                                <div className="d-flex justify-content-end gap-2 mt-3"><button type="button" className="btn btn-sm btn-outline-secondary" disabled={savingStage} onClick={() => setShowStageForm(false)}>{translateLiteral("Cancel", locale)}</button><button className="btn btn-sm btn-primary" disabled={savingStage}>{savingStage ? translateLiteral("Saving...", locale) : translateLiteral("Save", locale)}</button></div>
+                            </form>}
                             <div className="table-responsive">
-                                <table className="table align-middle mb-0" style={{ backgroundColor: "#ffffff", color: "#212529" }}>
+                                <table className="table align-middle mb-0">
                                     <thead>
-                                        <tr style={{ backgroundColor: "#f8f9fa" }}>
-                                            <th className="py-3 border-bottom text-dark fw-bold" style={{ backgroundColor: "#f8f9fa" }}>#</th>
-                                            <th className="py-3 border-bottom text-dark fw-bold" style={{ backgroundColor: "#f8f9fa" }}>Nombre de la Etapa</th>
-                                            <th className="py-3 border-bottom text-dark fw-bold" style={{ backgroundColor: "#f8f9fa" }}>Estado Actual</th>
-                                            <th className="py-3 border-bottom text-dark fw-bold text-end" style={{ backgroundColor: "#f8f9fa" }}>Acciones / Marcar</th>
+                                        <tr className="bg-light">
+                                            <th className="py-3 border-bottom text-dark fw-bold">#</th>
+                                            <th className="py-3 border-bottom text-dark fw-bold">Nombre de la Etapa</th>
+                                            <th className="py-3 border-bottom text-dark fw-bold">Estado Actual</th>
+                                            <th className="py-3 border-bottom text-dark fw-bold text-end">Acciones / Marcar</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {job.stages && job.stages.length > 0 ? (
                                             job.stages.map((stage, index) => (
-                                                <tr key={stage.id} style={{ backgroundColor: "#ffffff" }}>
-                                                    <td className="py-3 fw-bold text-dark" style={{ backgroundColor: "#ffffff" }}>0{index + 1}</td>
-                                                    <td className="py-3 fw-semibold text-dark" style={{ backgroundColor: "#ffffff" }}>{stage.name}</td>
-                                                    <td className="py-3" style={{ backgroundColor: "#ffffff" }}>
+                                                <tr key={stage.id}>
+                                                    <td className="py-3 fw-bold text-dark">0{index + 1}</td>
+                                                    <td className="py-3 fw-semibold text-dark">{stage.name}</td>
+                                                    <td className="py-3">
                                                         <span style={getStageBadgeStyle(stage.status)}>
                                                             {getStageText(stage.status)}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 text-end" style={{ backgroundColor: "#ffffff" }}>
+                                                    <td className="py-3 text-end">
                                                         <div className="btn-group btn-group-sm">
                                                             <button
                                                                 className={`btn btn-outline-secondary ${stage.status === 'pending' ? 'active' : ''}`}

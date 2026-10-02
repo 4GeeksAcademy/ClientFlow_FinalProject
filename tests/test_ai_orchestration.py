@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import patch
 
 from api.ai_orchestration import generate_reply_draft
+from api.ai_service import AgentServiceError
+from api.knowledge_embeddings import EmbeddingServiceError
 
 
 class AIOrchestrationTest(unittest.TestCase):
@@ -67,3 +69,16 @@ class AIOrchestrationTest(unittest.TestCase):
             result = generate_reply_draft(1,3,'Unknown?')
         self.assertNotIn('Unrelated.', request.call_args.args[0])
         self.assertEqual(result['reason'], 'agent_requested_human')
+
+    def test_service_outages_return_a_reviewable_clarification(self):
+        context = {"needs_human": False, "sources": [], "history": [],
+                   "agent": {"main_instruction": "Help."}, "question": "Hola, quiero reparar una puerta"}
+        with patch('api.ai_orchestration.build_conversation_context', return_value=context), \
+             patch('api.ai_orchestration.request_agent_reply', side_effect=AgentServiceError('offline')):
+            result = generate_reply_draft(1, 3, context['question'])
+        self.assertEqual(result['status'], 'pending_review')
+        self.assertEqual(result['reason'], 'local_clarification_fallback')
+
+        with patch('api.ai_orchestration.build_conversation_context', side_effect=EmbeddingServiceError('offline')):
+            result = generate_reply_draft(1, 3, context['question'])
+        self.assertEqual(result['status'], 'pending_review')
