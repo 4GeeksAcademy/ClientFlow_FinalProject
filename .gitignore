@@ -71,6 +71,7 @@ dist/*
 !.gitkeep
 !.htaccess
 !.eslintrc
+.env
 !.env.example
 .now
 
@@ -80,4 +81,25 @@ database.database
 database.db
 diagram.png
 __pycache__/
+.local/
+.venv/
+
+# Local Flask database files
+src/instance/*.db
+
+
+# Local databases and SQLite temporary files
+*.db
+*.db-*
+*.sqlite3
+*.sqlite3-*
+*.sqlite-*
+
+# Private key files
+*.pem
+*.key
+
+!.python-version
+
+# Ignore new local migration files; committed migrations remain tracked
 migrations

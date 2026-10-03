@@ -1,30 +1,259 @@
-// Import necessary components and functions from react-router-dom.
-
-import {
-    createBrowserRouter,
-    createRoutesFromElements,
-    Route,
-} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { createBrowserRouter, createRoutesFromElements, Navigate, Route } from "react-router-dom";
+import { AcceptInvitation } from "./pages/AcceptInvitation";
+import { Agenda } from "./pages/Agenda";
+import { Agents } from "./pages/Agents";
+import { ClientDetail } from "./pages/ClientDetail";
+import { Clients } from "./pages/Clients";
+import { Dashboard } from "./pages/Dashboard";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { Inbox } from "./pages/Inbox";
+import { JobDetail } from "./pages/JobDetail";
+import { Jobs } from "./pages/Jobs";
+import { Knowledge } from "./pages/Knowledge";
 import { Layout } from "./pages/Layout";
-import { Home } from "./pages/Home";
-import { Single } from "./pages/Single";
-import { Demo } from "./pages/Demo";
+import { Leads } from "./pages/Leads";
+import { Login } from "./pages/Login";
+import { Members } from "./pages/Members";
+import { Payment } from "./pages/Payment";
+import { PlanSelection } from "./pages/PlanSelection";
+import { Register } from "./pages/Register";
+import { ResetPassword } from "./pages/ResetPassword";
+import { Settings } from "./pages/Settings";
+import { WebChatPage } from "./pages/WebChatPage";
+import { useLanguage } from "./context/LanguageContext";
+import { readApiJson } from "./services/response.mjs";
+
+const LocalizedNotFound = () => {
+    const { ui } = useLanguage();
+    return <h1>{ui.notFound}</h1>;
+};
+
+const ProtectedRoute = ({ children }) => {
+    const { ui } = useLanguage();
+    const token = localStorage.getItem("access_token");
+    const [status, setStatus] = useState("loading");
+    const [message, setMessage] = useState("");
+
+    useEffect(() => {
+        if (!token) return;
+
+        const controller = new AbortController();
+        const apiUrl = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+
+        const checkAccess = async () => {
+            try {
+                const headers = {
+                    Authorization: `Bearer ${token}`,
+                };
+
+                const meResponse = await fetch(`${apiUrl}/api/me`, {
+                    headers,
+                    signal: controller.signal,
+                });
+
+                if (meResponse.status === 401) {
+                    setStatus("unauthorized");
+                    return;
+                }
+
+                const account = await readApiJson(meResponse, ui.accountLoadError);
+                const company = account.companies?.[0];
+
+                if (!company) {
+                    throw new Error(ui.noCompany);
+                }
+
+                const response = await fetch(`${apiUrl}/api/auth/context`, {
+                    headers: {
+                        ...headers,
+                        "X-Company-ID": String(company.id),
+                    },
+                    signal: controller.signal,
+                });
+
+                if (response.status === 401) {
+                    setStatus("unauthorized");
+                    return;
+                }
+
+                let data;
+                try {
+                    data = await readApiJson(response, ui.subscriptionVerifyError);
+                } catch (failure) {
+                    data = { code: failure.code };
+                    if (data.code === "subscription_required") {
+                        setStatus("subscription_required");
+                        return;
+                    }
+                    throw failure;
+                }
+
+                setStatus("allowed");
+            } catch (error) {
+                if (controller.signal.aborted) return;
+                setMessage(error.message || ui.accessVerifyError);
+                setStatus("blocked");
+            }
+        };
+
+        checkAccess();
+
+        const interval = window.setInterval(checkAccess, 30000);
+        window.addEventListener("focus", checkAccess);
+        return () => {
+            controller.abort();
+            window.clearInterval(interval);
+            window.removeEventListener("focus", checkAccess);
+        };
+    }, [token, ui.accountLoadError, ui.accessVerifyError, ui.noCompany, ui.subscriptionVerifyError]);
+
+    if (!token || status === "unauthorized") {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (status === "loading") {
+        return <p role="status">{ui.checkingSubscription}</p>;
+    }
+
+    if (status === "subscription_required") {
+        return <Navigate to="/select-plan?reason=expired" replace />;
+    }
+
+    if (status === "blocked") {
+        return (
+            <div className="alert alert-warning" role="alert">
+                <p>{message}</p>
+                <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => window.location.reload()}
+                >
+                    {ui.retry}
+                </button>
+            </div>
+        );
+    }
+
+    return children;
+};
 
 export const router = createBrowserRouter(
     createRoutesFromElements(
-    // CreateRoutesFromElements function allows you to build route elements declaratively.
-    // Create your routes here, if you want to keep the Navbar and Footer in all views, add your new routes inside the containing Route.
-    // Root, on the contrary, create a sister Route, if you have doubts, try it!
-    // Note: keep in mind that errorElement will be the default page when you don't get a route, customize that page to make your project more attractive.
-    // Note: The child paths of the Layout element replace the Outlet component with the elements contained in the "element" attribute of these child paths.
+        <Route path="/" element={<Layout />} errorElement={<LocalizedNotFound />}>
+            <Route path="accept-invitation" element={<AcceptInvitation />} />
+            <Route index element={<Navigate to="/dashboard" replace />} />
 
-      // Root Route: All navigation will start from here.
-      <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>} >
+            {/* Rutas Públicas */}
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+            <Route path="select-plan" element={<PlanSelection />} />
+            <Route path="payment" element={<Payment />} />
+            <Route path="forgot-password" element={<ForgotPassword />} />
+            <Route path="reset-password" element={<ResetPassword />} />
 
-        {/* Nested Routes: Defines sub-routes within the BaseHome component. */}
-        <Route path= "/" element={<Home />} />
-        <Route path="/single/:theId" element={ <Single />} />  {/* Dynamic route for single items */}
-        <Route path="/demo" element={<Demo />} />
-      </Route>
+            {/* Ruta Protegida del Dashboard */}
+            <Route
+                path="dashboard"
+                element={
+                    <ProtectedRoute>
+                        <Dashboard />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="leads"
+                element={
+                    <ProtectedRoute>
+                        <Leads />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Trabajos (Listado) */}
+            <Route
+                path="jobs"
+                element={
+                    <ProtectedRoute>
+                        <Jobs />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Detalle de Trabajo */}
+            <Route
+                path="jobs/:id"
+                element={
+                    <ProtectedRoute>
+                        <JobDetail />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Clientes (Listado) */}
+            <Route
+                path="clients"
+                element={
+                    <ProtectedRoute>
+                        <Clients />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de Detalle de Cliente */}
+            <Route
+                path="clients/:id"
+                element={
+                    <ProtectedRoute>
+                        <ClientDetail />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Ruta Protegida de la Agenda */}
+            <Route
+                path="agenda"
+                element={
+                    <ProtectedRoute>
+                        <Agenda />
+                    </ProtectedRoute>
+                }
+            />
+            <Route path="agent-ai" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+            <Route path="knowledge" element={<ProtectedRoute><Knowledge /></ProtectedRoute>} />
+            <Route
+                path="team"
+                element={
+                    <ProtectedRoute>
+                        <Members />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="settings"
+                element={
+                    <ProtectedRoute>
+                        <Settings />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="conversations"
+                element={
+                    <ProtectedRoute>
+                        <Inbox />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="web-chat"
+                element={
+                    <ProtectedRoute>
+                        <WebChatPage />
+                    </ProtectedRoute>
+                }
+            />
+        </Route>
     )
 );
