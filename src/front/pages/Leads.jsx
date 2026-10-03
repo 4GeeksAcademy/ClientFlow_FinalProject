@@ -601,7 +601,7 @@ export const Leads = () => {
                 <div className="card border-0 shadow-sm bg-white rounded-3 overflow-hidden">
                     <div className="table-responsive">
                         <table className="table align-middle mb-0">
-                            <thead className="table-light text-secondary text-uppercase" style={{ fontSize: "0.72rem", letterSpacing: "0.5px" }}>
+                            <thead className="table-light text-secondary text-uppercase leads-table-header" style={{ fontSize: "0.72rem", letterSpacing: "0.5px" }}>
                                 <tr>
                                     <th className="py-3 px-4">Nombre</th>
                                     <th className="py-3">Origen</th>

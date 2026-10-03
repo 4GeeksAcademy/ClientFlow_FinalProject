@@ -40,6 +40,17 @@
     box-shadow: 0 -8px 20px rgb(15 23 42 / 6%);
 }
 
+:root[data-bs-theme="dark"] .leads-table-header {
+    --bs-table-bg: var(--cf-surface-muted);
+    --bs-table-color: var(--cf-text);
+    --bs-table-border-color: var(--cf-border);
+}
+
+:root[data-bs-theme="dark"] .leads-table-header > tr > th {
+    color: var(--cf-text) !important;
+    background-color: var(--cf-surface-muted) !important;
+}
+
 @media (max-width: 767.98px) {
     .lead-form-modal {
         padding: 0;
