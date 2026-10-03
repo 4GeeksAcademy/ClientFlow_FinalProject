@@ -100,3 +100,6 @@ src/instance/*.db
 *.key
 
 !.python-version
+
+# Ignore new local migration files; committed migrations remain tracked
+migrations
