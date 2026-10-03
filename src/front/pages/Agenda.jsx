@@ -1,0 +1,449 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { dateKey, parseDate } from "../utils/calendar.mjs";
+import { getAppointmentContext, getAppointmentOptions, getAppointments,
+    createAppointment, updateAppointment, cancelAppointment } from "../services/appointmentService";
+import { useLanguage } from "../context/LanguageContext";
+
+const localTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+const localStamp = (value) => { const date = new Date(value); return `${dateKey(date)}T${localTime(date)}`; };
+const statusColors = { scheduled: "var(--cf-brand)", confirmed: "#198754", completed: "#495057", cancelled: "#6c757d", no_show: "#a64b00" };
+
+export const Agenda = () => {
+    const { locale, ui } = useLanguage();
+    const statusLabels = { scheduled: ui.scheduled, confirmed: ui.confirmed, completed: ui.completed, cancelled: ui.cancelled, no_show: ui.noShow };
+    const token = localStorage.getItem("access_token");
+    const [company, setCompany] = useState(null);
+    const [choices, setChoices] = useState({ clients: [], members: [], jobs: [], services: [] });
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const [revision, setRevision] = useState(0);
+    const [errorMsg, setErrorMsg] = useState(null);
+    const [formError, setFormError] = useState("");
+    const location = useLocation();
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDateStr, setSelectedDateStr] = useState(dateKey(new Date()));
+    const [currentView, setCurrentView] = useState("month");
+    const [showModal, setShowModal] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const emptyForm = { title: "", date: selectedDateStr, time: "10:00", duration: 60,
+        clientId: "", assignedId: "", jobId: "", serviceId: "", status: "scheduled", notes: "" };
+    const [newApp, setNewApp] = useState(emptyForm);
+    const options = { token, companyId: company?.id };
+
+    useEffect(() => {
+        const controller = new AbortController();
+        const load = async () => {
+            setLoading(true); setErrorMsg(null);
+            try {
+                const account = await getAppointmentContext(token, controller.signal);
+                const current = account.companies?.[0];
+                if (!current) throw new Error(ui.noCompany);
+                const opts = { token, companyId: current.id, signal: controller.signal };
+                const [data, lists] = await Promise.all([getAppointments(opts), getAppointmentOptions(opts)]);
+                if (controller.signal.aborted) return;
+                setCompany(current); setChoices(lists);
+                setAppointments(data.map(item => ({ ...item,
+                    duration: Math.round((new Date(item.ends_at) - new Date(item.starts_at)) / 60000),
+                    starts_at: localStamp(item.starts_at), ends_at: localStamp(item.ends_at) })));
+            } catch (error) {
+                if (!controller.signal.aborted) setErrorMsg(error instanceof TypeError ? ui.connectionError : error.message);
+            } finally { if (!controller.signal.aborted) setLoading(false); }
+        };
+        load();
+        return () => controller.abort();
+    }, [token, revision, ui.connectionError, ui.noCompany]);
+
+    useEffect(() => {
+        const id = new URLSearchParams(location.search).get("appointmentId");
+        const item = appointments.find(app => String(app.id) === id);
+        if (item) {
+            const day = item.starts_at.split('T')[0];
+            setSelectedDateStr(day); setCurrentDate(parseDate(day));
+        }
+    }, [location.search, appointments]);
+
+    const openCreate = () => {
+        setEditingId(null); setFormError("");
+        setNewApp({ ...emptyForm, assignedId: String(company?.membership_id || "") });
+        setShowModal(true);
+    };
+    const openEdit = (item) => {
+        setEditingId(item.id); setFormError("");
+        setNewApp({ title: item.title, date: item.starts_at.split('T')[0], time: item.starts_at.split('T')[1],
+            duration: item.duration, clientId: String(item.client_id), assignedId: String(item.assigned_membership_id),
+            jobId: String(item.job_id || ""), serviceId: String(item.service_type_id || ""), status: item.status, notes: item.notes || "" });
+        setShowModal(true);
+    };
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const monthName = new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(year, month, 1));
+    const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(2024, 0, index + 1)));
+    const move = (amount) => {
+        if (currentView === "month") setCurrentDate(new Date(year, month + amount, 1));
+        else { const date = new Date(currentDate); date.setDate(date.getDate() + amount * 7); setCurrentDate(date); }
+    };
+    const handlePrev = () => move(-1);
+    const handleNext = () => move(1);
+    const handleToday = () => { setCurrentDate(new Date()); setSelectedDateStr(dateKey(new Date())); };
+    const handleCreateAppointment = async (event) => {
+        event.preventDefault();
+        if (busy || !company) return;
+        setBusy(true); setFormError("");
+        try {
+            const start = new Date(`${newApp.date}T${newApp.time}:00`);
+            const end = new Date(start.getTime() + Number(newApp.duration) * 60000);
+            const body = { title: newApp.title.trim(), starts_at: start.toISOString(), ends_at: end.toISOString(),
+                client_id: Number(newApp.clientId), assigned_membership_id: Number(newApp.assignedId),
+                job_id: newApp.jobId ? Number(newApp.jobId) : null,
+                service_type_id: newApp.serviceId ? Number(newApp.serviceId) : null,
+                status: newApp.status, notes: newApp.notes };
+            if (editingId) await updateAppointment(options, editingId, body);
+            else await createAppointment(options, body);
+            setShowModal(false); setRevision(value => value + 1);
+        } catch (error) { setFormError(error.message || ui.appointmentSaveError); }
+        finally { setBusy(false); }
+    };
+    const handleDeleteAppointment = async (id) => {
+        if (busy || !window.confirm(ui.confirmCancelAppointment)) return;
+        setBusy(true);
+        try {
+            await cancelAppointment(options, id);
+            setAppointments(current => current.filter(item => item.id !== id));
+        }
+        catch (error) { setErrorMsg(error.message || ui.appointmentCancelError); }
+        finally { setBusy(false); }
+    };
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const adjustedFirstDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const getWeekDays = (date) => {
+        const monday = new Date(date); monday.setDate(date.getDate() - (date.getDay() + 6) % 7);
+        return Array.from({ length: 7 }, (_, index) => { const day = new Date(monday); day.setDate(monday.getDate() + index); return dateKey(day); });
+    };
+    const currentWeekDays = getWeekDays(currentDate);
+    const selectedDayAppointments = appointments.filter(app => app.starts_at.split('T')[0] === selectedDateStr);
+    return (
+        <div className="container-fluid px-0" style={{ color: "#212529" }}>
+            {/* Cabecera general */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <h2 className="fw-bold mb-1" style={{ color: "#212529" }}>{ui.calendarTitle}</h2>
+                    <p className="text-secondary small mb-0">{ui.calendarSubtitle}</p>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                    <button
+                        className="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm"
+                        style={{ backgroundColor: "var(--cf-brand)", border: "none" }}
+                        disabled={loading || busy || !company}
+                        onClick={openCreate}
+                    >
+                        <i className="fa-solid fa-plus"></i> {ui.newAppointment}
+                    </button>
+                </div>
+            </div>
+
+            {errorMsg && <div className="alert alert-danger">{errorMsg} <button className="btn btn-sm btn-outline-danger" onClick={() => setRevision(value => value + 1)}>{ui.retry}</button></div>}
+            {loading && <p className="text-muted">{ui.appointmentsLoading}</p>}
+
+            <div className="row g-4">
+                {/* Columna Izquierda: Calendario */}
+                <div className="col-12 col-xl-7">
+                    <div className="card border-0 shadow-sm h-100 rounded-4 overflow-hidden bg-white">
+                        {/* Cabecera del calendario */}
+                        <div className="card-header py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
+                            <div className="d-flex align-items-center gap-2">
+                                <div className="btn-group btn-group-sm">
+                                    <button className="btn btn-outline-secondary border px-2 shadow-sm" onClick={handlePrev}><i className="fa-solid fa-chevron-left"></i></button>
+                                    <button className="btn btn-outline-secondary border px-2 fw-semibold shadow-sm" onClick={handleToday}>{ui.today}</button>
+                                    <button className="btn btn-outline-secondary border px-2 shadow-sm" onClick={handleNext}><i className="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                                <h5 className="fw-bold m-0 ms-2 text-dark">
+                                    {currentView === 'month' && `${monthName} ${year}`}
+                                    {currentView === 'week' && ui.weeklyView}
+                                </h5>
+                            </div>
+
+                            <div className="btn-group btn-group-sm">
+                                <button
+                                    className={`btn ${currentView === 'month' ? 'btn-primary' : 'btn-outline-secondary border shadow-sm'}`}
+                                    onClick={() => setCurrentView('month')}
+                                    style={currentView === 'month' ? { backgroundColor: "var(--cf-brand)", border: "none" } : {}}
+                                >
+                                    {ui.month}
+                                </button>
+                                <button
+                                    className={`btn ${currentView === 'week' ? 'btn-primary' : 'btn-outline-secondary border shadow-sm'}`}
+                                    onClick={() => setCurrentView('week')}
+                                    style={currentView === 'week' ? { backgroundColor: "var(--cf-brand)", border: "none" } : {}}
+                                >
+                                    {ui.week}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="card-body pt-0 px-3 pb-3 bg-white">
+                            {currentView === 'month' && (
+                                <div>
+                                    {/* Días de la semana */}
+                                    <div className="row text-center fw-bold mb-2 py-2 rounded-3 mx-0 bg-light text-dark" style={{ fontSize: "0.8rem" }}>
+                                        {weekdayNames.map((name) => <div className="col" key={name}>{name}</div>)}
+                                    </div>
+                                    <div className="d-flex flex-column gap-1">
+                                        {(() => {
+                                            let rows = [];
+                                            let cells = [];
+
+                                            // Celdas vacías iniciales para alinear al lunes
+                                            for (let i = 0; i < adjustedFirstDayIndex; i++) {
+                                                cells.push(
+                                                    <div className="col p-2 text-muted opacity-25 border-0 rounded-2" key={`empty-${i}`} style={{ minHeight: "95px" }}>
+                                                        &nbsp;
+                                                    </div>
+                                                );
+                                            }
+
+                                            // Días del mes
+                                            for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
+                                                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                                                const dayApps = appointments.filter(a => a.starts_at && a.starts_at.split('T')[0] === dateStr);
+                                                const isSelected = selectedDateStr === dateStr;
+
+                                                cells.push(
+                                                    <div className="col p-1" key={dateStr} style={{ minHeight: "95px", maxWidth: "14.28%" }}>
+                                                        <div
+                                                            onClick={() => setSelectedDateStr(dateStr)}
+                                                            className="h-100 d-flex flex-column justify-content-between p-2 rounded-2 position-relative bg-white"
+                                                            style={{
+                                                                cursor: "pointer",
+                                                                border: isSelected ? "2px solid var(--cf-brand)" : "1px solid #dee2e6",
+                                                                boxShadow: isSelected ? "0 0 0 1px var(--cf-brand)" : "none",
+                                                                transition: "all 0.15s ease-in-out"
+                                                            }}
+                                                        >
+                                                            <div className="d-flex justify-content-between align-items-center">
+                                                                <span className="fw-bold small px-1 text-dark" style={{ fontSize: "0.75rem" }}>
+                                                                    {dayNum}
+                                                                </span>
+                                                                {dayApps.length > 0 && <span className="badge rounded-pill text-white" style={{ fontSize: "0.55rem", backgroundColor: "var(--cf-brand)" }}>{dayApps.length}</span>}
+                                                            </div>
+                                                            <div className="overflow-hidden d-flex flex-column gap-1 mt-1" style={{ maxHeight: "50px" }}>
+                                                                {dayApps.map(app => {
+                                                                    const timeStr = app.starts_at ? app.starts_at.split('T')[1].substring(0, 5) : "";
+                                                                    return (
+                                                                        <div key={app.id} className="text-truncate rounded-1 px-1 py-0.5 text-white fw-semibold" style={{ fontSize: "0.6rem", backgroundColor: 'var(--cf-brand)' }}>
+                                                                            {timeStr} {app.title}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+
+                                                if ((adjustedFirstDayIndex + dayNum) % 7 === 0 || dayNum === totalDays) {
+                                                    if (dayNum === totalDays && cells.length % 7 !== 0) {
+                                                        const remaining = 7 - (cells.length % 7);
+                                                        for (let r = 0; r < remaining; r++) {
+                                                            cells.push(
+                                                                <div className="col p-2 text-muted opacity-25 border-0 rounded-2" key={`empty-end-${r}`} style={{ minHeight: "95px" }}>
+                                                                    &nbsp;
+                                                                </div>
+                                                            );
+                                                        }
+                                                    }
+                                                    rows.push(
+                                                        <div className="row g-1 mb-1" key={`row-${dayNum}`}>
+                                                            {cells}
+                                                        </div>
+                                                    );
+                                                    cells = [];
+                                                }
+                                            }
+                                            return rows;
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentView === 'week' && (
+                                <div className="row g-2">
+                                    {currentWeekDays.map(dateStr => {
+                                        const dayApps = appointments.filter(a => a.starts_at && a.starts_at.split('T')[0] === dateStr);
+                                        const isSelected = selectedDateStr === dateStr;
+                                        return (
+                                            <div
+                                                className="col-12 col-md p-2 rounded-3 bg-white"
+                                                key={dateStr}
+                                                style={{
+                                                    minHeight: "320px",
+                                                    border: isSelected ? "2px solid var(--cf-brand)" : "1px solid #dee2e6",
+                                                    boxShadow: isSelected ? "0 0 0 1px var(--cf-brand)" : "none",
+                                                    transition: "all 0.15s ease-in-out"
+                                                }}
+                                            >
+                                                <div
+                                                    onClick={() => setSelectedDateStr(dateStr)}
+                                                    className="h-100 d-flex flex-column"
+                                                    style={{ cursor: "pointer" }}
+                                                >
+                                                    <div className="fw-bold small mb-2 pb-2 border-bottom text-center text-dark border-light">
+                                                        {dateStr.split('-').slice(1).reverse().join('/')}
+                                                    </div>
+                                                    <div className="d-flex flex-column gap-1 flex-grow-1">
+                                                        {dayApps.map(app => {
+                                                            const timeStr = app.starts_at ? app.starts_at.split('T')[1].substring(0, 5) : "";
+                                                            return (
+                                                                <div key={app.id} className="p-1.5 text-white rounded-1 shadow-xs" style={{ fontSize: "0.7rem", backgroundColor: "var(--cf-brand)" }}>
+                                                                    <strong>{timeStr}</strong> {app.title}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Columna Derecha: Detalle de Citas del Día */}
+                <div className="col-12 col-xl-5">
+                    <div className="card border-0 shadow-sm h-100 rounded-4 overflow-hidden bg-white">
+                        <div className="card-header py-3 border-0 d-flex justify-content-between align-items-center bg-white">
+                            <h5 className="fw-bold m-0 text-dark">
+                                <i className="fa-solid fa-calendar-day me-2" style={{ color: "var(--cf-brand)" }}></i> {ui.dayAppointments}
+                            </h5>
+                            <span className="badge text-white px-2.5 py-1.5 rounded-pill shadow-xs" style={{ backgroundColor: "var(--cf-brand)" }}>{selectedDateStr}</span>
+                        </div>
+                        <div className="card-body pt-0 px-3 pb-3 bg-white">
+                            {selectedDayAppointments.length === 0 ? (
+                                <div className="text-center py-5">
+                                    <i className="fa-solid fa-calendar-xmark fa-2x text-muted mb-3 opacity-50"></i>
+                                    <p className="text-secondary small mb-0">{ui.noDayAppointments}</p>
+                                </div>
+                            ) : (
+                                <div className="d-flex flex-column gap-3">
+                                    {selectedDayAppointments.map(app => {
+                                        const params = new URLSearchParams(location.search);
+                                        const isHighlighted = String(params.get("appointmentId")) === String(app.id);
+                                        const timeStr = app.starts_at ? app.starts_at.split('T')[1].substring(0, 5) : "";
+
+                                        return (
+                                            <div
+                                                className={`p-3 rounded-3 border-0 shadow-xs bg-light position-relative`}
+                                                key={app.id}
+                                                style={{
+                                                    borderLeft: `4px solid ${isHighlighted ? "#198754" : (choices.services.find(service => service.id === app.service_type_id)?.colour || "var(--cf-brand)")}`
+                                                }}
+                                            >
+                                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                                    <div>
+                                                        <span className="badge text-white mb-1" style={{ fontSize: "0.7rem", backgroundColor: statusColors[app.status] || "#495057" }}>{statusLabels[app.status] || app.status}</span>
+                                                        <h6 className="fw-bold mb-0 text-dark">
+                                                            {app.title} {isHighlighted && <span className="text-success small ms-1">({ui.selected})</span>}
+                                                        </h6>
+                                                    </div>
+                                                    <div className="d-flex align-items-center gap-2">
+                                                        <span className="fw-bold small" style={{ color: "var(--cf-brand)" }}><i className="fa-solid fa-clock me-1"></i>{timeStr}</span>
+                                                        <button className="btn btn-sm btn-outline-primary" disabled={busy} onClick={() => openEdit(app)}>{ui.edit}</button>
+                                                        <button
+                                                            className="btn btn-outline-danger btn-sm border-0 p-1"
+                                                            title={ui.cancelAppointment}
+                                                            disabled={busy || app.status === "cancelled"}
+                                                            onClick={() => handleDeleteAppointment(app.id)}
+                                                        >
+                                                            <i className="fa-solid fa-trash-can"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="small text-secondary mb-0">
+                                                    <p className="mb-1">
+                                                        <i className="fa-solid fa-note-sticky me-2 text-dark opacity-75"></i>
+                                                        <strong>{ui.notes}:</strong> {app.notes || ui.noNotes}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Modal de Nueva Cita */}
+            {showModal && (
+                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow-lg rounded-4 bg-white text-dark">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="fw-bold text-dark">{editingId ? ui.editAppointment : ui.scheduleAppointment}</h5>
+                                <button type="button" className="btn-close shadow-none" onClick={() => setShowModal(false)}></button>
+                            </div>
+                            <form onSubmit={handleCreateAppointment}>
+                                <div className="modal-body">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark">{ui.appointmentTitle}</label>
+                                        <input
+                                            type="text"
+                                            className="form-control shadow-none rounded-3 border bg-light text-dark"
+                                            required
+                                            value={newApp.title}
+                                            onChange={e => setNewApp({ ...newApp, title: e.target.value })}
+                                            placeholder={ui.appointmentTitleExample}
+                                        />
+                                    </div>
+                                    <div className="row g-2 mb-3">
+                                        <div className="col">
+                                            <label className="form-label small fw-semibold text-dark">{ui.date}</label>
+                                            <input
+                                                type="date"
+                                                className="form-control border shadow-none rounded-3 bg-white text-dark"
+                                                required
+                                                value={newApp.date}
+                                                onChange={e => setNewApp({ ...newApp, date: e.target.value })}
+                                                style={{ cursor: "pointer" }}
+                                            />
+                                        </div>
+                                        <div className="col">
+                                            <label className="form-label small fw-semibold text-dark">{ui.time}</label>
+                                            <input
+                                                type="time"
+                                                className="form-control border shadow-none rounded-3 bg-white text-dark"
+                                                required
+                                                value={newApp.time}
+                                                onChange={e => setNewApp({ ...newApp, time: e.target.value })}
+                                                style={{ cursor: "pointer" }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <label className="form-label d-block">{ui.durationMinutes}<input className="form-control" type="number" min="1" max="10080" required value={newApp.duration} onChange={event => setNewApp({ ...newApp, duration: event.target.value })} /></label>
+                                    <label className="form-label d-block">{ui.client}<select className="form-select" required value={newApp.clientId} onChange={event => setNewApp({ ...newApp, clientId: event.target.value, jobId: "" })}><option value="">{ui.selectClient}</option>{choices.clients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.responsible}<select className="form-select" required value={newApp.assignedId} onChange={event => setNewApp({ ...newApp, assignedId: event.target.value })}><option value="">{ui.selectResponsible}</option>{choices.members.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.optionalJob}<select className="form-select" value={newApp.jobId} onChange={event => setNewApp({ ...newApp, jobId: event.target.value })}><option value="">{ui.noJob}</option>{choices.jobs.filter(item => item.client_id === Number(newApp.clientId)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.optionalService}<select className="form-select" value={newApp.serviceId} onChange={event => setNewApp({ ...newApp, serviceId: event.target.value })}><option value="">{ui.noService}</option>{choices.services.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.status}<select className="form-select" value={newApp.status} onChange={event => setNewApp({ ...newApp, status: event.target.value })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                                    <label className="form-label d-block">{ui.notes}<textarea className="form-control" maxLength={10000} value={newApp.notes} onChange={event => setNewApp({ ...newApp, notes: event.target.value })} /></label>
+                                    {formError && <p className="text-danger" role="alert">{formError}</p>}
+                                </div>
+                                <div className="modal-footer border-0 pt-0">
+                                    <button type="button" className="btn btn-outline-secondary btn-sm rounded-3 px-3" onClick={() => setShowModal(false)}>{ui.cancel}</button>
+                                    <button type="submit" disabled={busy} className="btn btn-primary btn-sm px-4 rounded-3" style={{ backgroundColor: "var(--cf-brand)", border: "none" }}>{ui.saveAppointment}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Agenda;

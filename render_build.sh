@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# exit on error
-set -o errexit
+set -euo pipefail
 
-npm install
+export PIPENV_DONT_LOAD_ENV=1
+export PIPENV_VENV_IN_PROJECT=1
+export PIPENV_IGNORE_VIRTUALENVS=1
+
+python3 -m venv /tmp/clientflow-pipenv-bootstrap
+/tmp/clientflow-pipenv-bootstrap/bin/python -m pip install pipenv==2024.4.1
+/tmp/clientflow-pipenv-bootstrap/bin/pipenv sync
+
+npm ci
 npm run build
-
-pipenv install
-
-pipenv run upgrade
