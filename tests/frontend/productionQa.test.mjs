@@ -44,6 +44,15 @@ test("lead search icon has a centered fixed hit area", () => {
     assert.match(leads, /minWidth: "2\.75rem"/);
 });
 
+test("lead table header remains readable in dark mode", () => {
+    const leads = source("src/front/pages/Leads.jsx");
+    const css = source("src/front/styles/leads.css");
+    assert.match(leads, /leads-table-header/);
+    assert.match(css, /data-bs-theme="dark"[^}]*\.leads-table-header/);
+    assert.match(css, /--bs-table-bg:\s*var\(--cf-surface-muted\)/);
+    assert.match(css, /--bs-table-color:\s*var\(--cf-text\)/);
+});
+
 test("job scheduling uses API field names without timezone shifts", () => {
     const jobs = source("src/front/pages/Jobs.jsx");
     const jobDetail = source("src/front/pages/JobDetail.jsx");
